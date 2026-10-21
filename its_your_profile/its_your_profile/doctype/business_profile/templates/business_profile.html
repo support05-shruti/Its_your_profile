@@ -1,0 +1,81 @@
+{% extends "templates/web.html" %}
+
+{% block title %}{{ company_name }}{% endblock %}
+
+{% block head_include %}
+<script type="application/ld+json">
+{{ json_ld }}
+</script>
+{% endblock %}
+
+{% block page_content %}
+<article class="business-profile">
+	<h1>{{ company_name }}</h1>
+
+	{% if business_nature or city %}
+	<p class="text-muted">
+		{{ business_nature or "" }}{% if business_nature and city %} · {% endif %}{{ city or "" }}{% if state %}, {{ state }}{% endif %}
+	</p>
+	{% endif %}
+
+	{% if ai_summary %}
+	<section class="mt-4">
+		<h2 class="h5">{{ _("About") }}</h2>
+		<div>{{ ai_summary }}</div>
+	</section>
+	{% endif %}
+
+	<section class="mt-4">
+		<h2 class="h5">{{ _("Contact") }}</h2>
+		<dl class="row">
+			{% if contact_person %}
+			<dt class="col-sm-3">{{ _("Contact Person") }}</dt>
+			<dd class="col-sm-9">{{ contact_person }}{% if designation %} ({{ designation }}){% endif %}</dd>
+			{% endif %}
+			{% if phone %}
+			<dt class="col-sm-3">{{ _("Phone") }}</dt>
+			<dd class="col-sm-9"><a href="tel:{{ phone }}">{{ phone }}</a></dd>
+			{% endif %}
+			{% if email %}
+			<dt class="col-sm-3">{{ _("Email") }}</dt>
+			<dd class="col-sm-9"><a href="mailto:{{ email }}">{{ email }}</a></dd>
+			{% endif %}
+			{% if website_url %}
+			<dt class="col-sm-3">{{ _("Website") }}</dt>
+			<dd class="col-sm-9"><a href="{{ website_url }}" rel="noopener" target="_blank">{{ website_url }}</a></dd>
+			{% endif %}
+			{% if address_line or city %}
+			<dt class="col-sm-3">{{ _("Address") }}</dt>
+			<dd class="col-sm-9">
+				{{ address_line or "" }}{% if city %}, {{ city }}{% endif %}{% if state %}, {{ state }}{% endif %}{% if pincode %} - {{ pincode }}{% endif %}
+				{% if google_maps_url %}<br><a href="{{ google_maps_url }}" rel="noopener" target="_blank">{{ _("View on map") }}</a>{% endif %}
+			</dd>
+			{% endif %}
+		</dl>
+	</section>
+
+	{% if established_year or employee_range %}
+	<section class="mt-4">
+		<h2 class="h5">{{ _("Company Facts") }}</h2>
+		<dl class="row">
+			{% if established_year %}
+			<dt class="col-sm-3">{{ _("Established") }}</dt>
+			<dd class="col-sm-9">{{ established_year }}</dd>
+			{% endif %}
+			{% if employee_range %}
+			<dt class="col-sm-3">{{ _("Employees") }}</dt>
+			<dd class="col-sm-9">{{ employee_range }}</dd>
+			{% endif %}
+		</dl>
+	</section>
+	{% endif %}
+
+	{% if linkedin_url or facebook_url %}
+	<p class="mt-4">
+		{% if linkedin_url %}<a href="{{ linkedin_url }}" rel="noopener" target="_blank">LinkedIn</a>{% endif %}
+		{% if linkedin_url and facebook_url %} · {% endif %}
+		{% if facebook_url %}<a href="{{ facebook_url }}" rel="noopener" target="_blank">Facebook</a>{% endif %}
+	</p>
+	{% endif %}
+</article>
+{% endblock %}

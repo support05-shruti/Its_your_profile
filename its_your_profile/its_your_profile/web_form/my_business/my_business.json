@@ -1,0 +1,174 @@
+{
+ "accept_payment": 0,
+ "allow_comments": 0,
+ "allow_delete": 0,
+ "allow_edit": 1,
+ "allow_incomplete": 0,
+ "allow_multiple": 1,
+ "allow_print": 0,
+ "amount": 0.0,
+ "amount_based_on_field": 0,
+ "anonymous": 0,
+ "apply_document_permissions": 0,
+ "breadcrumbs": "",
+ "button_label": "Save",
+ "client_script": "",
+ "condition_json": "[]",
+ "creation": "2026-10-21 14:00:00.000000",
+ "doc_type": "Business Profile",
+ "docstatus": 0,
+ "doctype": "Web Form",
+ "hide_footer": 0,
+ "hide_navbar": 0,
+ "idx": 0,
+ "introduction_text": "<p>Snap a photo of your visiting card and we will fill in the details for you. Add your website and we will write a short summary of your business.</p>",
+ "is_standard": 1,
+ "key_required": 0,
+ "list_columns": [
+  {
+   "fieldname": "company_name",
+   "fieldtype": "Data",
+   "label": "Company Name"
+  },
+  {
+   "fieldname": "city",
+   "fieldtype": "Data",
+   "label": "City"
+  },
+  {
+   "fieldname": "card_scan_status",
+   "fieldtype": "Select",
+   "label": "Card Scan Status"
+  }
+ ],
+ "login_required": 1,
+ "max_attachment_size": 10,
+ "modified": "2026-10-21 14:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Its Your Profile",
+ "name": "my-business",
+ "owner": "Administrator",
+ "payment_button_label": "Buy Now",
+ "published": 1,
+ "route": "my-business",
+ "show_attachments": 0,
+ "show_list": 1,
+ "show_sidebar": 0,
+ "success_message": "Your business profile has been saved.",
+ "success_url": "",
+ "title": "My Business Profile",
+ "web_form_fields": [
+  {
+   "fieldname": "visiting_card",
+   "fieldtype": "Attach Image",
+   "label": "Visiting Card",
+   "reqd": 0
+  },
+  {
+   "fieldname": "card_scan_status",
+   "fieldtype": "Select",
+   "label": "Card Scan Status",
+   "options": "Pending\nProcessing\nCompleted\nFailed",
+   "read_only": 1,
+   "reqd": 0
+  },
+  {
+   "fieldname": "company_name",
+   "fieldtype": "Data",
+   "label": "Company Name",
+   "reqd": 0
+  },
+  {
+   "fieldname": "website_url",
+   "fieldtype": "Data",
+   "label": "Website URL",
+   "reqd": 0
+  },
+  {
+   "fieldname": "contact_person",
+   "fieldtype": "Data",
+   "label": "Contact Person",
+   "reqd": 0
+  },
+  {
+   "fieldname": "designation",
+   "fieldtype": "Data",
+   "label": "Designation",
+   "reqd": 0
+  },
+  {
+   "fieldname": "phone",
+   "fieldtype": "Data",
+   "label": "Phone",
+   "reqd": 0
+  },
+  {
+   "fieldname": "email",
+   "fieldtype": "Data",
+   "label": "Email",
+   "reqd": 0
+  },
+  {
+   "fieldname": "business_nature",
+   "fieldtype": "Select",
+   "label": "Business Nature",
+   "options": "\nService\nManufacturing\nHybrid/Trading",
+   "reqd": 0
+  },
+  {
+   "fieldname": "employee_range",
+   "fieldtype": "Select",
+   "label": "Employee Range",
+   "options": "\n1-10\n11-50\n51-200\n200+",
+   "reqd": 0
+  },
+  {
+   "fieldname": "established_year",
+   "fieldtype": "Int",
+   "label": "Established Year",
+   "reqd": 0
+  },
+  {
+   "fieldname": "address_line",
+   "fieldtype": "Small Text",
+   "label": "Address Line",
+   "reqd": 0
+  },
+  {
+   "fieldname": "city",
+   "fieldtype": "Data",
+   "label": "City",
+   "reqd": 0
+  },
+  {
+   "fieldname": "state",
+   "fieldtype": "Data",
+   "label": "State",
+   "reqd": 0
+  },
+  {
+   "fieldname": "pincode",
+   "fieldtype": "Data",
+   "label": "Pincode",
+   "reqd": 0
+  },
+  {
+   "fieldname": "google_maps_url",
+   "fieldtype": "Data",
+   "label": "Google Maps URL",
+   "reqd": 0
+  },
+  {
+   "fieldname": "linkedin_url",
+   "fieldtype": "Data",
+   "label": "LinkedIn URL",
+   "reqd": 0
+  },
+  {
+   "fieldname": "facebook_url",
+   "fieldtype": "Data",
+   "label": "Facebook URL",
+   "reqd": 0
+  }
+ ]
+}

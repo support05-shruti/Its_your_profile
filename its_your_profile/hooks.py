@@ -78,7 +78,10 @@ app_license = "mit"
 # ----------
 
 # automatically create page for each record of this doctype
-# website_generators = ["Web Page"]
+website_generators = ["Business Profile"]
+
+# Serves /llms.txt as plain-text Markdown
+page_renderer = ["its_your_profile.llms_txt.LLMsTxtPage"]
 
 # automatically load and sync documents of this doctype from downstream apps
 # importable_doctypes = [doctype_1]

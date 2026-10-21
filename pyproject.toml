@@ -8,6 +8,10 @@ requires-python = ">=3.14"
 readme = "README.md"
 dynamic = ["version"]
 dependencies = [
+    "google-genai",
+    "beautifulsoup4",
+    "requests",
+    "pydantic",
     # "frappe~=16.0.0" # Installed and managed by bench.
 ]
 
