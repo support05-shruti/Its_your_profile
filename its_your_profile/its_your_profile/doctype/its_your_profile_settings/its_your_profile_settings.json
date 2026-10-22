@@ -1,0 +1,91 @@
+{
+ "actions": [],
+ "creation": "2026-10-22 10:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "ai_provider",
+  "gemini_section",
+  "gemini_api_key",
+  "gemini_model",
+  "openai_section",
+  "openai_api_key",
+  "openai_model",
+  "openai_base_url"
+ ],
+ "fields": [
+  {
+   "default": "Gemini",
+   "description": "Which AI reads visiting cards and writes website summaries",
+   "fieldname": "ai_provider",
+   "fieldtype": "Select",
+   "label": "AI Provider",
+   "options": "Gemini\nOpenAI"
+  },
+  {
+   "depends_on": "eval:doc.ai_provider==\"Gemini\"",
+   "fieldname": "gemini_section",
+   "fieldtype": "Section Break",
+   "label": "Gemini"
+  },
+  {
+   "description": "From https://aistudio.google.com/apikey",
+   "fieldname": "gemini_api_key",
+   "fieldtype": "Password",
+   "label": "Gemini API Key"
+  },
+  {
+   "description": "Leave empty to use gemini-flash-latest",
+   "fieldname": "gemini_model",
+   "fieldtype": "Data",
+   "label": "Gemini Model"
+  },
+  {
+   "depends_on": "eval:doc.ai_provider==\"OpenAI\"",
+   "fieldname": "openai_section",
+   "fieldtype": "Section Break",
+   "label": "OpenAI"
+  },
+  {
+   "description": "From https://platform.openai.com/api-keys (starts with sk-)",
+   "fieldname": "openai_api_key",
+   "fieldtype": "Password",
+   "label": "OpenAI API Key"
+  },
+  {
+   "description": "Leave empty to use gpt-5-mini",
+   "fieldname": "openai_model",
+   "fieldtype": "Data",
+   "label": "OpenAI Model"
+  },
+  {
+   "description": "Only for OpenAI-compatible services. Leave empty for OpenAI itself.",
+   "fieldname": "openai_base_url",
+   "fieldtype": "Data",
+   "label": "OpenAI Base URL"
+  }
+ ],
+ "issingle": 1,
+ "links": [],
+ "modified": "2026-10-22 10:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Its Your Profile",
+ "name": "Its Your Profile Settings",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

@@ -7,6 +7,21 @@ import frappe
 from frappe.website.website_generator import WebsiteGenerator
 
 
+# Fields the card scan fills; kept if a stale form save sends them back empty
+CARD_FIELDS = (
+	"company_name",
+	"contact_person",
+	"designation",
+	"phone",
+	"email",
+	"website_url",
+	"address_line",
+	"city",
+	"state",
+	"pincode",
+)
+
+
 class BusinessProfile(WebsiteGenerator):
 	def validate(self):
 		# A profile created from a card upload has no company name until the scan finishes
@@ -20,6 +35,15 @@ class BusinessProfile(WebsiteGenerator):
 
 		if self.visiting_card and (self.is_new() or self.has_value_changed("visiting_card")):
 			self.card_scan_status = "Pending"
+		elif not self.is_new() and not self.flags.from_scan and self.get_doc_before_save():
+			# Status is owned by the scan job: a form saved with a stale "Pending" must not
+			# restart the scan, and must not wipe the fields the scan just filled
+			before = self.get_doc_before_save()
+			self.card_scan_status = before.card_scan_status
+			if before.card_scan_status == "Completed":
+				for fieldname in CARD_FIELDS:
+					if not self.get(fieldname) and before.get(fieldname):
+						self.set(fieldname, before.get(fieldname))
 
 	def validate_urls(self):
 		for fieldname in ("website_url", "google_maps_url", "linkedin_url", "facebook_url"):

@@ -43,6 +43,9 @@ def scan_visiting_card(profile: str):
 		mime_type = mimetypes.guess_type(file.file_name or doc.visiting_card)[0] or "image/jpeg"
 		details = ai.extract_card_details(file.get_content(), mime_type)
 
+		# The AI call is slow; reload so edits saved meanwhile aren't overwritten (TimestampMismatchError)
+		doc = frappe.get_doc("Business Profile", profile)
+
 		# Only fill blanks, so anything the user already typed is kept
 		for key, fieldname in CARD_FIELD_MAP.items():
 			value = getattr(details, key)
@@ -50,6 +53,7 @@ def scan_visiting_card(profile: str):
 				doc.set(fieldname, value.strip())
 
 		doc.card_scan_status = "Completed"
+		doc.flags.from_scan = True
 		doc.save(ignore_permissions=True)
 	except Exception:
 		frappe.db.rollback()
@@ -79,6 +83,8 @@ def scrape_website(profile: str):
 		insights = ai.analyse_website(text)
 		links = social_links(soups)
 
+		# The AI call is slow; reload so edits saved meanwhile aren't overwritten (TimestampMismatchError)
+		doc = frappe.get_doc("Business Profile", profile)
 		doc.ai_summary = "<p>" + frappe.utils.escape_html(insights.ai_summary.strip()) + "</p>"
 		if not doc.business_nature:
 			doc.business_nature = insights.business_nature
