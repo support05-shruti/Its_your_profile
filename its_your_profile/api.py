@@ -1,7 +1,40 @@
+import mimetypes
+
 import frappe
 from frappe import _
 
 ALLOWED_IMAGE_TYPES = ("image/jpeg", "image/png", "image/webp", "image/heic", "image/heif")
+
+
+def card_read_cache_key(file_url: str) -> str:
+	return f"its_your_profile:card_read:{file_url}"
+
+
+@frappe.whitelist(methods=["POST"])
+def read_visiting_card(file_url: str):
+	"""Read a just-attached card and return field values, so the form fills in before Save.
+
+	Marks the file as read so saving the profile doesn't queue a second, background scan.
+	"""
+	from its_your_profile import ai
+	from its_your_profile.tasks import CARD_FIELD_MAP
+
+	if frappe.session.user == "Guest":
+		frappe.throw(_("Please log in to read a visiting card"), frappe.PermissionError)
+
+	file = frappe.get_doc("File", {"file_url": file_url})
+	if not frappe.has_permission("File", "read", doc=file):
+		frappe.throw(_("Not permitted"), frappe.PermissionError)
+
+	mime_type = mimetypes.guess_type(file.file_name or file_url)[0] or "image/jpeg"
+	details = ai.extract_card_details(file.get_content(), mime_type)
+	frappe.cache.set_value(card_read_cache_key(file_url), 1, expires_in_sec=3600)
+
+	return {
+		fieldname: getattr(details, key).strip()
+		for key, fieldname in CARD_FIELD_MAP.items()
+		if getattr(details, key)
+	}
 
 
 @frappe.whitelist(methods=["POST"])

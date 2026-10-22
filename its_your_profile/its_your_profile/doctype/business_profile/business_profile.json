@@ -24,6 +24,7 @@
   "website_url",
   "card_section",
   "visiting_card",
+  "visiting_card_back",
   "column_break_card",
   "card_scan_status",
   "address_section",
@@ -47,7 +48,7 @@
    "in_list_view": 1,
    "in_standard_filter": 1,
    "label": "Company Name",
-   "mandatory_depends_on": "eval:!doc.visiting_card"
+   "mandatory_depends_on": "eval:!doc.visiting_card && !doc.visiting_card_back"
   },
   {
    "fieldname": "route",
@@ -123,6 +124,12 @@
    "fieldname": "card_section",
    "fieldtype": "Section Break",
    "label": "Visiting Card"
+  },
+  {
+   "description": "Optional. Add it if the card has details on the back too.",
+   "fieldname": "visiting_card_back",
+   "fieldtype": "Attach Image",
+   "label": "Visiting Card (Back Side)"
   },
   {
    "fieldname": "visiting_card",
@@ -214,7 +221,7 @@
  "index_web_pages_for_search": 1,
  "is_published_field": "published",
  "links": [],
- "modified": "2026-10-21 14:00:00.000000",
+ "modified": "2026-10-22 11:00:00.000000",
  "modified_by": "Administrator",
  "module": "Its Your Profile",
  "name": "Business Profile",

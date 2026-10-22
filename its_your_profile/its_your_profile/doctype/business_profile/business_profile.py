@@ -7,6 +7,9 @@ import frappe
 from frappe.website.website_generator import WebsiteGenerator
 
 
+# Front is the main card photo; the back side is optional
+CARD_SIDES = ("visiting_card", "visiting_card_back")
+
 # Fields the card scan fills; kept if a stale form save sends them back empty
 CARD_FIELDS = (
 	"company_name",
@@ -25,7 +28,7 @@ CARD_FIELDS = (
 class BusinessProfile(WebsiteGenerator):
 	def validate(self):
 		# A profile created from a card upload has no company name until the scan finishes
-		if not self.company_name and not self.visiting_card:
+		if not self.company_name and not (self.visiting_card or self.visiting_card_back):
 			frappe.throw(frappe._("Please enter a Company Name or upload a Visiting Card"))
 
 		self.validate_urls()
@@ -33,8 +36,19 @@ class BusinessProfile(WebsiteGenerator):
 		if self.company_name:
 			self.set_route()
 
-		if self.visiting_card and (self.is_new() or self.has_value_changed("visiting_card")):
-			self.card_scan_status = "Pending"
+		new_sides = [
+			self.get(side)
+			for side in CARD_SIDES
+			if self.get(side) and (self.is_new() or self.has_value_changed(side))
+		]
+		if new_sides:
+			from its_your_profile.api import card_read_cache_key
+
+			# Sides already read in the form before Save (api.read_visiting_card) need no background scan
+			if all(frappe.cache.get_value(card_read_cache_key(url)) for url in new_sides):
+				self.card_scan_status = "Completed"
+			else:
+				self.card_scan_status = "Pending"
 		elif not self.is_new() and not self.flags.from_scan and self.get_doc_before_save():
 			# Status is owned by the scan job: a form saved with a stale "Pending" must not
 			# restart the scan, and must not wipe the fields the scan just filled
@@ -65,7 +79,7 @@ class BusinessProfile(WebsiteGenerator):
 	def on_update(self):
 		super().on_update()
 
-		if self.visiting_card and self.card_scan_status == "Pending":
+		if (self.visiting_card or self.visiting_card_back) and self.card_scan_status == "Pending":
 			frappe.enqueue(
 				"its_your_profile.tasks.scan_visiting_card",
 				queue="long",

@@ -33,24 +33,29 @@ CARD_FIELD_MAP = {
 
 def scan_visiting_card(profile: str):
 	doc = frappe.get_doc("Business Profile", profile)
-	if not doc.visiting_card:
+	sides = [url for url in (doc.visiting_card, doc.visiting_card_back) if url]
+	if not sides:
 		return
 
 	doc.db_set("card_scan_status", "Processing", commit=True)
 
 	try:
-		file = frappe.get_doc("File", {"file_url": doc.visiting_card})
-		mime_type = mimetypes.guess_type(file.file_name or doc.visiting_card)[0] or "image/jpeg"
-		details = ai.extract_card_details(file.get_content(), mime_type)
+		# Front first, so its values win; the optional back side only fills what's still blank
+		results = []
+		for file_url in sides:
+			file = frappe.get_doc("File", {"file_url": file_url})
+			mime_type = mimetypes.guess_type(file.file_name or file_url)[0] or "image/jpeg"
+			results.append(ai.extract_card_details(file.get_content(), mime_type))
 
 		# The AI call is slow; reload so edits saved meanwhile aren't overwritten (TimestampMismatchError)
 		doc = frappe.get_doc("Business Profile", profile)
 
 		# Only fill blanks, so anything the user already typed is kept
-		for key, fieldname in CARD_FIELD_MAP.items():
-			value = getattr(details, key)
-			if value and not doc.get(fieldname):
-				doc.set(fieldname, value.strip())
+		for details in results:
+			for key, fieldname in CARD_FIELD_MAP.items():
+				value = getattr(details, key)
+				if value and not doc.get(fieldname):
+					doc.set(fieldname, value.strip())
 
 		doc.card_scan_status = "Completed"
 		doc.flags.from_scan = True
