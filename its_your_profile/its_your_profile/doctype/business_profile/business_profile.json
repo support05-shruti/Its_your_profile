@@ -13,9 +13,14 @@
   "visiting_card_back",
   "column_break_card",
   "card_scan_status",
+  "colours_section",
+  "name_color",
+  "column_break_colours",
+  "brand_color",
   "company_section",
   "company_name",
   "business_nature",
+  "about_business",
   "column_break_main",
   "employee_range",
   "established_year",
@@ -48,13 +53,42 @@
  ],
  "fields": [
   {
+   "collapsible": 1,
+   "description": "Read from the visiting card and used on the public page. Change them here if the card was read wrong.",
+   "fieldname": "colours_section",
+   "fieldtype": "Section Break",
+   "label": "Card Colours"
+  },
+  {
+   "description": "Colour of the company name on the card. The public page shows the name in this colour.",
+   "fieldname": "name_color",
+   "fieldtype": "Color",
+   "label": "Company Name Colour"
+  },
+  {
+   "fieldname": "column_break_colours",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "Main brand or accent colour on the card, used for headings, links and the button on the public page.",
+   "fieldname": "brand_color",
+   "fieldtype": "Color",
+   "label": "Brand Colour"
+  },
+  {
+   "description": "In the owner's own words: products, services and who you work with. Shown on the public page.",
+   "fieldname": "about_business",
+   "fieldtype": "Small Text",
+   "label": "What Does Your Business Do?"
+  },
+  {
    "fieldname": "company_section",
    "fieldtype": "Section Break",
    "label": "Company"
   },
   {
    "collapsible": 1,
-   "description": "The address of this business's public page, made automatically as business/iyp-year-month-number (e.g. business/iyp-2026-10-00001). The number restarts at 00001 every year.",
+   "description": "The address of this business's public page, made automatically as business/iyp-yy-mm-number (e.g. business/iyp-26-10-00005). The number restarts at 00001 every year.",
    "fieldname": "page_section",
    "fieldtype": "Section Break",
    "label": "Public Page"
@@ -65,7 +99,7 @@
   },
   {
    "collapsible": 1,
-   "description": "One welcome email with the public page link goes to the email above, when Send Welcome Email is on in Its Your Profile Settings.",
+   "description": "Click Send Welcome Email at the top to email the public page link and the card to the email above. If Send Welcome Email Automatically is on in Settings, it goes after Save by itself.",
    "fieldname": "welcome_section",
    "fieldtype": "Section Break",
    "label": "Welcome Email"
@@ -264,7 +298,7 @@
  "index_web_pages_for_search": 1,
  "is_published_field": "published",
  "links": [],
- "modified": "2026-10-26 14:00:00.000000",
+ "modified": "2026-10-27 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Its Your Profile",
  "name": "Business Profile",

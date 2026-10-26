@@ -43,7 +43,7 @@
  ],
  "login_required": 1,
  "max_attachment_size": 10,
- "modified": "2026-10-24 12:00:00.000000",
+ "modified": "2026-10-27 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Its Your Profile",
  "name": "my-business",
@@ -104,6 +104,13 @@
    "fieldtype": "Select",
    "label": "Business Nature",
    "options": "\nService\nManufacturing\nHybrid/Trading",
+   "reqd": 0
+  },
+  {
+   "description": "In your own words: what you make or offer, and who your customers are.",
+   "fieldname": "about_business",
+   "fieldtype": "Small Text",
+   "label": "What Does Your Business Do?",
    "reqd": 0
   },
   {

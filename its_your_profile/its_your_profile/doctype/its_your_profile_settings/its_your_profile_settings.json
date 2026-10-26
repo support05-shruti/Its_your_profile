@@ -75,17 +75,17 @@
   },
   {
    "default": "0",
-   "description": "Off until launch. When on, each new business gets one welcome email, at the email on its card, with the link to its public page.",
+   "description": "On: a business saved with a new email gets the welcome email automatically, once. Off: emails go only when staff click Send Welcome Email on a business. The button works either way.",
    "fieldname": "send_welcome_email",
    "fieldtype": "Check",
-   "label": "Send Welcome Email"
+   "label": "Send Welcome Email Automatically"
   },
   {
    "fieldname": "column_break_email",
    "fieldtype": "Column Break"
   },
   {
-   "description": "The email address welcome emails are sent from. Add it first in Desk → Email Account with Enable Outgoing ticked. Leave empty to use the default outgoing account.",
+   "description": "The address welcome emails are sent from. Add it first in Desk → Email Account with Enable Outgoing ticked. Leave empty to use the default outgoing account.",
    "fieldname": "welcome_email_account",
    "fieldtype": "Link",
    "label": "Send From",
@@ -94,7 +94,7 @@
  ],
  "issingle": 1,
  "links": [],
- "modified": "2026-10-26 14:00:00.000000",
+ "modified": "2026-10-26 18:00:00.000000",
  "modified_by": "Administrator",
  "module": "Its Your Profile",
  "name": "Its Your Profile Settings",

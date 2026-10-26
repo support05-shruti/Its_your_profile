@@ -17,25 +17,26 @@ class LLMsTxtPage(BaseRenderer):
 
 
 def get_llms_txt() -> str:
-	site_name = frappe.db.get_single_value("Website Settings", "app_name") or "It's Your Profile"
 	profiles = frappe.get_all(
 		"Business Profile",
 		filters={"published": 1, "route": ("is", "set")},
-		fields=["company_name", "route", "ai_summary", "business_nature", "city", "state"],
+		fields=["company_name", "route", "ai_summary", "about_business", "business_nature", "city", "state"],
 		order_by="company_name asc",
 	)
 
 	lines = [
-		f"# {site_name}",
+		"# It's Your Profile",
 		"",
-		"> A directory of verified business profiles. Each profile page also carries Schema.org LocalBusiness JSON-LD.",
+		"> A directory of business profiles. Each profile page also carries Schema.org LocalBusiness JSON-LD.",
+		"",
+		f"Browse and search the directory: {get_url('directory')}",
 		"",
 		"## Businesses",
 		"",
 	]
 	for p in profiles:
 		meta = ", ".join(x for x in (p.business_nature, p.city, p.state) if x)
-		summary = " ".join(strip_html(p.ai_summary or "").split())
+		summary = " ".join((strip_html(p.ai_summary or "") or p.about_business or "").split())
 		detail = " - ".join(x for x in (meta, summary) if x)
 		lines.append(f"- [{p.company_name}]({get_url(p.route)})" + (f": {detail}" if detail else ""))
 

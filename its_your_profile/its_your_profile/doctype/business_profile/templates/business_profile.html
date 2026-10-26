@@ -9,6 +9,18 @@
 {% endblock %}
 
 {% block page_content %}
+{#- Colours come from the visiting card (validated hex codes only), darkened to stay readable -#}
+<style>
+	.business-profile {
+		--iyp-name: {{ page_name_color or "inherit" }};
+		--iyp-brand: {{ page_brand_color or "var(--primary, #1f5f8b)" }};
+		border-top: 6px solid var(--iyp-brand);
+		padding-top: 24px;
+	}
+	.business-profile h1 { color: var(--iyp-name); }
+	.business-profile h2 { color: var(--iyp-brand); }
+	.business-profile a { color: var(--iyp-brand); }
+</style>
 <article class="business-profile">
 	<h1>{{ company_name }}</h1>
 
@@ -18,10 +30,11 @@
 	</p>
 	{% endif %}
 
-	{% if ai_summary %}
+	{% if about_business or ai_summary %}
 	<section class="mt-4">
 		<h2 class="h5">{{ _("About") }}</h2>
-		<div>{{ ai_summary }}</div>
+		{% if about_business %}<p>{{ about_business | e | replace("\n", "<br>") }}</p>{% endif %}
+		{% if ai_summary %}<div>{{ ai_summary }}</div>{% endif %}
 	</section>
 	{% endif %}
 
@@ -54,6 +67,15 @@
 		</dl>
 	</section>
 
+	{% if map_embed_url %}
+	<section class="mt-4">
+		<h2 class="h5">{{ _("Location") }}</h2>
+		<iframe src="{{ map_embed_url | e }}" title="{{ _('Map of {0}').format(company_name) | e }}"
+			width="100%" height="320" style="border: 0; border-radius: 8px;" loading="lazy"
+			referrerpolicy="no-referrer-when-downgrade" allowfullscreen></iframe>
+	</section>
+	{% endif %}
+
 	{% if established_year or employee_range %}
 	<section class="mt-4">
 		<h2 class="h5">{{ _("Company Facts") }}</h2>
@@ -80,5 +102,10 @@
 		</p>
 	</section>
 	{% endif %}
+
+	<footer class="mt-5 pt-3 border-top">
+		<p class="text-muted mb-2">{{ _("Is your business easy for AI assistants like ChatGPT to find? Get a free profile page from your visiting card.") }}</p>
+		<a href="/my-business/new">{{ _("Register your business") }}</a> · <a href="/directory">{{ _("Browse the directory") }}</a>
+	</footer>
 </article>
 {% endblock %}

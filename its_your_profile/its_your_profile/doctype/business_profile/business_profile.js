@@ -58,14 +58,21 @@ function read_links(frm) {
 			freeze: true,
 			freeze_message: __("Finding links on the website..."),
 		})
-		.then(({ message: links }) => {
+		.then(({ message }) => {
+			const links = (message && message.links) || [];
+			// The website's own map beats one we built from the address, but not one typed in
+			const current_map = frm.doc.google_maps_url || "";
+			if (message && message.map_url && (!current_map || current_map.startsWith(MAPS_PREFIX))) {
+				frm.set_value("google_maps_url", message.map_url);
+			}
+
 			const key = (r) => `${r.platform}|${r.label || ""}`;
 			const clean = (u) => (u || "").replace(/\/+$/, "").toLowerCase();
 			const have = new Set((frm.doc.profile_links || []).map(key));
 			const have_urls = new Set((frm.doc.profile_links || []).map((r) => clean(r.url)));
 
 			let added = 0;
-			(links || []).forEach((link) => {
+			links.forEach((link) => {
 				if (have.has(key(link)) || have_urls.has(clean(link.url))) return;
 				frm.add_child("profile_links", link);
 				have.add(key(link));
@@ -82,7 +89,7 @@ function read_links(frm) {
 		});
 }
 
-// Send the welcome email by hand (works even while the automatic switch is off)
+// Send or resend the welcome email by hand
 function add_welcome_email_button(frm) {
 	if (frm.is_new() || !frm.doc.email) return;
 	const label = frm.doc.welcome_email_sent ? __("Resend Welcome Email") : __("Send Welcome Email");

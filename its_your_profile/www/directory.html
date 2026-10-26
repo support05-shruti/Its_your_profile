@@ -1,0 +1,65 @@
+{% extends "templates/web.html" %}
+
+{% block title %}{{ _("It's Your Profile · Business Directory") }}{% endblock %}
+
+{% block page_content %}
+<style>
+	.iyp-hero { padding: 32px 0 24px; border-bottom: 1px solid var(--border-color, #e2e6e9); margin-bottom: 24px; }
+	.iyp-hero h1 { font-size: 2rem; margin-bottom: 8px; }
+	.iyp-hero p { max-width: 60ch; color: var(--text-muted, #5a6875); }
+	.iyp-search { display: flex; flex-wrap: wrap; gap: 8px; margin: 16px 0 8px; }
+	.iyp-search input, .iyp-search select { flex: 1 1 180px; min-width: 0; }
+	.iyp-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; }
+	.iyp-card { border: 1px solid var(--border-color, #e2e6e9); border-radius: 10px; padding: 16px;
+		border-top: 4px solid var(--iyp-card, #1f5f8b); display: grid; gap: 6px; align-content: start; }
+	.iyp-card h2 { font-size: 1.05rem; margin: 0; }
+	.iyp-card h2 a { color: var(--iyp-card, inherit); text-decoration: none; }
+	.iyp-card h2 a:hover { text-decoration: underline; }
+	.iyp-meta { font-size: .85rem; color: var(--text-muted, #5a6875); }
+	.iyp-card p { font-size: .9rem; margin: 0; }
+</style>
+
+<section class="iyp-hero">
+	<h1>{{ _("It's Your Profile") }}</h1>
+	<p>{{ _("A free business directory built for AI search. When people ask ChatGPT or Gemini for a business like yours, a clear profile page helps them find you. Make yours from your visiting card in a minute.") }}</p>
+	<a class="btn btn-primary" href="/my-business/new">{{ _("Register your business") }}</a>
+</section>
+
+<form class="iyp-search" method="get" action="/directory" role="search">
+	<input class="form-control" type="search" name="q" value="{{ q | e }}"
+		placeholder="{{ _('Search by name, product, service or city') }}" aria-label="{{ _('Search') }}">
+	<select class="form-control" name="nature" aria-label="{{ _('Business type') }}">
+		<option value="">{{ _("All business types") }}</option>
+		{% for n in natures %}<option value="{{ n }}" {% if n == nature %}selected{% endif %}>{{ _(n) }}</option>{% endfor %}
+	</select>
+	<select class="form-control" name="city" aria-label="{{ _('City') }}">
+		<option value="">{{ _("All cities") }}</option>
+		{% for c in cities %}<option value="{{ c | e }}" {% if c == city %}selected{% endif %}>{{ c | e }}</option>{% endfor %}
+	</select>
+	<button class="btn btn-default" type="submit">{{ _("Search") }}</button>
+</form>
+
+<p class="iyp-meta">
+	{% if q or nature or city %}
+		{{ _("{0} found").format(businesses | length) }} · <a href="/directory">{{ _("Clear search") }}</a>
+	{% else %}
+		{{ _("{0} businesses listed").format(total) }}
+	{% endif %}
+</p>
+
+{% if businesses %}
+<div class="iyp-grid">
+	{% for b in businesses %}
+	<article class="iyp-card" {% if b.colour %}style="--iyp-card: {{ b.colour }}"{% endif %}>
+		<h2><a href="/{{ b.route }}">{{ b.company_name | e }}</a></h2>
+		<div class="iyp-meta">
+			{{ b.business_nature or "" }}{% if b.business_nature and b.city %} · {% endif %}{{ (b.city or "") | e }}
+		</div>
+		{% if b.summary %}<p>{{ b.summary | e }}</p>{% endif %}
+	</article>
+	{% endfor %}
+</div>
+{% else %}
+<p>{{ _("No businesses match your search yet.") }} <a href="/my-business/new">{{ _("Add yours") }}</a></p>
+{% endif %}
+{% endblock %}

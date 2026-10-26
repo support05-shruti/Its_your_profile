@@ -6,3 +6,4 @@
 # Patches added in this section will be executed after doctypes are migrated
 its_your_profile.patches.move_social_urls_to_profile_links
 its_your_profile.patches.set_iyp_routes
+its_your_profile.patches.shorten_iyp_routes

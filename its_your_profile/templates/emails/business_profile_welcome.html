@@ -18,6 +18,10 @@
 	{% endfor %}
 </table>
 
+{% if has_card %}
+<p>{{ _("We have attached the visiting card you shared, so you can compare it with the details above.") }}</p>
+{% endif %}
+
 <p>{{ _("If anything is wrong, you can correct it here:") }} <a href="{{ edit_url }}">{{ edit_url }}</a></p>
 
 <p>{{ _("Your page link:") }} <a href="{{ page_url }}">{{ page_url }}</a></p>

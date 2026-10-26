@@ -74,7 +74,14 @@ frappe.ready(function () {
 				freeze: true,
 				freeze_message: __("Finding your links on the website..."),
 			})
-			.then(({ message: links }) => {
+			.then(({ message }) => {
+				const links = (message && message.links) || [];
+				// The website's own map beats one we built from the address, but not one typed in
+				const current_map = web_form.get_value("google_maps_url") || "";
+				if (message && message.map_url && (!current_map || current_map.startsWith(MAPS_PREFIX))) {
+					web_form.set_value("google_maps_url", message.map_url);
+				}
+
 				const field = web_form.fields_dict.profile_links;
 				const rows = (field.df.data = field.grid.get_data() || []);
 				const key = (r) => `${r.platform}|${r.label || ""}`;
@@ -83,7 +90,7 @@ frappe.ready(function () {
 				const have_urls = new Set(rows.map((r) => clean(r.url)));
 
 				let added = 0;
-				(links || []).forEach((link) => {
+				links.forEach((link) => {
 					if (have.has(key(link)) || have_urls.has(clean(link.url))) return;
 					rows.push({ idx: rows.length + 1, __islocal: true, ...link, label: link.label || "" });
 					have.add(key(link));

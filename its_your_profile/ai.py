@@ -30,6 +30,14 @@ class CardDetails(BaseModel):
 	city: str | None = None
 	state: str | None = None
 	pincode: str | None = None
+	name_color: str | None = Field(
+		None, description="Hex colour of the company name text as printed on the card, e.g. #E8711A"
+	)
+	brand_color: str | None = Field(
+		None,
+		description="Hex colour of the main logo or accent colour on the card, e.g. #1F5F8B. "
+		"Not white or the plain background colour.",
+	)
 
 
 class WebsiteInsights(BaseModel):
@@ -42,7 +50,9 @@ class WebsiteInsights(BaseModel):
 
 CARD_PROMPT = """You are reading a business visiting card.
 Extract the details printed on the card. Use null for anything that is not clearly printed.
-Do not guess or invent values."""
+Do not guess or invent values.
+Also give the colours as hex codes: the colour of the company name text, and the main brand or
+logo colour. Use null for a colour if the card is black and white."""
 
 WEBSITE_PROMPT = """Below is text scraped from a company's website.
 1. Write a factual three-sentence summary of what the business does, who it serves and where.

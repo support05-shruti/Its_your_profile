@@ -26,15 +26,22 @@ def read_visiting_card(file_url: str):
 	if not frappe.has_permission("File", "read", doc=file):
 		frappe.throw(_("Not permitted"), frappe.PermissionError)
 
+	from its_your_profile.its_your_profile.doctype.business_profile.business_profile import card_colours
+
 	mime_type = mimetypes.guess_type(file.file_name or file_url)[0] or "image/jpeg"
 	details = ai.extract_card_details(file.get_content(), mime_type)
-	frappe.cache.set_value(card_read_cache_key(file_url), 1, expires_in_sec=3600)
+	colours = card_colours(details)
 
-	return {
+	# Remembered for the Save that follows: marks the card as read (no background scan) and
+	# carries its colours, which the user form has no boxes for
+	frappe.cache.set_value(card_read_cache_key(file_url), {"colours": colours}, expires_in_sec=3600)
+
+	values = {
 		fieldname: getattr(details, key).strip()
 		for key, fieldname in CARD_FIELD_MAP.items()
 		if getattr(details, key)
 	}
+	return {**values, **colours}
 
 
 @frappe.whitelist(methods=["POST"])
@@ -44,7 +51,7 @@ def read_website_links(url: str):
 	from bs4 import BeautifulSoup
 
 	from its_your_profile.its_your_profile.doctype.business_profile.business_profile import clean_url
-	from its_your_profile.tasks import fetch, find_contact_page, social_links
+	from its_your_profile.tasks import fetch, find_contact_page, find_map_url, social_links
 
 	if frappe.session.user == "Guest":
 		frappe.throw(_("Please log in"), frappe.PermissionError)
@@ -60,14 +67,18 @@ def read_website_links(url: str):
 	except Exception:
 		frappe.throw(_("Could not open {0}. Please check the website address.").format(url))
 
-	links = social_links([BeautifulSoup(html, "html.parser") for html in pages])
-	return [{"platform": platform, "label": label, "url": link} for platform, label, link in links]
+	soups = [BeautifulSoup(html, "html.parser") for html in pages]
+	return {
+		"links": [
+			{"platform": platform, "label": label, "url": link} for platform, label, link in social_links(soups)
+		],
+		"map_url": find_map_url(soups),
+	}
 
 
 @frappe.whitelist(methods=["POST"])
 def send_welcome_email(name: str):
-	"""Desk button: send (or resend) the welcome email for one business, even while the
-	automatic switch in Its Your Profile Settings is off — e.g. to test before launch."""
+	"""Desk button: send (or resend) the welcome email for one business."""
 	doc = frappe.get_doc("Business Profile", name)
 	doc.check_permission("write")
 	doc.send_welcome_email()

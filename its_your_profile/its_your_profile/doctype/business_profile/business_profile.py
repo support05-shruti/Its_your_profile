@@ -2,6 +2,7 @@
 # For license information, please see license.txt
 
 import json
+import re
 from urllib.parse import quote_plus
 
 import frappe
@@ -23,6 +24,8 @@ CARD_FIELDS = (
 	"city",
 	"state",
 	"pincode",
+	"name_color",
+	"brand_color",
 )
 
 
@@ -30,26 +33,74 @@ CARD_FIELDS = (
 WELCOME_FIELDS = ("welcome_email_sent", "welcome_email_sent_on")
 
 
-def welcome_email_settings():
-	"""(enabled, sending account) from Its Your Profile Settings. Off until it is ticked there."""
+def welcome_emails_automatic():
+	"""Its Your Profile Settings → Send Welcome Email Automatically (off by default)."""
 	try:
-		enabled, account = frappe.db.get_value(
-			"Its Your Profile Settings",
-			"Its Your Profile Settings",
-			["send_welcome_email", "welcome_email_account"],
-		) or (0, None)
+		return bool(frappe.utils.cint(frappe.db.get_single_value("Its Your Profile Settings", "send_welcome_email")))
 	except Exception:
-		return False, None  # settings not migrated yet
-	return bool(frappe.utils.cint(enabled)), account
+		return False  # settings not migrated yet
+
+
+def welcome_email_account():
+	"""The Email Account chosen in Its Your Profile Settings → Send From (None = default outgoing)."""
+	try:
+		return frappe.db.get_single_value("Its Your Profile Settings", "welcome_email_account")
+	except Exception:
+		return None  # settings not migrated yet
 
 
 def make_profile_route(when):
-	"""Next public page address for a card made at `when`. One counter per year (Frappe's Series
-	table, key "iyp-<year>-"), so numbers never repeat and each year starts at 00001."""
+	"""Next public page address for a card made at `when`: business/iyp-<yy>-<mm>-<number>,
+	e.g. business/iyp-26-10-00005. One counter per year (Frappe's Series table, key
+	"iyp-<yyyy>-"), so numbers never repeat and each year starts at 00001."""
 	from frappe.model.naming import getseries
 
 	number = getseries(f"iyp-{when.year}-", 5)
-	return f"business/iyp-{when.year}-{when.month:02d}-{number}"
+	return f"business/iyp-{when:%y}-{when.month:02d}-{number}"
+
+
+# Maps links we build from the address start with this; a map found on the website replaces them
+MAPS_SEARCH_PREFIX = "https://www.google.com/maps/search/?api=1&query="
+MAP_EMBED = re.compile(r"^https://(www\.|maps\.)?google\.[a-z.]+/maps/embed", re.I)
+
+COLOUR_FIELDS = ("name_color", "brand_color")
+HEX_COLOUR = re.compile(r"^#?([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$")
+
+
+def clean_hex(value):
+	"""'#e8711a', 'E8711A' or '#e71' → '#E8711A'; anything else → None (never reaches the page)."""
+	match = HEX_COLOUR.match((value or "").strip())
+	if not match:
+		return None
+	digits = match.group(1)
+	if len(digits) == 3:
+		digits = "".join(c * 2 for c in digits)
+	return "#" + digits.upper()
+
+
+def card_colours(details):
+	"""Colours the AI read from a card, as clean hex codes for the colour fields."""
+	return {fieldname: clean_hex(getattr(details, fieldname, None)) for fieldname in COLOUR_FIELDS}
+
+
+def readable_on_white(hex_colour, min_contrast=3.0):
+	"""Darken a card colour until it can be read on the white page (3:1, for large text and
+	headings). Pale card colours like yellow would otherwise be invisible."""
+	if not hex_colour:
+		return None
+	r, g, b = (int(hex_colour[i : i + 2], 16) for i in (1, 3, 5))
+
+	def contrast(r, g, b):
+		def channel(c):
+			c /= 255
+			return c / 12.92 if c <= 0.03928 else ((c + 0.055) / 1.055) ** 2.4
+
+		luminance = 0.2126 * channel(r) + 0.7152 * channel(g) + 0.0722 * channel(b)
+		return 1.05 / (luminance + 0.05)
+
+	while contrast(r, g, b) < min_contrast and (r or g or b):
+		r, g, b = int(r * 0.9), int(g * 0.9), int(b * 0.9)
+	return f"#{r:02X}{g:02X}{b:02X}"
 
 
 def clean_url(url, label):
@@ -69,6 +120,8 @@ class BusinessProfile(WebsiteGenerator):
 			frappe.throw(frappe._("Please enter a Company Name or upload a Visiting Card"))
 
 		self.validate_urls()
+		for fieldname in COLOUR_FIELDS:
+			self.set(fieldname, clean_hex(self.get(fieldname)))
 		self.set_google_maps_url()
 		self.keep_welcome_fields()
 
@@ -84,8 +137,15 @@ class BusinessProfile(WebsiteGenerator):
 			from its_your_profile.api import card_read_cache_key
 
 			# Sides already read in the form before Save (api.read_visiting_card) need no background scan
-			if all(frappe.cache.get_value(card_read_cache_key(url)) for url in new_sides):
+			reads = [frappe.cache.get_value(card_read_cache_key(url)) for url in new_sides]
+			if all(reads):
 				self.card_scan_status = "Completed"
+				# Front first, so its colours win over the back's
+				for read in reads:
+					colours = read.get("colours", {}) if isinstance(read, dict) else {}
+					for fieldname, value in colours.items():
+						if value and not self.get(fieldname):
+							self.set(fieldname, value)
 			else:
 				self.card_scan_status = "Pending"
 		elif not self.is_new() and not self.flags.from_scan and self.get_doc_before_save():
@@ -122,10 +182,21 @@ class BusinessProfile(WebsiteGenerator):
 		parts = [self.company_name, self.address_line, self.city, self.state, self.pincode]
 		query = ", ".join(" ".join(p.split()) for p in parts if p and p.strip())
 		if self.address_line or self.city:
-			self.google_maps_url = "https://www.google.com/maps/search/?api=1&query=" + quote_plus(query)
+			self.google_maps_url = MAPS_SEARCH_PREFIX + quote_plus(query)
+
+	def get_map_embed_url(self):
+		"""A map that can be shown inside the public page: the website's own embedded map when
+		we found one, otherwise Google's address search in embed mode (no API key needed)."""
+		if MAP_EMBED.match(self.google_maps_url or ""):
+			return self.google_maps_url
+		if not (self.address_line or self.city):
+			return None
+		parts = [self.company_name, self.address_line, self.city, self.state, self.pincode]
+		query = ", ".join(" ".join(p.split()) for p in parts if p and p.strip())
+		return "https://maps.google.com/maps?q=" + quote_plus(query) + "&output=embed"
 
 	def make_route(self):
-		"""business/iyp-<year>-<month>-<5-digit number>, e.g. business/iyp-2026-10-00001.
+		"""business/iyp-<yy>-<mm>-<5-digit number>, e.g. business/iyp-26-10-00005.
 		The number counts every card in the year and starts again from 00001 each January."""
 		return make_profile_route(frappe.utils.get_datetime(self.creation or frappe.utils.now_datetime()))
 
@@ -152,11 +223,14 @@ class BusinessProfile(WebsiteGenerator):
 				enqueue_after_commit=True,
 			)
 
-		# Automatic welcome: only when switched on, once per business, and only when the email is
-		# new on this save (a new profile, or a card scan that just filled it). Existing businesses
-		# are not mailed when the switch is turned on; use the Desk button for those.
-		enabled, _account = welcome_email_settings()
-		if enabled and not self.welcome_email_sent and self.has_value_changed("email") and self.ready_for_welcome():
+		# Automatic welcome, only while the switch in Settings is on: once per business, when the
+		# email is new on this save. With the switch off, staff use the Desk button instead.
+		if (
+			welcome_emails_automatic()
+			and not self.welcome_email_sent
+			and self.has_value_changed("email")
+			and self.ready_for_welcome()
+		):
 			try:
 				self.send_welcome_email()
 			except Exception:
@@ -174,12 +248,24 @@ class BusinessProfile(WebsiteGenerator):
 		if not self.ready_for_welcome():
 			frappe.throw(frappe._("Add a valid Email and a Company Name, and keep the page Published, first."))
 
-		_enabled, account = welcome_email_settings()
+		account = welcome_email_account()
 		sender = frappe.db.get_value("Email Account", account, "email_id") if account else None
+
+		# Attach the card photos (front, and back if added) so the owner sees what we read
+		attachments = [
+			{"fid": file_name}
+			for file_name in (
+				frappe.db.get_value("File", {"file_url": self.get(side)}, "name")
+				for side in CARD_SIDES
+				if self.get(side)
+			)
+			if file_name
+		]
 
 		frappe.sendmail(
 			recipients=[self.email],
 			sender=sender,
+			attachments=attachments,
 			subject=frappe._("Your business is live: {0}").format(self.company_name),
 			template="business_profile_welcome",
 			args={
@@ -187,6 +273,7 @@ class BusinessProfile(WebsiteGenerator):
 				"details": self.get_details_for_email(),
 				"page_url": frappe.utils.get_url(self.route),
 				"edit_url": frappe.utils.get_url(f"/my-business/{self.name}/edit"),
+				"has_card": bool(attachments),
 			},
 			reference_doctype=self.doctype,
 			reference_name=self.name,
@@ -212,9 +299,13 @@ class BusinessProfile(WebsiteGenerator):
 	def get_context(self, context):
 		context.no_cache = 1
 		context.json_ld = self.get_json_ld()
+		# Card colours, made readable on the white page; the template falls back to its own
+		context.page_name_color = readable_on_white(self.name_color or self.brand_color)
+		context.page_brand_color = readable_on_white(self.brand_color or self.name_color)
+		context.map_embed_url = self.get_map_embed_url()
 		context.metatags = {
 			"title": self.company_name,
-			"description": frappe.utils.strip_html(self.ai_summary or "")[:300],
+			"description": (frappe.utils.strip_html(self.ai_summary or "") or self.about_business or "")[:300],
 		}
 
 	def get_json_ld(self):
@@ -223,7 +314,10 @@ class BusinessProfile(WebsiteGenerator):
 			"@type": "LocalBusiness",
 			"name": self.company_name,
 			"url": frappe.utils.get_url(self.route),
-			"description": frappe.utils.strip_html(self.ai_summary or "") or None,
+			"description": " ".join(
+				p for p in (self.about_business, frappe.utils.strip_html(self.ai_summary or "")) if p
+			)
+			or None,
 			"telephone": self.phone,
 			"email": self.email,
 			"foundingDate": str(self.established_year) if self.established_year else None,

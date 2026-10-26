@@ -2,6 +2,7 @@
 
 import ipaddress
 import mimetypes
+import re
 import socket
 from urllib.parse import urljoin, urlparse
 
@@ -50,12 +51,17 @@ def scan_visiting_card(profile: str):
 		# The AI call is slow; reload so edits saved meanwhile aren't overwritten (TimestampMismatchError)
 		doc = frappe.get_doc("Business Profile", profile)
 
+		from its_your_profile.its_your_profile.doctype.business_profile.business_profile import card_colours
+
 		# Only fill blanks, so anything the user already typed is kept
 		for details in results:
 			for key, fieldname in CARD_FIELD_MAP.items():
 				value = getattr(details, key)
 				if value and not doc.get(fieldname):
 					doc.set(fieldname, value.strip())
+			for fieldname, value in card_colours(details).items():
+				if value and not doc.get(fieldname):
+					doc.set(fieldname, value)
 
 		doc.card_scan_status = "Completed"
 		doc.flags.from_scan = True
@@ -87,6 +93,7 @@ def scrape_website(profile: str):
 		text = "\n\n".join(page_text(s) for s in soups)[:MAX_TEXT_CHARS]
 		insights = ai.analyse_website(text)
 		links = social_links(soups)
+		map_url = find_map_url(soups)
 
 		# The AI call is slow; reload so edits saved meanwhile aren't overwritten (TimestampMismatchError)
 		doc = frappe.get_doc("Business Profile", profile)
@@ -100,6 +107,7 @@ def scrape_website(profile: str):
 			if url and not any(p == platform for p, _label, _url in links):
 				links.append((platform, None, url))
 		add_profile_links(doc, links)
+		use_website_map(doc, map_url)
 
 		doc.save(ignore_permissions=True)
 		frappe.db.commit()
@@ -192,6 +200,35 @@ def social_links(soups: list[BeautifulSoup]) -> list[tuple[str, str | None, str]
 						found.append((platform, label, href))
 					break
 	return found
+
+
+MAP_EMBED = re.compile(r"^https://(www\.|maps\.)?google\.[a-z.]+/maps/embed", re.I)
+MAP_LINK = re.compile(r"^https://((www\.|maps\.)?google\.[a-z.]+/maps|maps\.app\.goo\.gl/|goo\.gl/maps)", re.I)
+
+
+def find_map_url(soups: list[BeautifulSoup]) -> str | None:
+	"""The business's own Google Map on its website: an embedded map (<iframe>) first, as it is
+	the exact location the owner chose, else a link to Google Maps."""
+	for soup in soups:
+		for frame in soup.find_all("iframe", src=True):
+			src = frame["src"].strip()
+			src = "https:" + src if src.startswith("//") else src
+			if MAP_EMBED.match(src):
+				return src
+	for soup in soups:
+		for a in soup.find_all("a", href=True):
+			href = a["href"].strip()
+			if MAP_LINK.match(href):
+				return href
+	return None
+
+
+def use_website_map(doc, map_url):
+	"""Prefer the website's map over one we built from the address; never replace one typed in."""
+	from its_your_profile.its_your_profile.doctype.business_profile.business_profile import MAPS_SEARCH_PREFIX
+
+	if map_url and (not doc.google_maps_url or doc.google_maps_url.startswith(MAPS_SEARCH_PREFIX)):
+		doc.google_maps_url = map_url
 
 
 def add_profile_links(doc, links):
