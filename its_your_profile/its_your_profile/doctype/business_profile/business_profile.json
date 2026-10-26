@@ -8,11 +8,15 @@
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
+  "card_section",
+  "visiting_card",
+  "visiting_card_back",
+  "column_break_card",
+  "card_scan_status",
+  "company_section",
   "company_name",
-  "route",
-  "published",
-  "column_break_main",
   "business_nature",
+  "column_break_main",
   "employee_range",
   "established_year",
   "contact_section",
@@ -22,11 +26,6 @@
   "phone",
   "email",
   "website_url",
-  "card_section",
-  "visiting_card",
-  "visiting_card_back",
-  "column_break_card",
-  "card_scan_status",
   "address_section",
   "address_line",
   "city",
@@ -37,9 +36,29 @@
   "social_section",
   "profile_links",
   "ai_section",
-  "ai_summary"
+  "ai_summary",
+  "page_section",
+  "published",
+  "column_break_page",
+  "route"
  ],
  "fields": [
+  {
+   "fieldname": "company_section",
+   "fieldtype": "Section Break",
+   "label": "Company"
+  },
+  {
+   "collapsible": 1,
+   "description": "The address of this business's public page. Filled automatically from the company name.",
+   "fieldname": "page_section",
+   "fieldtype": "Section Break",
+   "label": "Public Page"
+  },
+  {
+   "fieldname": "column_break_page",
+   "fieldtype": "Column Break"
+  },
   {
    "fieldname": "company_name",
    "fieldtype": "Data",
@@ -215,7 +234,7 @@
  "index_web_pages_for_search": 1,
  "is_published_field": "published",
  "links": [],
- "modified": "2026-10-26 10:00:00.000000",
+ "modified": "2026-10-26 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Its Your Profile",
  "name": "Business Profile",
