@@ -2,17 +2,12 @@ frappe.ready(function () {
 	const web_form = frappe.web_form;
 	const POLL_MS = 3000;
 
-	// Open the camera directly on phones when picking the visiting card
-	new MutationObserver(() => {
-		document.querySelectorAll('input[type="file"]:not([capture])').forEach((input) => {
-			input.setAttribute("accept", "image/*");
-			input.setAttribute("capture", "environment");
-		});
-	}).observe(document.body, { childList: true, subtree: true });
-
-	// Read each side as soon as it is attached, so the details are filled in before Save
+	// Read each side as soon as it is attached, so the details are filled in before Save.
+	// The same photo can arrive twice (Take Photo sets the field, which also fires its change).
+	const read_urls = new Set();
 	const read_card = (file_url) => {
-		if (!file_url) return;
+		if (!file_url || read_urls.has(file_url)) return;
+		read_urls.add(file_url);
 		frappe
 			.call({
 				method: "its_your_profile.api.read_visiting_card",
@@ -40,6 +35,73 @@ frappe.ready(function () {
 	};
 	web_form.on("visiting_card", (field, file_url) => read_card(file_url));
 	web_form.on("visiting_card_back", (field, file_url) => read_card(file_url));
+
+	// "Take Photo" on phones: opens the camera straight away. The normal Attach button stays
+	// for picking a photo from the gallery.
+	const MAX_SIDE = 1600; // px; plenty for the AI to read, and a phone photo uploads in seconds
+
+	const shrink = (file) =>
+		new Promise((resolve) => {
+			const img = new Image();
+			img.onload = () => {
+				const scale = Math.min(1, MAX_SIDE / Math.max(img.width, img.height));
+				const canvas = document.createElement("canvas");
+				canvas.width = Math.round(img.width * scale);
+				canvas.height = Math.round(img.height * scale);
+				canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
+				URL.revokeObjectURL(img.src);
+				canvas.toBlob((blob) => resolve(blob || file), "image/jpeg", 0.85);
+			};
+			img.onerror = () => resolve(file); // a format the browser can't draw: send it as it is
+			img.src = URL.createObjectURL(file);
+		});
+
+	const upload_photo = async (fieldname, file) => {
+		frappe.freeze(__("Uploading photo..."));
+		try {
+			const form = new FormData();
+			form.append("file", await shrink(file), `visiting-card-${Date.now()}.jpg`);
+			form.append("is_private", "1");
+			const response = await fetch("/api/method/upload_file", {
+				method: "POST",
+				headers: { "X-Frappe-CSRF-Token": frappe.csrf_token, Accept: "application/json" },
+				body: form,
+			});
+			const data = await response.json();
+			if (!response.ok || !data.message) throw new Error(data.exception || response.statusText);
+			const file_url = data.message.file_url;
+			await web_form.set_value(fieldname, file_url);
+			frappe.unfreeze();
+			read_card(file_url);
+		} catch (e) {
+			frappe.unfreeze();
+			frappe.msgprint(__("The photo could not be uploaded. Please try again, or use Attach."));
+		}
+	};
+
+	const on_phone = window.matchMedia("(pointer: coarse)").matches;
+	["visiting_card", "visiting_card_back"].forEach((fieldname) => {
+		const field = web_form.fields_dict[fieldname];
+		if (!on_phone || !field) return;
+
+		const input = document.createElement("input");
+		input.type = "file";
+		input.accept = "image/*";
+		input.setAttribute("capture", "environment"); // the back camera
+		input.hidden = true;
+		input.addEventListener("change", () => {
+			if (input.files[0]) upload_photo(fieldname, input.files[0]);
+			input.value = "";
+		});
+
+		const button = document.createElement("button");
+		button.type = "button";
+		button.className = "btn btn-primary btn-sm mt-2";
+		button.textContent = __("📷 Take Photo");
+		button.addEventListener("click", () => input.click());
+
+		field.$wrapper.append(button, input);
+	});
 
 	// Build a Google Maps link from the address while the form is being filled.
 	// A link the user pasted is kept; one we built is rebuilt when the address changes.
