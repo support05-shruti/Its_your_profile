@@ -82,7 +82,38 @@ function read_links(frm) {
 		});
 }
 
+// Send the welcome email by hand (works even while the automatic switch is off)
+function add_welcome_email_button(frm) {
+	if (frm.is_new() || !frm.doc.email) return;
+	const label = frm.doc.welcome_email_sent ? __("Resend Welcome Email") : __("Send Welcome Email");
+	frm.add_custom_button(label, () => {
+		frappe.confirm(
+			__("Send the welcome email with the page link to {0}?", [
+				`<b>${frappe.utils.escape_html(frm.doc.email)}</b>`,
+			]),
+			() =>
+				frappe
+					.call({
+						method: "its_your_profile.api.send_welcome_email",
+						args: { name: frm.doc.name },
+						freeze: true,
+						freeze_message: __("Sending..."),
+					})
+					.then(({ message }) => {
+						frappe.show_alert({
+							message: __("Welcome email queued for {0}", [message.sent_to]),
+							indicator: "green",
+						});
+						frm.reload_doc();
+					})
+		);
+	});
+}
+
 const handlers = {
+	refresh(frm) {
+		add_welcome_email_button(frm);
+	},
 	visiting_card(frm) {
 		read_card(frm, "visiting_card");
 	},

@@ -11,7 +11,11 @@
   "openai_section",
   "openai_api_key",
   "openai_model",
-  "openai_base_url"
+  "openai_base_url",
+  "email_section",
+  "send_welcome_email",
+  "column_break_email",
+  "welcome_email_account"
  ],
  "fields": [
   {
@@ -63,11 +67,34 @@
    "fieldname": "openai_base_url",
    "fieldtype": "Data",
    "label": "OpenAI Base URL"
+  },
+  {
+   "fieldname": "email_section",
+   "fieldtype": "Section Break",
+   "label": "Emails"
+  },
+  {
+   "default": "0",
+   "description": "Off until launch. When on, each new business gets one welcome email, at the email on its card, with the link to its public page.",
+   "fieldname": "send_welcome_email",
+   "fieldtype": "Check",
+   "label": "Send Welcome Email"
+  },
+  {
+   "fieldname": "column_break_email",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "The email address welcome emails are sent from. Add it first in Desk → Email Account with Enable Outgoing ticked. Leave empty to use the default outgoing account.",
+   "fieldname": "welcome_email_account",
+   "fieldtype": "Link",
+   "label": "Send From",
+   "options": "Email Account"
   }
  ],
  "issingle": 1,
  "links": [],
- "modified": "2026-10-22 10:00:00.000000",
+ "modified": "2026-10-26 14:00:00.000000",
  "modified_by": "Administrator",
  "module": "Its Your Profile",
  "name": "Its Your Profile Settings",

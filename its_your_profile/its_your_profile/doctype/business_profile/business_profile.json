@@ -37,6 +37,10 @@
   "profile_links",
   "ai_section",
   "ai_summary",
+  "welcome_section",
+  "welcome_email_sent",
+  "column_break_welcome",
+  "welcome_email_sent_on",
   "page_section",
   "published",
   "column_break_page",
@@ -50,7 +54,7 @@
   },
   {
    "collapsible": 1,
-   "description": "The address of this business's public page. Filled automatically from the company name.",
+   "description": "The address of this business's public page, made automatically as business/iyp-year-month-number (e.g. business/iyp-2026-10-00001). The number restarts at 00001 every year.",
    "fieldname": "page_section",
    "fieldtype": "Section Break",
    "label": "Public Page"
@@ -58,6 +62,32 @@
   {
    "fieldname": "column_break_page",
    "fieldtype": "Column Break"
+  },
+  {
+   "collapsible": 1,
+   "description": "One welcome email with the public page link goes to the email above, when Send Welcome Email is on in Its Your Profile Settings.",
+   "fieldname": "welcome_section",
+   "fieldtype": "Section Break",
+   "label": "Welcome Email"
+  },
+  {
+   "default": "0",
+   "fieldname": "welcome_email_sent",
+   "fieldtype": "Check",
+   "label": "Welcome Email Sent",
+   "no_copy": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_welcome",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "welcome_email_sent_on",
+   "fieldtype": "Datetime",
+   "label": "Sent On",
+   "no_copy": 1,
+   "read_only": 1
   },
   {
    "fieldname": "company_name",
@@ -234,7 +264,7 @@
  "index_web_pages_for_search": 1,
  "is_published_field": "published",
  "links": [],
- "modified": "2026-10-26 12:00:00.000000",
+ "modified": "2026-10-26 14:00:00.000000",
  "modified_by": "Administrator",
  "module": "Its Your Profile",
  "name": "Business Profile",

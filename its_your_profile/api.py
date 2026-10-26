@@ -65,6 +65,16 @@ def read_website_links(url: str):
 
 
 @frappe.whitelist(methods=["POST"])
+def send_welcome_email(name: str):
+	"""Desk button: send (or resend) the welcome email for one business, even while the
+	automatic switch in Its Your Profile Settings is off — e.g. to test before launch."""
+	doc = frappe.get_doc("Business Profile", name)
+	doc.check_permission("write")
+	doc.send_welcome_email()
+	return {"sent_to": doc.email}
+
+
+@frappe.whitelist(methods=["POST"])
 def upload_visiting_card():
 	"""Create a Business Profile from an uploaded card photo (multipart field `file`).
 

@@ -1,0 +1,25 @@
+<p>{{ _("Hello") }}{% if doc.contact_person %} {{ doc.contact_person | e }}{% endif %},</p>
+
+<p>{{ _("Welcome! We have created a page for {0} from your visiting card.").format(doc.company_name | e) }}</p>
+
+<p style="margin: 24px 0;">
+	<a href="{{ page_url }}" style="background: #1f5f8b; color: #ffffff; padding: 10px 18px; border-radius: 6px; text-decoration: none; font-weight: bold;">
+		{{ _("View your business page") }}
+	</a>
+</p>
+
+<p>{{ _("These are the details we read from your card:") }}</p>
+<table style="border-collapse: collapse; margin-bottom: 16px;">
+	{% for label, value in details %}
+	<tr>
+		<td style="padding: 4px 16px 4px 0; color: #566572;">{{ label }}</td>
+		<td style="padding: 4px 0;">{{ value | e }}</td>
+	</tr>
+	{% endfor %}
+</table>
+
+<p>{{ _("If anything is wrong, you can correct it here:") }} <a href="{{ edit_url }}">{{ edit_url }}</a></p>
+
+<p>{{ _("Your page link:") }} <a href="{{ page_url }}">{{ page_url }}</a></p>
+
+<p>{{ _("Thank you") }}</p>

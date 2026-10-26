@@ -26,6 +26,32 @@ CARD_FIELDS = (
 )
 
 
+# Set only when the welcome email goes out; never taken from a submitted form
+WELCOME_FIELDS = ("welcome_email_sent", "welcome_email_sent_on")
+
+
+def welcome_email_settings():
+	"""(enabled, sending account) from Its Your Profile Settings. Off until it is ticked there."""
+	try:
+		enabled, account = frappe.db.get_value(
+			"Its Your Profile Settings",
+			"Its Your Profile Settings",
+			["send_welcome_email", "welcome_email_account"],
+		) or (0, None)
+	except Exception:
+		return False, None  # settings not migrated yet
+	return bool(frappe.utils.cint(enabled)), account
+
+
+def make_profile_route(when):
+	"""Next public page address for a card made at `when`. One counter per year (Frappe's Series
+	table, key "iyp-<year>-"), so numbers never repeat and each year starts at 00001."""
+	from frappe.model.naming import getseries
+
+	number = getseries(f"iyp-{when.year}-", 5)
+	return f"business/iyp-{when.year}-{when.month:02d}-{number}"
+
+
 def clean_url(url, label):
 	"""Add https:// when missing, and allow only web links (no javascript: etc. on a public page)."""
 	url = (url or "").strip()
@@ -44,6 +70,7 @@ class BusinessProfile(WebsiteGenerator):
 
 		self.validate_urls()
 		self.set_google_maps_url()
+		self.keep_welcome_fields()
 
 		if self.company_name:
 			self.set_route()
@@ -71,6 +98,14 @@ class BusinessProfile(WebsiteGenerator):
 					if not self.get(fieldname) and before.get(fieldname):
 						self.set(fieldname, before.get(fieldname))
 
+	def keep_welcome_fields(self):
+		"""These change only when the email is sent (db_set), so a form opened earlier and saved
+		with stale values must not reset them and trigger a second email."""
+		before = None if self.is_new() else self.get_doc_before_save()
+		if before:
+			for fieldname in WELCOME_FIELDS:
+				self.set(fieldname, before.get(fieldname))
+
 	def validate_urls(self):
 		for fieldname in ("website_url", "google_maps_url"):
 			self.set(fieldname, clean_url(self.get(fieldname), self.meta.get_label(fieldname)))
@@ -90,12 +125,9 @@ class BusinessProfile(WebsiteGenerator):
 			self.google_maps_url = "https://www.google.com/maps/search/?api=1&query=" + quote_plus(query)
 
 	def make_route(self):
-		route = super().make_route()
-		base, suffix = route, 1
-		while frappe.db.exists("Business Profile", {"route": route, "name": ("!=", self.name)}):
-			suffix += 1
-			route = f"{base}-{suffix}"
-		return route
+		"""business/iyp-<year>-<month>-<5-digit number>, e.g. business/iyp-2026-10-00001.
+		The number counts every card in the year and starts again from 00001 each January."""
+		return make_profile_route(frappe.utils.get_datetime(self.creation or frappe.utils.now_datetime()))
 
 	def on_update(self):
 		super().on_update()
@@ -119,6 +151,63 @@ class BusinessProfile(WebsiteGenerator):
 				deduplicate=True,
 				enqueue_after_commit=True,
 			)
+
+		# Automatic welcome: only when switched on, once per business, and only when the email is
+		# new on this save (a new profile, or a card scan that just filled it). Existing businesses
+		# are not mailed when the switch is turned on; use the Desk button for those.
+		enabled, _account = welcome_email_settings()
+		if enabled and not self.welcome_email_sent and self.has_value_changed("email") and self.ready_for_welcome():
+			try:
+				self.send_welcome_email()
+			except Exception:
+				# A missing or broken email account must not stop the profile from saving
+				frappe.log_error(f"Welcome email failed for {self.name}")
+
+	def ready_for_welcome(self):
+		"""The email needs a real address to go to and a live page to link to."""
+		return bool(
+			self.company_name and self.route and self.published and frappe.utils.validate_email_address(self.email)
+		)
+
+	def send_welcome_email(self):
+		"""Email the owner the link to their public page, from the account chosen in Settings."""
+		if not self.ready_for_welcome():
+			frappe.throw(frappe._("Add a valid Email and a Company Name, and keep the page Published, first."))
+
+		_enabled, account = welcome_email_settings()
+		sender = frappe.db.get_value("Email Account", account, "email_id") if account else None
+
+		frappe.sendmail(
+			recipients=[self.email],
+			sender=sender,
+			subject=frappe._("Your business is live: {0}").format(self.company_name),
+			template="business_profile_welcome",
+			args={
+				"doc": self,
+				"details": self.get_details_for_email(),
+				"page_url": frappe.utils.get_url(self.route),
+				"edit_url": frappe.utils.get_url(f"/my-business/{self.name}/edit"),
+			},
+			reference_doctype=self.doctype,
+			reference_name=self.name,
+		)
+		self.db_set(
+			{"welcome_email_sent": 1, "welcome_email_sent_on": frappe.utils.now_datetime()},
+			update_modified=False,
+		)
+
+	def get_details_for_email(self):
+		address = ", ".join(p for p in (self.address_line, self.city, self.state, self.pincode) if p)
+		rows = [
+			(frappe._("Company Name"), self.company_name),
+			(frappe._("Contact Person"), self.contact_person),
+			(frappe._("Designation"), self.designation),
+			(frappe._("Phone"), self.phone),
+			(frappe._("Email"), self.email),
+			(frappe._("Website"), self.website_url),
+			(frappe._("Address"), address),
+		]
+		return [(label, value) for label, value in rows if value]
 
 	def get_context(self, context):
 		context.no_cache = 1
