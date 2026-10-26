@@ -38,6 +38,33 @@ def read_visiting_card(file_url: str):
 
 
 @frappe.whitelist(methods=["POST"])
+def read_website_links(url: str):
+	"""Fetch a website (homepage + contact page) and return its profile links, so the form's
+	Profile Links table fills in before Save. No AI involved, so it answers in seconds."""
+	from bs4 import BeautifulSoup
+
+	from its_your_profile.its_your_profile.doctype.business_profile.business_profile import clean_url
+	from its_your_profile.tasks import fetch, find_contact_page, social_links
+
+	if frappe.session.user == "Guest":
+		frappe.throw(_("Please log in"), frappe.PermissionError)
+
+	url = clean_url(url, _("Website URL"))
+	try:
+		pages = [fetch(url)]
+		if contact_url := find_contact_page(pages[0], url):
+			try:
+				pages.append(fetch(contact_url))
+			except Exception:
+				pass  # the homepage alone is still useful
+	except Exception:
+		frappe.throw(_("Could not open {0}. Please check the website address.").format(url))
+
+	links = social_links([BeautifulSoup(html, "html.parser") for html in pages])
+	return [{"platform": platform, "label": label, "url": link} for platform, label, link in links]
+
+
+@frappe.whitelist(methods=["POST"])
 def upload_visiting_card():
 	"""Create a Business Profile from an uploaded card photo (multipart field `file`).
 

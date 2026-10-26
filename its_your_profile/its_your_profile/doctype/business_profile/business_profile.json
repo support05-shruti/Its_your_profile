@@ -35,9 +35,7 @@
   "pincode",
   "google_maps_url",
   "social_section",
-  "linkedin_url",
-  "column_break_social",
-  "facebook_url",
+  "profile_links",
   "ai_section",
   "ai_summary"
  ],
@@ -118,6 +116,7 @@
   {
    "fieldname": "website_url",
    "fieldtype": "Data",
+   "length": 1000,
    "label": "Website URL"
   },
   {
@@ -182,28 +181,23 @@
    "label": "Pincode"
   },
   {
+   "description": "Filled automatically from the address on Save if left empty",
    "fieldname": "google_maps_url",
    "fieldtype": "Data",
+   "length": 1000,
    "label": "Google Maps URL"
   },
   {
    "fieldname": "social_section",
    "fieldtype": "Section Break",
-   "label": "Social"
+   "label": "Links"
   },
   {
-   "fieldname": "linkedin_url",
-   "fieldtype": "Data",
-   "label": "LinkedIn URL"
-  },
-  {
-   "fieldname": "column_break_social",
-   "fieldtype": "Column Break"
-  },
-  {
-   "fieldname": "facebook_url",
-   "fieldtype": "Data",
-   "label": "Facebook URL"
+   "description": "LinkedIn, Facebook, Google Profile, BNI or any other page. Links found on the website are added automatically.",
+   "fieldname": "profile_links",
+   "fieldtype": "Table",
+   "label": "Profile Links",
+   "options": "Business Profile Link"
   },
   {
    "fieldname": "ai_section",
@@ -221,7 +215,7 @@
  "index_web_pages_for_search": 1,
  "is_published_field": "published",
  "links": [],
- "modified": "2026-10-22 11:00:00.000000",
+ "modified": "2026-10-26 10:00:00.000000",
  "modified_by": "Administrator",
  "module": "Its Your Profile",
  "name": "Business Profile",

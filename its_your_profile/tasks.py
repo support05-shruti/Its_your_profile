@@ -95,10 +95,11 @@ def scrape_website(profile: str):
 			doc.business_nature = insights.business_nature
 		if not doc.established_year and insights.established_year:
 			doc.established_year = insights.established_year
-		if not doc.linkedin_url:
-			doc.linkedin_url = links.get("linkedin") or insights.linkedin_url
-		if not doc.facebook_url:
-			doc.facebook_url = links.get("facebook") or insights.facebook_url
+		# The AI only fills a platform the page's own <a> links didn't give us
+		for platform, url in (("LinkedIn", insights.linkedin_url), ("Facebook", insights.facebook_url)):
+			if url and not any(p == platform for p, _label, _url in links):
+				links.append((platform, None, url))
+		add_profile_links(doc, links)
 
 		doc.save(ignore_permissions=True)
 		frappe.db.commit()
@@ -145,14 +146,60 @@ def page_text(soup: BeautifulSoup) -> str:
 	return soup.get_text(" ", strip=True)
 
 
-def social_links(soups: list[BeautifulSoup]) -> dict:
-	found = {}
+# (host suffix, path must contain, platform, label for "Other") — first match wins
+LINK_RULES = (
+	("linkedin.com", "", "LinkedIn", None),
+	("facebook.com", "", "Facebook", None),
+	("fb.com", "", "Facebook", None),
+	("g.page", "", "Google Profile", None),
+	("business.google.com", "", "Google Profile", None),
+	("maps.app.goo.gl", "", "Google Profile", None),
+	("goo.gl", "/maps", "Google Profile", None),
+	("google.com", "/maps", "Google Profile", None),
+	("bniconnectglobal.com", "", "BNI", None),
+	("bni.com", "", "BNI", None),
+	("bniindia.in", "", "BNI", None),
+	("instagram.com", "", "Other", "Instagram"),
+	("youtube.com", "", "Other", "YouTube"),
+	("youtu.be", "", "Other", "YouTube"),
+	("twitter.com", "", "Other", "X (Twitter)"),
+	("x.com", "", "Other", "X (Twitter)"),
+	("wa.me", "", "Other", "WhatsApp"),
+	("indiamart.com", "", "Other", "IndiaMART"),
+	("justdial.com", "", "Other", "Justdial"),
+	("pinterest.com", "", "Other", "Pinterest"),
+)
+
+# "Share this page" buttons, not the company's own profile
+SHARE_PATHS = ("/sharer", "/share", "/intent", "/shareArticle", "/dialog/")
+
+
+def social_links(soups: list[BeautifulSoup]) -> list[tuple[str, str | None, str]]:
+	"""Find the company's profile links on its pages, one per platform, as (platform, label, url)."""
+	found, seen = [], set()
 	for soup in soups:
 		for a in soup.find_all("a", href=True):
-			href = a["href"]
-			host = urlparse(href).hostname or ""
-			if host.endswith("linkedin.com"):
-				found.setdefault("linkedin", href)
-			elif host.endswith("facebook.com"):
-				found.setdefault("facebook", href)
+			href = a["href"].strip()
+			parsed = urlparse(href)
+			host, path = (parsed.hostname or "").removeprefix("www."), parsed.path or ""
+			if parsed.scheme not in ("http", "https") or any(s in path for s in SHARE_PATHS):
+				continue
+			for suffix, path_part, platform, label in LINK_RULES:
+				if (host == suffix or host.endswith("." + suffix)) and path_part in path:
+					key = (platform, label)
+					if key not in seen:
+						seen.add(key)
+						found.append((platform, label, href))
+					break
 	return found
+
+
+def add_profile_links(doc, links):
+	"""Append links to the profile's table, skipping platforms (and URLs) it already has."""
+	have = {(row.platform, row.label or None) for row in doc.profile_links}
+	have_urls = {row.url.rstrip("/").lower() for row in doc.profile_links if row.url}
+	for platform, label, url in links:
+		if (platform, label) in have or url.rstrip("/").lower() in have_urls:
+			continue
+		doc.append("profile_links", {"platform": platform, "label": label, "url": url})
+		have.add((platform, label))

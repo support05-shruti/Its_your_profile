@@ -33,10 +33,73 @@ frappe.ready(function () {
 						: __("No new details found on this side of the card."),
 					indicator: filled.length ? "green" : "orange",
 				});
+				// The card may have given us an address and a website: use them straight away
+				update_maps_url();
+				read_links(web_form.get_value("website_url"));
 			});
 	};
 	web_form.on("visiting_card", (field, file_url) => read_card(file_url));
 	web_form.on("visiting_card_back", (field, file_url) => read_card(file_url));
+
+	// Build a Google Maps link from the address while the form is being filled.
+	// A link the user pasted is kept; one we built is rebuilt when the address changes.
+	const MAPS_PREFIX = "https://www.google.com/maps/search/?api=1&query=";
+	const update_maps_url = () => {
+		const current = web_form.get_value("google_maps_url") || "";
+		if (current && !current.startsWith(MAPS_PREFIX)) return;
+		if (!web_form.get_value("address_line") && !web_form.get_value("city")) return;
+
+		const query = ["company_name", "address_line", "city", "state", "pincode"]
+			.map((f) => (web_form.get_value(f) || "").replace(/\s+/g, " ").trim())
+			.filter(Boolean)
+			.join(", ");
+		const url = MAPS_PREFIX + encodeURIComponent(query).replace(/%20/g, "+");
+		if (url !== current) web_form.set_value("google_maps_url", url);
+	};
+	["company_name", "address_line", "city", "state", "pincode"].forEach((f) =>
+		web_form.on(f, update_maps_url)
+	);
+
+	// Read the website's profile links as soon as a website is given, and add them to the table
+	let last_links_url = null;
+	const read_links = (url) => {
+		url = (url || "").trim();
+		if (!url || url === last_links_url) return;
+		last_links_url = url;
+
+		frappe
+			.call({
+				method: "its_your_profile.api.read_website_links",
+				args: { url },
+				freeze: true,
+				freeze_message: __("Finding your links on the website..."),
+			})
+			.then(({ message: links }) => {
+				const field = web_form.fields_dict.profile_links;
+				const rows = (field.df.data = field.grid.get_data() || []);
+				const key = (r) => `${r.platform}|${r.label || ""}`;
+				const clean = (u) => (u || "").replace(/\/+$/, "").toLowerCase();
+				const have = new Set(rows.map(key));
+				const have_urls = new Set(rows.map((r) => clean(r.url)));
+
+				let added = 0;
+				(links || []).forEach((link) => {
+					if (have.has(key(link)) || have_urls.has(clean(link.url))) return;
+					rows.push({ idx: rows.length + 1, __islocal: true, ...link, label: link.label || "" });
+					have.add(key(link));
+					added++;
+				});
+				field.grid.refresh();
+
+				frappe.show_alert({
+					message: added
+						? __("Added {0} links from the website. Please check them.", [added])
+						: __("No new profile links found on the website."),
+					indicator: added ? "green" : "orange",
+				});
+			});
+	};
+	web_form.on("website_url", (field, url) => read_links(url));
 
 	// After a new card is submitted, go to its edit page so the user can watch the scan finish
 	const handle_success = web_form.handle_success.bind(web_form);

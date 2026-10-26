@@ -2,6 +2,7 @@
 # For license information, please see license.txt
 
 import json
+from urllib.parse import quote_plus
 
 import frappe
 from frappe.website.website_generator import WebsiteGenerator
@@ -25,6 +26,16 @@ CARD_FIELDS = (
 )
 
 
+def clean_url(url, label):
+	"""Add https:// when missing, and allow only web links (no javascript: etc. on a public page)."""
+	url = (url or "").strip()
+	if url and "://" not in url:
+		url = "https://" + url
+	if url and not url.lower().startswith(("http://", "https://")):
+		frappe.throw(frappe._("{0} must be a web address").format(label))
+	return url or None
+
+
 class BusinessProfile(WebsiteGenerator):
 	def validate(self):
 		# A profile created from a card upload has no company name until the scan finishes
@@ -32,6 +43,7 @@ class BusinessProfile(WebsiteGenerator):
 			frappe.throw(frappe._("Please enter a Company Name or upload a Visiting Card"))
 
 		self.validate_urls()
+		self.set_google_maps_url()
 
 		if self.company_name:
 			self.set_route()
@@ -60,13 +72,22 @@ class BusinessProfile(WebsiteGenerator):
 						self.set(fieldname, before.get(fieldname))
 
 	def validate_urls(self):
-		for fieldname in ("website_url", "google_maps_url", "linkedin_url", "facebook_url"):
-			url = (self.get(fieldname) or "").strip()
-			if url and "://" not in url:
-				url = "https://" + url
-			if url and not url.lower().startswith(("http://", "https://")):
-				frappe.throw(frappe._("{0} must be a web address").format(self.meta.get_label(fieldname)))
-			self.set(fieldname, url or None)
+		for fieldname in ("website_url", "google_maps_url"):
+			self.set(fieldname, clean_url(self.get(fieldname), self.meta.get_label(fieldname)))
+
+		for row in self.profile_links:
+			row.url = clean_url(row.url, frappe._("Link in row {0}").format(row.idx))
+			if row.platform != "Other":
+				row.label = None
+
+	def set_google_maps_url(self):
+		"""Cards carry an address, not a Maps link, so build a Maps search link from the address."""
+		if self.google_maps_url:
+			return
+		parts = [self.company_name, self.address_line, self.city, self.state, self.pincode]
+		query = ", ".join(" ".join(p.split()) for p in parts if p and p.strip())
+		if self.address_line or self.city:
+			self.google_maps_url = "https://www.google.com/maps/search/?api=1&query=" + quote_plus(query)
 
 	def make_route(self):
 		route = super().make_route()
@@ -119,7 +140,7 @@ class BusinessProfile(WebsiteGenerator):
 			"foundingDate": str(self.established_year) if self.established_year else None,
 			"numberOfEmployees": self.employee_range,
 			"hasMap": self.google_maps_url,
-			"sameAs": [u for u in (self.website_url, self.linkedin_url, self.facebook_url) if u] or None,
+			"sameAs": [u for u in (self.website_url, *(row.url for row in self.profile_links)) if u] or None,
 			# Private cards (/private/files/...) can't be opened by visitors, so don't advertise them
 			"image": frappe.utils.get_url(self.visiting_card)
 			if (self.visiting_card or "").startswith("/files/")

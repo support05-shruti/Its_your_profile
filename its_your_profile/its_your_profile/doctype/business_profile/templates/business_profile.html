@@ -70,12 +70,15 @@
 	</section>
 	{% endif %}
 
-	{% if linkedin_url or facebook_url %}
-	<p class="mt-4">
-		{% if linkedin_url %}<a href="{{ linkedin_url }}" rel="noopener" target="_blank">LinkedIn</a>{% endif %}
-		{% if linkedin_url and facebook_url %} · {% endif %}
-		{% if facebook_url %}<a href="{{ facebook_url }}" rel="noopener" target="_blank">Facebook</a>{% endif %}
-	</p>
+	{% if doc.profile_links %}
+	<section class="mt-4">
+		<h2 class="h5">{{ _("Find us on") }}</h2>
+		<p>
+			{% for link in doc.profile_links %}
+			<a href="{{ link.url }}" rel="noopener" target="_blank">{{ link.label if link.platform == "Other" and link.label else link.platform }}</a>{% if not loop.last %} · {% endif %}
+			{% endfor %}
+		</p>
+	</section>
 	{% endif %}
 </article>
 {% endblock %}

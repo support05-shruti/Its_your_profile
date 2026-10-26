@@ -43,7 +43,7 @@
  ],
  "login_required": 1,
  "max_attachment_size": 10,
- "modified": "2026-10-22 11:00:00.000000",
+ "modified": "2026-10-24 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Its Your Profile",
  "name": "my-business",
@@ -59,6 +59,11 @@
  "title": "My Business Profile",
  "web_form_fields": [
   {
+   "fieldname": "card_section",
+   "fieldtype": "Section Break",
+   "label": "Visiting Card"
+  },
+  {
    "fieldname": "visiting_card",
    "fieldtype": "Attach Image",
    "label": "Visiting Card",
@@ -72,6 +77,10 @@
    "reqd": 0
   },
   {
+   "fieldname": "column_break_card",
+   "fieldtype": "Column Break"
+  },
+  {
    "fieldname": "card_scan_status",
    "fieldtype": "Select",
    "label": "Card Scan Status",
@@ -80,39 +89,14 @@
    "reqd": 0
   },
   {
+   "fieldname": "company_section",
+   "fieldtype": "Section Break",
+   "label": "Company"
+  },
+  {
    "fieldname": "company_name",
    "fieldtype": "Data",
    "label": "Company Name",
-   "reqd": 0
-  },
-  {
-   "fieldname": "website_url",
-   "fieldtype": "Data",
-   "label": "Website URL",
-   "reqd": 0
-  },
-  {
-   "fieldname": "contact_person",
-   "fieldtype": "Data",
-   "label": "Contact Person",
-   "reqd": 0
-  },
-  {
-   "fieldname": "designation",
-   "fieldtype": "Data",
-   "label": "Designation",
-   "reqd": 0
-  },
-  {
-   "fieldname": "phone",
-   "fieldtype": "Data",
-   "label": "Phone",
-   "reqd": 0
-  },
-  {
-   "fieldname": "email",
-   "fieldtype": "Data",
-   "label": "Email",
    "reqd": 0
   },
   {
@@ -121,6 +105,10 @@
    "label": "Business Nature",
    "options": "\nService\nManufacturing\nHybrid/Trading",
    "reqd": 0
+  },
+  {
+   "fieldname": "column_break_main",
+   "fieldtype": "Column Break"
   },
   {
    "fieldname": "employee_range",
@@ -136,6 +124,51 @@
    "reqd": 0
   },
   {
+   "fieldname": "contact_section",
+   "fieldtype": "Section Break",
+   "label": "Contact"
+  },
+  {
+   "fieldname": "contact_person",
+   "fieldtype": "Data",
+   "label": "Contact Person",
+   "reqd": 0
+  },
+  {
+   "fieldname": "designation",
+   "fieldtype": "Data",
+   "label": "Designation",
+   "reqd": 0
+  },
+  {
+   "fieldname": "column_break_contact",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "phone",
+   "fieldtype": "Data",
+   "label": "Phone",
+   "reqd": 0
+  },
+  {
+   "fieldname": "email",
+   "fieldtype": "Data",
+   "label": "Email",
+   "reqd": 0
+  },
+  {
+   "description": "If you add your website, we read it and add your social links below automatically.",
+   "fieldname": "website_url",
+   "fieldtype": "Data",
+   "label": "Website URL",
+   "reqd": 0
+  },
+  {
+   "fieldname": "address_section",
+   "fieldtype": "Section Break",
+   "label": "Address"
+  },
+  {
    "fieldname": "address_line",
    "fieldtype": "Small Text",
    "label": "Address Line",
@@ -146,6 +179,10 @@
    "fieldtype": "Data",
    "label": "City",
    "reqd": 0
+  },
+  {
+   "fieldname": "column_break_address",
+   "fieldtype": "Column Break"
   },
   {
    "fieldname": "state",
@@ -160,21 +197,23 @@
    "reqd": 0
   },
   {
+   "description": "Leave empty and we will make it from your address.",
    "fieldname": "google_maps_url",
    "fieldtype": "Data",
    "label": "Google Maps URL",
    "reqd": 0
   },
   {
-   "fieldname": "linkedin_url",
-   "fieldtype": "Data",
-   "label": "LinkedIn URL",
-   "reqd": 0
+   "fieldname": "social_section",
+   "fieldtype": "Section Break",
+   "label": "Links"
   },
   {
-   "fieldname": "facebook_url",
-   "fieldtype": "Data",
-   "label": "Facebook URL",
+   "description": "LinkedIn, Facebook, Google Profile, BNI or any other page. Click Add Row for each link.",
+   "fieldname": "profile_links",
+   "fieldtype": "Table",
+   "label": "Profile Links",
+   "options": "Business Profile Link",
    "reqd": 0
   }
  ]
