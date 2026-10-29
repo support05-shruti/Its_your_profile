@@ -277,6 +277,8 @@ class BusinessProfile(WebsiteGenerator):
 			},
 			reference_doctype=self.doctype,
 			reference_name=self.name,
+			# Send right away; the queue is otherwise only emptied every 4 minutes by the scheduler
+			now=True,
 		)
 		self.db_set(
 			{"welcome_email_sent": 1, "welcome_email_sent_on": frappe.utils.now_datetime()},

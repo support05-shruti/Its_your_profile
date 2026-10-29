@@ -32,15 +32,22 @@ def read_visiting_card(file_url: str):
 	details = ai.extract_card_details(file.get_content(), mime_type)
 	colours = card_colours(details)
 
+	values = {
+		fieldname: getattr(details, key).strip()
+		for key, fieldname in CARD_FIELD_MAP.items()
+		if getattr(details, key) and getattr(details, key).strip()
+	}
+	if not values:
+		# Not remembered as read, so Save still queues the background scan as a second try
+		frappe.throw(
+			_("Could not read any details from this photo. Please take a clearer, straight photo of the card in good light, or type the details."),
+			title=_("Card not readable"),
+		)
+
 	# Remembered for the Save that follows: marks the card as read (no background scan) and
 	# carries its colours, which the user form has no boxes for
 	frappe.cache.set_value(card_read_cache_key(file_url), {"colours": colours}, expires_in_sec=3600)
 
-	values = {
-		fieldname: getattr(details, key).strip()
-		for key, fieldname in CARD_FIELD_MAP.items()
-		if getattr(details, key)
-	}
 	return {**values, **colours}
 
 

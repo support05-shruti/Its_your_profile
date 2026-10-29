@@ -117,9 +117,19 @@ function add_welcome_email_button(frm) {
 	});
 }
 
+// Read the attached card again, e.g. after attaching a clearer photo; fills only empty fields
+function add_read_again_button(frm) {
+	if (frm.is_new() || !(frm.doc.visiting_card || frm.doc.visiting_card_back)) return;
+	frm.add_custom_button(__("Read Card Again"), () => {
+		if (frm.doc.visiting_card) read_card(frm, "visiting_card");
+		if (frm.doc.visiting_card_back) read_card(frm, "visiting_card_back");
+	});
+}
+
 const handlers = {
 	refresh(frm) {
 		add_welcome_email_button(frm);
+		add_read_again_button(frm);
 	},
 	visiting_card(frm) {
 		read_card(frm, "visiting_card");
