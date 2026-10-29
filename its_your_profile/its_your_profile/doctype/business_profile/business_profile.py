@@ -103,6 +103,14 @@ def readable_on_white(hex_colour, min_contrast=3.0):
 	return f"#{r:02X}{g:02X}{b:02X}"
 
 
+PHONE_SEPARATORS = re.compile(r"[\s\-().]")
+
+
+def clean_phone(phone):
+	"""'+91 20 2447-1409' → '+912024471409'. Keeps '+', and '/' or ',' between two numbers."""
+	return PHONE_SEPARATORS.sub("", phone or "") or None
+
+
 def clean_url(url, label):
 	"""Add https:// when missing, and allow only web links (no javascript: etc. on a public page)."""
 	url = (url or "").strip()
@@ -119,6 +127,8 @@ class BusinessProfile(WebsiteGenerator):
 		if not self.company_name and not (self.visiting_card or self.visiting_card_back):
 			frappe.throw(frappe._("Please enter a Company Name or upload a Visiting Card"))
 
+		self.phone = clean_phone(self.phone)
+		self.set_website_from_email()
 		self.validate_urls()
 		for fieldname in COLOUR_FIELDS:
 			self.set(fieldname, clean_hex(self.get(fieldname)))
@@ -157,6 +167,15 @@ class BusinessProfile(WebsiteGenerator):
 				for fieldname in CARD_FIELDS:
 					if not self.get(fieldname) and before.get(fieldname):
 						self.set(fieldname, before.get(fieldname))
+
+	def set_website_from_email(self):
+		"""No website given: try the company domain of the email (info@acme.in → https://acme.in).
+		Only when the email is new on this save, as it means a quick check that the site opens."""
+		if self.website_url or not self.email or not self.has_value_changed("email"):
+			return
+		from its_your_profile.tasks import website_from_email
+
+		self.website_url = website_from_email(self.email)
 
 	def keep_welcome_fields(self):
 		"""These change only when the email is sent (db_set), so a form opened earlier and saved

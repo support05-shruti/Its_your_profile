@@ -63,6 +63,9 @@ def scan_visiting_card(profile: str):
 				if value and not doc.get(fieldname):
 					doc.set(fieldname, value)
 
+		if not doc.website_url:
+			doc.website_url = website_from_email(doc.email)
+
 		doc.card_scan_status = "Completed"
 		doc.flags.from_scan = True
 		doc.save(ignore_permissions=True)
@@ -115,6 +118,34 @@ def scrape_website(profile: str):
 		frappe.db.rollback()
 		frappe.log_error(f"Website scrape failed for {profile}")
 		logger.exception(f"Website scrape failed for {profile}")
+
+
+# Free/personal mail services: an address there says nothing about the business's own website
+FREE_EMAIL_DOMAINS = {
+	"gmail.com", "googlemail.com", "yahoo.com", "yahoo.co.in", "yahoo.in", "ymail.com", "rocketmail.com",
+	"rediffmail.com", "outlook.com", "outlook.in", "hotmail.com", "live.com", "live.in", "msn.com",
+	"icloud.com", "me.com", "aol.com", "zoho.com", "zohomail.in", "protonmail.com", "proton.me",
+	"gmx.com", "mail.com", "yandex.com",
+}  # fmt: skip
+
+
+def website_from_email(email: str | None) -> str | None:
+	"""info@softworld.co.in → https://softworld.co.in, but only if that website actually opens.
+	Personal addresses (gmail.com and the like) give nothing."""
+	domain = email.rsplit("@", 1)[-1].strip().lower() if email and "@" in email else ""
+	if not domain or "." not in domain or domain in FREE_EMAIL_DOMAINS:
+		return None
+
+	for url in (f"https://{domain}", f"https://www.{domain}"):
+		try:
+			ensure_public_url(url)
+			response = requests.get(url, headers={"User-Agent": USER_AGENT}, timeout=8, allow_redirects=True)
+			ensure_public_url(response.url)
+			if response.ok:
+				return url
+		except Exception:
+			continue  # no such site, or not reachable: try the next form
+	return None
 
 
 def fetch(url: str) -> str:

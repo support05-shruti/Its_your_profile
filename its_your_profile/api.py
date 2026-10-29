@@ -26,7 +26,10 @@ def read_visiting_card(file_url: str):
 	if not frappe.has_permission("File", "read", doc=file):
 		frappe.throw(_("Not permitted"), frappe.PermissionError)
 
-	from its_your_profile.its_your_profile.doctype.business_profile.business_profile import card_colours
+	from its_your_profile.its_your_profile.doctype.business_profile.business_profile import (
+		card_colours,
+		clean_phone,
+	)
 
 	mime_type = mimetypes.guess_type(file.file_name or file_url)[0] or "image/jpeg"
 	details = ai.extract_card_details(file.get_content(), mime_type)
@@ -37,6 +40,16 @@ def read_visiting_card(file_url: str):
 		for key, fieldname in CARD_FIELD_MAP.items()
 		if getattr(details, key) and getattr(details, key).strip()
 	}
+	if values.get("phone"):
+		values["phone"] = clean_phone(values["phone"])  # shown clean in the form before Save
+
+	if values.get("email") and not values.get("website_url"):
+		from its_your_profile.tasks import website_from_email
+
+		# No website on the card: try the company domain of the email (the form then reads its links)
+		if website := website_from_email(values["email"]):
+			values["website_url"] = website
+
 	if not values:
 		# Not remembered as read, so Save still queues the background scan as a second try
 		frappe.throw(
