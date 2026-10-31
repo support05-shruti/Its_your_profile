@@ -106,6 +106,63 @@ def send_welcome_email(name: str):
 
 
 @frappe.whitelist(methods=["POST"])
+def rotate_visiting_card(name: str, fieldname: str, direction: str):
+	"""Desk button: turn a card photo a quarter left or right. Saved as a new file, so the
+	browser shows the new image at once instead of a cached copy of the old one."""
+	import io
+
+	from PIL import Image, ImageOps
+
+	if fieldname not in ("visiting_card", "visiting_card_back"):
+		frappe.throw(_("Not a visiting card field"))
+
+	doc = frappe.get_doc("Business Profile", name)
+	doc.check_permission("write")
+	old_url = doc.get(fieldname)
+	if not old_url:
+		frappe.throw(_("No photo to rotate"))
+	old_file = frappe.get_doc("File", {"file_url": old_url})
+
+	# Apply the phone's EXIF orientation first, so we turn the photo as it looks on screen
+	image = Image.open(io.BytesIO(old_file.get_content()))
+	image_format = image.format if image.format in ("JPEG", "PNG", "WEBP") else "JPEG"
+	image = ImageOps.exif_transpose(image).rotate(90 if direction == "left" else -90, expand=True)
+	if image_format == "JPEG" and image.mode not in ("RGB", "L"):
+		image = image.convert("RGB")
+	buffer = io.BytesIO()
+	image.save(buffer, format=image_format, quality=95)
+
+	new_file = frappe.get_doc(
+		{
+			"doctype": "File",
+			"file_name": old_file.file_name,
+			"attached_to_doctype": "Business Profile",
+			"attached_to_name": name,
+			"attached_to_field": fieldname,
+			"is_private": old_file.is_private,
+			"content": buffer.getvalue(),
+		}
+	).insert(ignore_permissions=True)
+
+	doc.db_set(fieldname, new_file.file_url)
+	try:
+		frappe.delete_doc("File", old_file.name, ignore_permissions=True)
+	except Exception:
+		pass  # an old photo left behind is harmless; the profile already points at the new one
+	return {"file_url": new_file.file_url}
+
+
+@frappe.whitelist(methods=["POST"])
+def refresh_ai_summary(name: str):
+	"""Desk button: read the website (or search Google) again and rewrite the AI Summary."""
+	from its_your_profile.tasks import scrape_website
+
+	frappe.get_doc("Business Profile", name).check_permission("write")
+	scrape_website(name)
+	return {"ai_summary": frappe.db.get_value("Business Profile", name, "ai_summary")}
+
+
+@frappe.whitelist(methods=["POST"])
 def upload_visiting_card():
 	"""Create a Business Profile from an uploaded card photo (multipart field `file`).
 

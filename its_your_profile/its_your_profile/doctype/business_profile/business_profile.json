@@ -8,15 +8,6 @@
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
-  "card_section",
-  "visiting_card",
-  "visiting_card_back",
-  "column_break_card",
-  "card_scan_status",
-  "colours_section",
-  "name_color",
-  "column_break_colours",
-  "brand_color",
   "company_section",
   "company_name",
   "business_nature",
@@ -27,6 +18,8 @@
   "contact_section",
   "contact_person",
   "designation",
+  "contact_linkedin_url",
+  "linkedin_status",
   "column_break_contact",
   "phone",
   "email",
@@ -42,6 +35,17 @@
   "profile_links",
   "ai_section",
   "ai_summary",
+  "card_section",
+  "visiting_card",
+  "visiting_card_preview",
+  "column_break_card",
+  "visiting_card_back",
+  "visiting_card_back_preview",
+  "card_scan_status",
+  "colours_section",
+  "name_color",
+  "column_break_colours",
+  "brand_color",
   "welcome_section",
   "welcome_email_sent",
   "column_break_welcome",
@@ -183,6 +187,24 @@
    "label": "Designation"
   },
   {
+   "description": "Found automatically with a Google search when the Contact Person is filled in. Check it is the right person.",
+   "fieldname": "contact_linkedin_url",
+   "fieldtype": "Data",
+   "label": "Contact Person's LinkedIn",
+   "length": 1000,
+   "options": "URL"
+  },
+  {
+   "description": "Whether the contact person's LinkedIn profile was found. The company's LinkedIn page, if found, is added to Profile Links.",
+   "fieldname": "linkedin_status",
+   "fieldtype": "Select",
+   "in_standard_filter": 1,
+   "label": "LinkedIn Search",
+   "no_copy": 1,
+   "options": "\nSearching\nFound\nNot Found\nFailed",
+   "read_only": 1
+  },
+  {
    "fieldname": "column_break_contact",
    "fieldtype": "Column Break"
   },
@@ -217,6 +239,20 @@
    "fieldname": "visiting_card",
    "fieldtype": "Attach Image",
    "label": "Visiting Card"
+  },
+  {
+   "depends_on": "visiting_card",
+   "fieldname": "visiting_card_preview",
+   "fieldtype": "Image",
+   "label": "Visiting Card Photo",
+   "options": "visiting_card"
+  },
+  {
+   "depends_on": "visiting_card_back",
+   "fieldname": "visiting_card_back_preview",
+   "fieldtype": "Image",
+   "label": "Visiting Card Photo (Back Side)",
+   "options": "visiting_card_back"
   },
   {
    "fieldname": "column_break_card",
@@ -298,7 +334,7 @@
  "index_web_pages_for_search": 1,
  "is_published_field": "published",
  "links": [],
- "modified": "2026-10-27 12:00:00.000000",
+ "modified": "2026-10-30 13:58:38.730119",
  "modified_by": "Administrator",
  "module": "Its Your Profile",
  "name": "Business Profile",

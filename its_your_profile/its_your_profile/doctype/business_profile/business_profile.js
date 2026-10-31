@@ -4,6 +4,95 @@
 // Wrapped so the desk can load this script more than once without "already declared" errors
 (() => {
 const MAPS_PREFIX = "https://www.google.com/maps/search/?api=1&query=";
+// preview field → the attach field it shows
+const CARD_PREVIEWS = {
+	visiting_card_preview: "visiting_card",
+	visiting_card_back_preview: "visiting_card_back",
+};
+
+// Show the card photos as small thumbnails with rotate buttons; click one to open it full size
+function style_card_previews(frm) {
+	Object.entries(CARD_PREVIEWS).forEach(([preview, source]) => {
+		const field = frm.fields_dict[preview];
+		if (!field) return;
+		field.$wrapper
+			.find("img")
+			.css({ "max-width": "260px", "max-height": "160px", "object-fit": "contain", cursor: "zoom-in" })
+			.addClass("border rounded")
+			.off("click.card")
+			.on("click.card", function () {
+				window.open(this.src, "_blank");
+			});
+
+		field.$wrapper.find(".card-rotate").remove();
+		if (frm.is_new() || !frm.doc[source]) return;
+		const $buttons = $(`<div class="card-rotate mt-2">
+			<button class="btn btn-xs btn-default" data-direction="left">↺ ${__("Rotate Left")}</button>
+			<button class="btn btn-xs btn-default ml-2" data-direction="right">↻ ${__("Rotate Right")}</button>
+		</div>`).appendTo(field.$wrapper);
+		$buttons.find("button").on("click", function () {
+			rotate_card(frm, source, $(this).data("direction"));
+		});
+	});
+}
+
+// Frappe's Upload → crop window has no rotate button, but its Cropper (window.cropper) can rotate;
+// add ↺ ↻ buttons there while a Business Profile is open. The turn is kept when Crop is clicked.
+function add_cropper_rotate_buttons() {
+	document.querySelectorAll(".image-cropper-actions").forEach((actions) => {
+		if (actions.querySelector(".cropper-rotate")) return;
+		if (!window.cur_frm || cur_frm.doctype !== "Business Profile") return;
+		const $buttons = $(`<div class="cropper-rotate btn-group ml-2">
+			<button type="button" class="btn btn-default btn-sm" data-degrees="-90" title="${__("Rotate Left")}">↺</button>
+			<button type="button" class="btn btn-default btn-sm" data-degrees="90" title="${__("Rotate Right")}">↻</button>
+		</div>`);
+		$buttons.find("button").on("click", function () {
+			rotate_cropper($(this).data("degrees"));
+		});
+		$(actions).children().first().css("display", "flex").append($buttons);
+	});
+}
+
+// Turn the photo itself and load it back into the cropper, which then fits it to the box.
+// (Cropper's own rotate() leaves the turned photo overflowing the box.)
+function rotate_cropper(degrees) {
+	const cropper = window.cropper;
+	if (!cropper) return;
+	const source = cropper.element;
+	const width = source.naturalWidth;
+	const height = source.naturalHeight;
+
+	const canvas = document.createElement("canvas");
+	canvas.width = height;
+	canvas.height = width;
+	const ctx = canvas.getContext("2d");
+	ctx.translate(height / 2, width / 2);
+	ctx.rotate((degrees * Math.PI) / 180);
+	ctx.drawImage(source, -width / 2, -height / 2);
+
+	// Frappe's cropper builds a new Cropper on every image load, which would replace the working one
+	source.onload = null;
+	cropper.replace(canvas.toDataURL("image/jpeg", 0.95));
+}
+
+if (!window.__card_cropper_observer) {
+	window.__card_cropper_observer = new MutationObserver(add_cropper_rotate_buttons);
+	window.__card_cropper_observer.observe(document.body, { childList: true, subtree: true });
+}
+
+function rotate_card(frm, fieldname, direction) {
+	const run = () =>
+		frappe
+			.call({
+				method: "its_your_profile.api.rotate_visiting_card",
+				args: { name: frm.doc.name, fieldname, direction },
+				freeze: true,
+				freeze_message: __("Rotating..."),
+			})
+			.then(() => frm.reload_doc());
+	// Unsaved edits would be lost by the reload afterwards, so save first
+	frm.is_dirty() ? frm.save().then(run) : run();
+}
 const ADDRESS_FIELDS = ["company_name", "address_line", "city", "state", "pincode"];
 
 // Read a card side as soon as it is attached, so the details are filled in before Save
@@ -126,16 +215,47 @@ function add_read_again_button(frm) {
 	});
 }
 
+// Read the website again (or search Google for the company) and rewrite the AI Summary
+function add_refresh_summary_button(frm) {
+	if (frm.is_new() || !frm.doc.website_url) return;
+	frm.add_custom_button(__("Refresh AI Summary"), () => {
+		const run = () =>
+			frappe
+				.call({
+					method: "its_your_profile.api.refresh_ai_summary",
+					args: { name: frm.doc.name },
+					freeze: true,
+					freeze_message: __("Reading the website and writing a summary..."),
+				})
+				.then(({ message }) => {
+					frappe.show_alert({
+						message: message.ai_summary
+							? __("AI Summary updated")
+							: __("Could not find enough about this business for a summary"),
+						indicator: message.ai_summary ? "green" : "orange",
+					});
+					frm.reload_doc();
+				});
+		// Unsaved edits would be lost by the reload afterwards, so save first
+		frm.is_dirty() ? frm.save().then(run) : run();
+	});
+}
+
 const handlers = {
 	refresh(frm) {
 		add_welcome_email_button(frm);
 		add_read_again_button(frm);
+		add_refresh_summary_button(frm);
+		style_card_previews(frm);
 	},
 	visiting_card(frm) {
 		read_card(frm, "visiting_card");
+		// The preview image is redrawn after the new value is set
+		setTimeout(() => style_card_previews(frm), 300);
 	},
 	visiting_card_back(frm) {
 		read_card(frm, "visiting_card_back");
+		setTimeout(() => style_card_previews(frm), 300);
 	},
 	website_url(frm) {
 		read_links(frm);

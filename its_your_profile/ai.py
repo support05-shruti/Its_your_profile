@@ -6,6 +6,7 @@ Any OpenAI-compatible service works too: set `openai_base_url` and `openai_model
 
 import base64
 import json
+import re
 import time
 from typing import Literal
 
@@ -41,11 +42,18 @@ class CardDetails(BaseModel):
 
 
 class WebsiteInsights(BaseModel):
-	ai_summary: str = Field(description="Exactly three plain-text sentences describing what the business does")
-	business_nature: Literal["Service", "Manufacturing", "Hybrid/Trading"]
+	ai_summary: str | None = Field(
+		None, description="Exactly three plain-text sentences describing what the business does"
+	)
+	business_nature: Literal["Service", "Manufacturing", "Hybrid/Trading"] | None = None
 	linkedin_url: str | None = None
 	facebook_url: str | None = None
 	established_year: int | None = None
+
+
+class LinkedInMatch(BaseModel):
+	person_url: str | None = None
+	company_url: str | None = None
 
 
 CARD_PROMPT = """You are reading a business visiting card.
@@ -54,14 +62,42 @@ Do not guess or invent values.
 Also give the colours as hex codes: the colour of the company name text, and the main brand or
 logo colour. Use null for a colour if the card is black and white."""
 
-WEBSITE_PROMPT = """Below is text scraped from a company's website.
+WEBSITE_PROMPT = """Below is text scraped from the website of {company}.
 1. Write a factual three-sentence summary of what the business does, who it serves and where.
-2. Classify it as Service, Manufacturing, or Hybrid/Trading.
+   If the text does not make clear what the business does, use null. Never write about the text
+   itself or say that information is missing.
+2. Classify it as Service, Manufacturing, or Hybrid/Trading (null if unclear).
 3. Return the LinkedIn and Facebook page URLs if they appear in the text, otherwise null.
 4. Return the year the company was established if stated, otherwise null.
 
 Website text:
 {text}"""
+
+RESEARCH_PROMPT = """Search Google for this business and find out what it does:
+Company: {company}
+Website: {website}
+City: {city}
+
+Reply with only a JSON object with these keys:
+- ai_summary: a factual three-sentence summary of what the business does, who it serves and where.
+  null if you cannot find this business. Never mention your search or that information is missing.
+- business_nature: "Service", "Manufacturing" or "Hybrid/Trading", or null
+- linkedin_url, facebook_url: the company's own pages if found, otherwise null
+- established_year: the year it was established as a number, otherwise null"""
+
+LINKEDIN_PROMPT = """Search Google for the LinkedIn pages of this business contact:
+Name: {person}
+Job title: {designation}
+Company: {company}
+City: {city}
+Website: {website}
+
+1. person_url: this person's own LinkedIn profile (linkedin.com/in/...). Only give it if a search
+   result shows a profile with the same name AND the same company, website or city. Otherwise null.
+2. company_url: the company's LinkedIn page (linkedin.com/company/...), only if the name clearly
+   matches. Otherwise null.
+Copy URLs exactly from the search results; never build or guess one.
+Reply with only a JSON object: {{"person_url": "..." or null, "company_url": "..." or null}}"""
 
 
 def _setting(fieldname):
@@ -172,7 +208,43 @@ def extract_card_details(image: bytes, mime_type: str) -> CardDetails:
 	return _generate([types.Part.from_bytes(data=image, mime_type=mime_type), CARD_PROMPT], CardDetails)
 
 
-def analyse_website(text: str) -> WebsiteInsights:
+def analyse_website(text: str, company: str | None = None) -> WebsiteInsights:
+	prompt = WEBSITE_PROMPT.format(text=text, company=company or "a company")
 	if _use_openai():
-		return _openai_generate(WEBSITE_PROMPT.format(text=text), WebsiteInsights)
-	return _generate(WEBSITE_PROMPT.format(text=text), WebsiteInsights)
+		return _openai_generate(prompt, WebsiteInsights)
+	return _generate(prompt, WebsiteInsights)
+
+
+def research_company(company=None, website=None, city=None) -> WebsiteInsights:
+	"""For websites that give no usable text (built in the browser with JavaScript): ask Gemini with Google Search."""
+	prompt = RESEARCH_PROMPT.format(company=company or "-", website=website or "-", city=city or "-")
+	found = re.search(r"\{.*\}", _search(prompt), re.S)
+	return WebsiteInsights.model_validate_json(found.group()) if found else WebsiteInsights()
+
+
+def find_linkedin(person, designation=None, company=None, city=None, website=None) -> LinkedInMatch:
+	prompt = LINKEDIN_PROMPT.format(
+		person=person, designation=designation or "-", company=company or "-", city=city or "-", website=website or "-"
+	)
+	found = re.search(r"\{.*\}", _search(prompt), re.S)
+	return LinkedInMatch.model_validate_json(found.group()) if found else LinkedInMatch()
+
+
+def _search(prompt) -> str:
+	"""Always Gemini, whatever the provider setting: it is the one with Google Search built in."""
+	from google.genai import types
+
+	client = _client()
+	try:
+		# No response_schema: older Gemini models refuse it together with the search tool
+		response = client.models.generate_content(
+			model=_setting("gemini_model") or DEFAULT_MODEL,
+			contents=prompt,
+			config=types.GenerateContentConfig(
+				tools=[types.Tool(google_search=types.GoogleSearch())],
+				temperature=0,
+			),
+		)
+	finally:
+		client.close()
+	return response.text or ""

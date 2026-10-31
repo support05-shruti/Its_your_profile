@@ -4,6 +4,7 @@ import ipaddress
 import mimetypes
 import re
 import socket
+import subprocess
 from urllib.parse import urljoin, urlparse
 
 import frappe
@@ -16,6 +17,8 @@ from its_your_profile import ai
 logger = frappe.logger("its_your_profile", allow_site=True)
 
 MAX_TEXT_CHARS = 20000
+# Less text than this means the page is built by JavaScript and must be opened in a browser
+MIN_PAGE_TEXT = 500
 USER_AGENT = "Mozilla/5.0 (compatible; ItsYourProfileBot/1.0)"
 
 CARD_FIELD_MAP = {
@@ -84,24 +87,33 @@ def scrape_website(profile: str):
 		return
 
 	try:
-		home = fetch(doc.website_url)
+		home = fetch_page(doc.website_url)
 		pages = [home]
 		if contact_url := find_contact_page(home, doc.website_url):
 			try:
-				pages.append(fetch(contact_url))
+				pages.append(fetch_page(contact_url))
 			except Exception:
 				pass  # the homepage alone is still useful
 
 		soups = [BeautifulSoup(html, "html.parser") for html in pages]
 		text = "\n\n".join(page_text(s) for s in soups)[:MAX_TEXT_CHARS]
-		insights = ai.analyse_website(text)
+		insights = ai.analyse_website(text, doc.company_name)
+		if not insights.ai_summary and ai._setting("gemini_api_key"):
+			# Sites built in the browser (Hostinger Horizons, Wix...) give almost no text; look the company up instead
+			researched = ai.research_company(doc.company_name, doc.website_url, doc.city)
+			for field in ("ai_summary", "business_nature", "linkedin_url", "facebook_url", "established_year"):
+				if not getattr(insights, field):
+					setattr(insights, field, getattr(researched, field))
 		links = social_links(soups)
 		map_url = find_map_url(soups)
 
 		# The AI call is slow; reload so edits saved meanwhile aren't overwritten (TimestampMismatchError)
 		doc = frappe.get_doc("Business Profile", profile)
-		doc.ai_summary = "<p>" + frappe.utils.escape_html(insights.ai_summary.strip()) + "</p>"
-		if not doc.business_nature:
+		# Blank rather than keep an old summary that may only say the website had no text
+		doc.ai_summary = (
+			"<p>" + frappe.utils.escape_html(insights.ai_summary.strip()) + "</p>" if insights.ai_summary else None
+		)
+		if not doc.business_nature and insights.business_nature:
 			doc.business_nature = insights.business_nature
 		if not doc.established_year and insights.established_year:
 			doc.established_year = insights.established_year
@@ -120,6 +132,51 @@ def scrape_website(profile: str):
 		logger.exception(f"Website scrape failed for {profile}")
 
 
+LINKEDIN_PERSON = re.compile(r"^https?://([a-z]{2,3}\.)?linkedin\.com/in/[^/?#\s]+", re.I)
+LINKEDIN_COMPANY = re.compile(r"^https?://([a-z]{2,3}\.)?linkedin\.com/company/[^/?#\s]+", re.I)
+
+
+def find_linkedin(profile: str):
+	# The search runs on Gemini only; without its key there is nothing to search with
+	if not ai._setting("gemini_api_key"):
+		return
+	doc = frappe.get_doc("Business Profile", profile)
+	if not doc.contact_person:
+		return
+
+	doc.db_set("linkedin_status", "Searching", commit=True)
+
+	try:
+		match = ai.find_linkedin(
+			doc.contact_person, doc.designation, doc.company_name, doc.city, doc.website_url
+		)
+		person_url = clean_linkedin_url(match.person_url, LINKEDIN_PERSON)
+		company_url = clean_linkedin_url(match.company_url, LINKEDIN_COMPANY)
+
+		# The AI call is slow; reload so edits saved meanwhile aren't overwritten (TimestampMismatchError)
+		doc = frappe.get_doc("Business Profile", profile)
+		if person_url and not doc.contact_linkedin_url:
+			doc.contact_linkedin_url = person_url
+		if company_url:
+			add_profile_links(doc, [("LinkedIn", None, company_url)])
+		doc.linkedin_status = "Found" if doc.contact_linkedin_url else "Not Found"
+
+		doc.save(ignore_permissions=True)
+		frappe.db.commit()
+	except Exception:
+		frappe.db.rollback()
+		frappe.log_error(f"LinkedIn search failed for {profile}")
+		logger.exception(f"LinkedIn search failed for {profile}")
+		frappe.db.set_value("Business Profile", profile, "linkedin_status", "Failed")
+		frappe.db.commit()
+
+
+def clean_linkedin_url(url: str | None, pattern: re.Pattern) -> str | None:
+	"""in.linkedin.com/in/name?trk=x → https://www.linkedin.com/in/name; anything else → None."""
+	found = pattern.match((url or "").strip())
+	return "https://www.linkedin.com" + urlparse(found.group()).path if found else None
+
+
 # Free/personal mail services: an address there says nothing about the business's own website
 FREE_EMAIL_DOMAINS = {
 	"gmail.com", "googlemail.com", "yahoo.com", "yahoo.co.in", "yahoo.in", "ymail.com", "rocketmail.com",
@@ -129,11 +186,18 @@ FREE_EMAIL_DOMAINS = {
 }  # fmt: skip
 
 
+def staff_email_domains() -> set[str]:
+	"""Domains of the desk users' own emails. A staff address typed in for testing
+	(support@softworld.co.in) says nothing about the business on the card."""
+	emails = frappe.get_all("User", filters={"user_type": "System User", "enabled": 1}, pluck="email")
+	return {e.rsplit("@", 1)[-1].lower() for e in emails if e and "@" in e}
+
+
 def website_from_email(email: str | None) -> str | None:
 	"""info@softworld.co.in → https://softworld.co.in, but only if that website actually opens.
-	Personal addresses (gmail.com and the like) give nothing."""
+	Personal addresses (gmail.com and the like) and our own staff's domain give nothing."""
 	domain = email.rsplit("@", 1)[-1].strip().lower() if email and "@" in email else ""
-	if not domain or "." not in domain or domain in FREE_EMAIL_DOMAINS:
+	if not domain or "." not in domain or domain in FREE_EMAIL_DOMAINS or domain in staff_email_domains():
 		return None
 
 	for url in (f"https://{domain}", f"https://www.{domain}"):
@@ -154,6 +218,44 @@ def fetch(url: str) -> str:
 	ensure_public_url(response.url)
 	response.raise_for_status()
 	return response.text
+
+
+def fetch_page(url: str) -> str:
+	"""The page's HTML. Sites built in the browser with JavaScript (Hostinger Horizons, Wix, React...)
+	send almost no text, so those are opened in headless Chromium to read what a visitor sees."""
+	html = fetch(url)
+	if len(page_text(BeautifulSoup(html, "html.parser"))) >= MIN_PAGE_TEXT:
+		return html
+	try:
+		return render(url) or html
+	except Exception:
+		logger.exception(f"Could not open {url} in Chromium")
+		return html
+
+
+def render(url: str) -> str:
+	from frappe.utils.print_utils import find_or_download_chromium_executable
+
+	ensure_public_url(url)
+	result = subprocess.run(
+		[
+			# Frappe's own Chromium for PDFs, downloaded into frappe-bench/chromium on first use
+			find_or_download_chromium_executable(),
+			"--headless",
+			"--no-sandbox",
+			"--disable-gpu",
+			"--disable-dev-shm-usage",
+			f"--user-agent={USER_AGENT}",
+			# Let the page's scripts run for up to 10 seconds before reading it
+			"--virtual-time-budget=10000",
+			"--dump-dom",
+			url,
+		],
+		capture_output=True,
+		text=True,
+		timeout=90,
+	)
+	return result.stdout
 
 
 def ensure_public_url(url: str):
@@ -180,9 +282,14 @@ def find_contact_page(html: str, base_url: str) -> str | None:
 
 
 def page_text(soup: BeautifulSoup) -> str:
+	# JavaScript-built sites often have no body text, but may still carry a useful meta description
+	meta = [soup.title.get_text(" ", strip=True) if soup.title else ""]
+	for attrs in ({"name": "description"}, {"property": "og:description"}, {"name": "keywords"}):
+		if tag := soup.find("meta", attrs=attrs):
+			meta.append(tag.get("content") or "")
 	for tag in soup(["script", "style", "noscript", "svg"]):
 		tag.decompose()
-	return soup.get_text(" ", strip=True)
+	return "\n".join(filter(None, [*meta, soup.get_text(" ", strip=True)]))
 
 
 # (host suffix, path must contain, platform, label for "Other") — first match wins

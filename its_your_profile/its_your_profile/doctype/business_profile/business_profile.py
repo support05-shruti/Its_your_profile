@@ -242,6 +242,18 @@ class BusinessProfile(WebsiteGenerator):
 				enqueue_after_commit=True,
 			)
 
+		if self.contact_person and (
+			self.has_value_changed("contact_person") or self.has_value_changed("company_name")
+		):
+			frappe.enqueue(
+				"its_your_profile.tasks.find_linkedin",
+				queue="long",
+				profile=self.name,
+				job_id=f"find_linkedin::{self.name}",
+				deduplicate=True,
+				enqueue_after_commit=True,
+			)
+
 		# Automatic welcome, only while the switch in Settings is on: once per business, when the
 		# email is new on this save. With the switch off, staff use the Desk button instead.
 		if (
