@@ -1,5 +1,7 @@
 """Public directory at /directory: browse and search every published business profile."""
 
+import re
+
 import frappe
 from frappe.utils import strip_html
 
@@ -47,6 +49,7 @@ def get_context(context):
 			"ai_summary",
 			"name_color",
 			"brand_color",
+			"phone",
 		],
 		order_by="creation desc",
 		limit_page_length=PAGE_SIZE,
@@ -55,6 +58,7 @@ def get_context(context):
 		text = b.about_business or strip_html(b.ai_summary or "")
 		b.summary = text if len(text) <= 200 else text[:200].rsplit(" ", 1)[0] + "…"
 		b.colour = readable_on_white(b.name_color or b.brand_color)
+		b.call = re.split(r"[/,]", b.phone)[0] if b.phone else None
 
 	context.update(
 		{

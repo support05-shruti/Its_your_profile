@@ -1,6 +1,7 @@
 # Copyright (c) 2026, SoftWorld Solutions Pvt. Ltd and contributors
 # For license information, please see license.txt
 
+import html
 import json
 import re
 from urllib.parse import quote_plus
@@ -111,6 +112,16 @@ def clean_phone(phone):
 	return PHONE_SEPARATORS.sub("", phone or "") or None
 
 
+def whatsapp_number(phone):
+	"""'+912024471409' → '912024471409'; a 10-digit Indian number gets the 91 country code."""
+	digits = re.sub(r"\D", "", phone or "")
+	if len(digits) == 11 and digits.startswith("0"):
+		digits = digits[1:]
+	if len(digits) == 10:
+		digits = "91" + digits
+	return digits if len(digits) >= 11 else None
+
+
 def clean_url(url, label):
 	"""Add https:// when missing, and allow only web links (no javascript: etc. on a public page)."""
 	url = (url or "").strip()
@@ -119,6 +130,22 @@ def clean_url(url, label):
 	if url and not url.lower().startswith(("http://", "https://")):
 		frappe.throw(frappe._("{0} must be a web address").format(label))
 	return url or None
+
+
+BUSINESS_KINDS = {
+	"Service": "service business",
+	"Manufacturing": "manufacturer",
+	"Hybrid/Trading": "trading business",
+}
+
+
+def join_words(items):
+	"""["a", "b", "c"] → "a, b and c"."""
+	return items[0] if len(items) == 1 else ", ".join(items[:-1]) + " and " + items[-1]
+
+
+def drop_empty(data):
+	return {k: v for k, v in data.items() if v}
 
 
 class BusinessProfile(WebsiteGenerator):
@@ -134,6 +161,7 @@ class BusinessProfile(WebsiteGenerator):
 			self.set(fieldname, clean_hex(self.get(fieldname)))
 		self.set_google_maps_url()
 		self.keep_welcome_fields()
+		self.make_logo_public()
 
 		if self.company_name:
 			self.set_route()
@@ -156,6 +184,8 @@ class BusinessProfile(WebsiteGenerator):
 					for fieldname, value in colours.items():
 						if value and not self.get(fieldname):
 							self.set(fieldname, value)
+					if isinstance(read, dict) and read.get("logo") and not self.company_logo:
+						self.company_logo = read["logo"]
 			else:
 				self.card_scan_status = "Pending"
 		elif not self.is_new() and not self.flags.from_scan and self.get_doc_before_save():
@@ -184,6 +214,18 @@ class BusinessProfile(WebsiteGenerator):
 		if before:
 			for fieldname in WELCOME_FIELDS:
 				self.set(fieldname, before.get(fieldname))
+
+	def make_logo_public(self):
+		"""The logo is for the public page, but the uploader may have marked it private."""
+		if not (self.company_logo or "").startswith("/private/files/"):
+			return
+		file_name = frappe.db.get_value("File", {"file_url": self.company_logo})
+		if not file_name:
+			return
+		file = frappe.get_doc("File", file_name)
+		file.is_private = 0
+		file.save(ignore_permissions=True)
+		self.company_logo = file.file_url
 
 	def validate_urls(self):
 		for fieldname in ("website_url", "google_maps_url"):
@@ -238,6 +280,19 @@ class BusinessProfile(WebsiteGenerator):
 				queue="long",
 				profile=self.name,
 				job_id=f"scrape_website::{self.name}",
+				deduplicate=True,
+				enqueue_after_commit=True,
+			)
+
+		# FAQs for AI search, once the page is live. A new website is read first: its summary and
+		# services make better FAQs, and that job's save brings us back here.
+		website_pending = self.website_url and self.has_value_changed("website_url")
+		if self.published and self.company_name and not self.faqs and not website_pending:
+			frappe.enqueue(
+				"its_your_profile.tasks.write_faqs",
+				queue="long",
+				profile=self.name,
+				job_id=f"write_faqs::{self.name}",
 				deduplicate=True,
 				enqueue_after_commit=True,
 			)
@@ -330,33 +385,186 @@ class BusinessProfile(WebsiteGenerator):
 		return [(label, value) for label, value in rows if value]
 
 	def get_context(self, context):
+		from its_your_profile.tracking import log_crawler_visit
+
 		context.no_cache = 1
+		# People are counted by the page's script; crawlers don't run it, so count them here
+		log_crawler_visit(self.name)
 		context.json_ld = self.get_json_ld()
 		# Card colours, made readable on the white page; the template falls back to its own
 		context.page_name_color = readable_on_white(self.name_color or self.brand_color)
 		context.page_brand_color = readable_on_white(self.brand_color or self.name_color)
 		context.map_embed_url = self.get_map_embed_url()
+		context.page_url = frappe.utils.get_url(self.route)
+		context.phone_numbers = [p for p in re.split(r"[/,]", self.phone or "") if p]
+		context.whatsapp_number = whatsapp_number(context.phone_numbers[0]) if context.phone_numbers else None
+		# Only public files can be shown to visitors
+		context.card_images = [
+			self.get(side) for side in CARD_SIDES if (self.get(side) or "").startswith("/files/")
+		]
+		context.logo_url = self.get_logo_url()
+		context.og_image = (
+			frappe.utils.get_url(context.card_images[0]) if context.card_images else context.logo_url
+		)
+		context.years_in_business = (
+			frappe.utils.now_datetime().year - self.established_year
+			if self.established_year and self.established_year > 1800
+			else None
+		)
+		context.vcard = json.dumps(self.get_vcard(context.phone_numbers)).replace("</", "<\\/")
+		context.services = self.get_services()
+		context.faq_items = [row for row in self.faqs if row.question and row.answer]
+		context.markdown_url = frappe.utils.get_url(self.route + ".md")
+		# Shown when there is no AI summary yet, so every page has a plain factual description
+		context.entity_summary = None if self.ai_summary else self.get_entity_summary()
 		context.metatags = {
 			"title": self.company_name,
-			"description": (frappe.utils.strip_html(self.ai_summary or "") or self.about_business or "")[:300],
+			"description": self.get_summary()[:300],
 		}
 
+	def get_vcard(self, phone_numbers):
+		"""Contact file for the page's "Save Contact" button."""
+
+		def esc(value):
+			return (value or "").replace("\\", "\\\\").replace(",", "\\,").replace(";", "\\;").replace("\n", "\\n")
+
+		lines = [
+			"BEGIN:VCARD",
+			"VERSION:3.0",
+			f"FN:{esc(self.contact_person or self.company_name)}",
+			f"ORG:{esc(self.company_name)}",
+		]
+		if self.designation:
+			lines.append(f"TITLE:{esc(self.designation)}")
+		lines += [f"TEL;TYPE=WORK,VOICE:{esc(p)}" for p in phone_numbers]
+		if self.email:
+			lines.append(f"EMAIL;TYPE=WORK:{esc(self.email)}")
+		if self.website_url:
+			lines.append(f"URL:{esc(self.website_url)}")
+		if self.address_line or self.city:
+			adr = ";".join(esc(p) for p in ("", "", self.address_line, self.city, self.state, self.pincode, "India"))
+			lines.append(f"ADR;TYPE=WORK:{adr}")
+		lines += [f"NOTE:{esc(frappe.utils.get_url(self.route))}", "END:VCARD"]
+		return "\r\n".join(lines)
+
+	def get_logo_url(self):
+		"""Full URL of the logo, or None while there is no public logo to show."""
+		if (self.company_logo or "").startswith("/files/"):
+			return frappe.utils.get_url(self.company_logo)
+
+	def get_facts_for_ai(self):
+		"""What the FAQ writer may use, one fact per line; nothing else is known to be true."""
+		facts = [
+			("Business name", self.company_name),
+			("Type of business", self.business_nature),
+			("City", ", ".join(p for p in (self.city, self.state) if p)),
+			("Established", self.established_year),
+			("Team size", self.employee_range and f"{self.employee_range} people"),
+			("Contact person", ", ".join(p for p in (self.contact_person, self.designation) if p)),
+			("Summary", self.get_summary()),
+			("Products and services", ", ".join(self.get_services())),
+			("In the owner's words", " ".join((self.about_business or "").split())),
+			("Has a website", "yes" if self.website_url else None),
+			("Can be contacted by", ", ".join(
+				c for c, has in (("phone", self.phone), ("WhatsApp", self.phone), ("email", self.email)) if has
+			)),
+		]
+		return "\n".join(f"- {label}: {value}" for label, value in facts if value)
+
+	def as_markdown(self, level=1):
+		"""The whole profile as Markdown for AI crawlers: served at <route>.md (level 1) and in
+		/llms-full.txt (level 2, under the directory's own heading)."""
+		h1, h2, h3 = ("#" * n for n in (level, level + 1, level + 2))
+		page_url = frappe.utils.get_url(self.route)
+		lines = [f"{h1} {self.company_name}", "", self.get_summary(), ""]
+
+		facts = [
+			("Profile page", page_url),
+			("Business type", self.business_nature),
+			("Established", self.established_year),
+			("Team size", self.employee_range and f"{self.employee_range} people"),
+			("Contact person", ", ".join(x for x in (self.contact_person, self.designation) if x)),
+			("Contact person's LinkedIn", self.contact_linkedin_url),
+			("Phone", self.phone),
+			("Email", self.email),
+			("Website", self.website_url),
+			("Address", ", ".join(x for x in (self.address_line, self.city, self.state, self.pincode) if x)),
+			("Map", self.google_maps_url),
+			("Last updated", frappe.utils.getdate(self.modified).isoformat() if self.modified else None),
+		]
+		lines += [f"- {label}: {value}" for label, value in facts if value]
+
+		if services := self.get_services():
+			lines += ["", f"{h2} Products and services", ""] + [f"- {s}" for s in services]
+		if self.about_business:
+			lines += ["", f"{h2} In the owner's words", "", " ".join(self.about_business.split())]
+		if faqs := [row for row in self.faqs if row.question and row.answer]:
+			lines += ["", f"{h2} Questions and answers", ""]
+			for row in faqs:
+				lines += [f"{h3} {' '.join(row.question.split())}", "", " ".join(row.answer.split()), ""]
+		if links := [row for row in self.profile_links if row.url]:
+			lines += ["", f"{h2} Elsewhere online", ""]
+			lines += [f"- {row.label or row.platform}: {row.url}" for row in links]
+		return "\n".join(lines).rstrip() + "\n"
+
+	def get_services(self):
+		"""The Products & Services field as a list, one entry per line, without repeats."""
+		services = {}
+		for line in (self.services or "").splitlines():
+			line = line.strip(" \t-•*")
+			if line:
+				services.setdefault(line.lower(), line)
+		return list(services.values())
+
+	def get_entity_summary(self):
+		"""Plain third-person facts for AI search engines, built from the fields."""
+		if not self.company_name:
+			return ""
+		kind = BUSINESS_KINDS.get(self.business_nature, "business")
+		place = ", ".join(p for p in (self.city, self.state) if p)
+		first = f"{self.company_name} is a {kind}"
+		if place:
+			first += f" based in {place}, India"
+		if self.established_year:
+			first += f", established in {self.established_year}"
+		sentences = [first + "."]
+		if services := self.get_services():
+			sentences.append(f"It offers {join_words(services[:8])}.")
+		if self.contact_person:
+			role = f"the {self.designation} of" if self.designation else "the contact person at"
+			sentences.append(f"{self.contact_person} is {role} {self.company_name}.")
+		return " ".join(sentences)
+
+	def get_summary(self):
+		"""The AI summary once written, else the summary built from the fields."""
+		# The AI summary is stored as escaped HTML; plain text needs "&" back, not "&amp;"
+		text = html.unescape(frappe.utils.strip_html(self.ai_summary or ""))
+		return " ".join(text.split()) or self.get_entity_summary()
+
 	def get_json_ld(self):
-		data = {
-			"@context": "https://schema.org",
-			"@type": "LocalBusiness",
+		"""Schema.org graph for search and AI engines: the page, the business, its contact person and its services."""
+		page_url = frappe.utils.get_url(self.route)
+		business_id = f"{page_url}#business"
+		person_id = f"{page_url}#person"
+		services = self.get_services()
+
+		business = {
+			"@type": ["LocalBusiness", "Organization"],
+			"@id": business_id,
 			"name": self.company_name,
-			"url": frappe.utils.get_url(self.route),
-			"description": " ".join(
-				p for p in (self.about_business, frappe.utils.strip_html(self.ai_summary or "")) if p
-			)
-			or None,
+			"url": self.website_url or page_url,
+			"mainEntityOfPage": page_url,
+			"description": self.get_summary(),
 			"telephone": self.phone,
 			"email": self.email,
 			"foundingDate": str(self.established_year) if self.established_year else None,
 			"numberOfEmployees": self.employee_range,
 			"hasMap": self.google_maps_url,
-			"sameAs": [u for u in (self.website_url, *(row.url for row in self.profile_links)) if u] or None,
+			"knowsAbout": services,
+			"areaServed": {"@type": "City", "name": self.city} if self.city else None,
+			# LinkedIn, X, Facebook, BNI... tie this business to its profiles elsewhere
+			"sameAs": [row.url for row in self.profile_links if row.url],
+			"logo": self.get_logo_url(),
 			# Private cards (/private/files/...) can't be opened by visitors, so don't advertise them
 			"image": frappe.utils.get_url(self.visiting_card)
 			if (self.visiting_card or "").startswith("/files/")
@@ -364,18 +572,81 @@ class BusinessProfile(WebsiteGenerator):
 		}
 
 		if self.address_line or self.city:
-			data["address"] = {
-				"@type": "PostalAddress",
-				"streetAddress": self.address_line,
-				"addressLocality": self.city,
-				"addressRegion": self.state,
-				"postalCode": self.pincode,
-				"addressCountry": "IN",
+			business["address"] = drop_empty(
+				{
+					"@type": "PostalAddress",
+					"streetAddress": self.address_line,
+					"addressLocality": self.city,
+					"addressRegion": self.state,
+					"postalCode": self.pincode,
+					"addressCountry": "IN",
+				}
+			)
+
+		if services:
+			business["hasOfferCatalog"] = {
+				"@type": "OfferCatalog",
+				"name": f"Products and services of {self.company_name}",
+				"itemListElement": [
+					{
+						"@type": "Offer",
+						"itemOffered": drop_empty(
+							{
+								"@type": "Service",
+								"name": service,
+								"provider": {"@id": business_id},
+								"areaServed": business["areaServed"],
+							}
+						),
+					}
+					for service in services
+				],
 			}
 
-		if self.contact_person:
-			data["employee"] = {"@type": "Person", "name": self.contact_person, "jobTitle": self.designation}
+		graph = [
+			{
+				"@type": "ProfilePage",
+				"@id": page_url,
+				"url": page_url,
+				"name": self.company_name,
+				"mainEntity": {"@id": business_id},
+				# AI search prefers fresh facts; tell it when they were last checked
+				"dateModified": frappe.utils.get_datetime(self.modified).isoformat() if self.modified else None,
+			},
+			business,
+		]
 
-		data = {k: v for k, v in data.items() if v}
+		# Ready-made answers Google and AI assistants can quote
+		if faqs := [row for row in self.faqs if row.question and row.answer]:
+			graph.append(
+				{
+					"@type": "FAQPage",
+					"@id": f"{page_url}#faq",
+					"about": {"@id": business_id},
+					"mainEntity": [
+						{
+							"@type": "Question",
+							"name": " ".join(row.question.split()),
+							"acceptedAnswer": {"@type": "Answer", "text": " ".join(row.answer.split())},
+						}
+						for row in faqs
+					],
+				}
+			)
+
+		if self.contact_person:
+			business["employee"] = {"@id": person_id}
+			graph.append(
+				{
+					"@type": "Person",
+					"@id": person_id,
+					"name": self.contact_person,
+					"jobTitle": self.designation,
+					"worksFor": {"@id": business_id},
+					"sameAs": [self.contact_linkedin_url] if self.contact_linkedin_url else None,
+				}
+			)
+
+		data = {"@context": "https://schema.org", "@graph": [drop_empty(node) for node in graph]}
 		# Escape "</" so the JSON can never close the surrounding <script> tag
 		return json.dumps(data, indent=2, ensure_ascii=False).replace("</", "<\\/")

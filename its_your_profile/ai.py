@@ -39,16 +39,38 @@ class CardDetails(BaseModel):
 		description="Hex colour of the main logo or accent colour on the card, e.g. #1F5F8B. "
 		"Not white or the plain background colour.",
 	)
+	social_links: list[str] = Field(
+		default_factory=list,
+		description="Social media and online profile addresses printed on the card, as full URLs",
+	)
+	logo_box: list[float] = Field(
+		default_factory=list,
+		description="Box around the complete company logo (symbol, styled name and tagline) as "
+		"[ymin, xmin, ymax, xmax], each 0-1000 of the image "
+		"height or width. Empty if the card has no logo.",
+	)
 
 
 class WebsiteInsights(BaseModel):
 	ai_summary: str | None = Field(
-		None, description="Exactly three plain-text sentences describing what the business does"
+		None, description="Exactly three plain-text third-person sentences describing what the business does"
+	)
+	services: list[str] = Field(
+		default_factory=list, description="Main products and services, each a short noun phrase"
 	)
 	business_nature: Literal["Service", "Manufacturing", "Hybrid/Trading"] | None = None
 	linkedin_url: str | None = None
 	facebook_url: str | None = None
 	established_year: int | None = None
+
+
+class FAQItem(BaseModel):
+	question: str
+	answer: str
+
+
+class FAQs(BaseModel):
+	faqs: list[FAQItem] = Field(default_factory=list, description="4 to 6 questions with their answers")
 
 
 class LinkedInMatch(BaseModel):
@@ -60,18 +82,51 @@ CARD_PROMPT = """You are reading a business visiting card.
 Extract the details printed on the card. Use null for anything that is not clearly printed.
 Do not guess or invent values.
 Also give the colours as hex codes: the colour of the company name text, and the main brand or
-logo colour. Use null for a colour if the card is black and white."""
+logo colour. Use null for a colour if the card is black and white.
+List in social_links every social media or online profile address printed on the card (LinkedIn,
+Facebook, Instagram, YouTube, X/Twitter, WhatsApp, IndiaMART, Justdial...) as a full URL, e.g.
+"instagram.com/acmetools" → "https://instagram.com/acmetools". A bare handle like "@acmetools"
+counts only when the platform's icon or name is printed right next to it. Do not include the
+company website or email here. Use an empty list if there are none.
+Give logo_box: a box around the complete company logo, as it would be cut out of the card to use
+as the company's logo. Include everything that is designed as part of the logo: the symbol or
+emblem, the company name written in the logo's style beside or under it, and a tagline printed
+as part of it. Leave out the person's name, contact details and address. Make sure the whole
+logo is inside the box. Use an empty list if there is no logo."""
 
+# The summary is written for AI search engines, which quote clear factual definitions over marketing copy
 WEBSITE_PROMPT = """Below is text scraped from the website of {company}.
 1. Write a factual three-sentence summary of what the business does, who it serves and where.
+   Write in the third person as plain statements that start with the company name, e.g.
+   "Acme Tools is a manufacturer of hand tools based in Rajkot, Gujarat." No marketing language,
+   superlatives, slogans, "we"/"our" or calls to action.
    If the text does not make clear what the business does, use null. Never write about the text
    itself or say that information is missing.
 2. Classify it as Service, Manufacturing, or Hybrid/Trading (null if unclear).
 3. Return the LinkedIn and Facebook page URLs if they appear in the text, otherwise null.
 4. Return the year the company was established if stated, otherwise null.
+5. List the main products and services it clearly offers (at most 10), each a short noun phrase
+   such as "GST filing" or "HDPE pipes". Use an empty list if unclear.
 
 Website text:
 {text}"""
+
+# FAQ answers become FAQPage data that Google and AI assistants quote word for word, so they may
+# only restate the facts given: an invented price or claim would be repeated as true
+FAQ_PROMPT = """Below are the facts about a business listed on It's Your Profile, a business directory.
+Write 4 to 6 questions a potential customer would ask an AI assistant about this business, each
+with a short answer (one or two sentences).
+- Use ONLY the facts below. Never add prices, years, awards, clients, timings or claims that are
+  not in them. Skip a question rather than guess its answer.
+- Name the business in each question, e.g. "What services does Acme Tools offer?", and answer in
+  the third person, starting with the business name where it reads naturally.
+- Cover what it does, where it is based or serves, its main products or services, and how to
+  contact it (say "by phone, WhatsApp or email through its It's Your Profile page", without
+  writing out the number or address).
+- Plain factual statements only: no marketing language, superlatives, "we"/"our" or calls to action.
+
+Facts:
+{facts}"""
 
 RESEARCH_PROMPT = """Search Google for this business and find out what it does:
 Company: {company}
@@ -79,8 +134,12 @@ Website: {website}
 City: {city}
 
 Reply with only a JSON object with these keys:
-- ai_summary: a factual three-sentence summary of what the business does, who it serves and where.
+- ai_summary: a factual three-sentence summary of what the business does, who it serves and where,
+  in the third person as plain statements that start with the company name. No marketing language,
+  superlatives or "we"/"our".
   null if you cannot find this business. Never mention your search or that information is missing.
+- services: a list of the main products and services it clearly offers (at most 10), each a short
+  noun phrase. An empty list if unclear.
 - business_nature: "Service", "Manufacturing" or "Hybrid/Trading", or null
 - linkedin_url, facebook_url: the company's own pages if found, otherwise null
 - established_year: the year it was established as a number, otherwise null"""
@@ -213,6 +272,13 @@ def analyse_website(text: str, company: str | None = None) -> WebsiteInsights:
 	if _use_openai():
 		return _openai_generate(prompt, WebsiteInsights)
 	return _generate(prompt, WebsiteInsights)
+
+
+def write_faqs(facts: str) -> FAQs:
+	prompt = FAQ_PROMPT.format(facts=facts)
+	if _use_openai():
+		return _openai_generate(prompt, FAQs)
+	return _generate(prompt, FAQs)
 
 
 def research_company(company=None, website=None, city=None) -> WebsiteInsights:

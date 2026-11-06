@@ -12,9 +12,11 @@
   "company_name",
   "business_nature",
   "about_business",
+  "services",
   "column_break_main",
   "employee_range",
   "established_year",
+  "company_logo",
   "contact_section",
   "contact_person",
   "designation",
@@ -35,6 +37,7 @@
   "profile_links",
   "ai_section",
   "ai_summary",
+  "faqs",
   "card_section",
   "visiting_card",
   "visiting_card_preview",
@@ -84,6 +87,12 @@
    "fieldname": "about_business",
    "fieldtype": "Small Text",
    "label": "What Does Your Business Do?"
+  },
+  {
+   "description": "One per line, e.g. \"GST filing\" or \"HDPE pipes\". Filled from the website when empty. Tells AI search engines what this business offers.",
+   "fieldname": "services",
+   "fieldtype": "Small Text",
+   "label": "Products & Services"
   },
   {
    "fieldname": "company_section",
@@ -170,6 +179,12 @@
    "fieldname": "established_year",
    "fieldtype": "Int",
    "label": "Established Year"
+  },
+  {
+   "description": "Shown at the top of the public page. A square logo looks best. Without one, the page shows the company's initials.",
+   "fieldname": "company_logo",
+   "fieldtype": "Attach Image",
+   "label": "Company Logo"
   },
   {
    "fieldname": "contact_section",
@@ -327,6 +342,13 @@
    "fieldname": "ai_summary",
    "fieldtype": "Text Editor",
    "label": "AI Summary"
+  },
+  {
+   "description": "Questions customers ask, answered from this profile's facts. Shown on the page and given to Google and AI search as FAQ data. Written by AI when empty; edit freely.",
+   "fieldname": "faqs",
+   "fieldtype": "Table",
+   "label": "FAQs",
+   "options": "Business Profile FAQ"
   }
  ],
  "grid_page_length": 50,
@@ -334,7 +356,7 @@
  "index_web_pages_for_search": 1,
  "is_published_field": "published",
  "links": [],
- "modified": "2026-10-30 13:58:38.730119",
+ "modified": "2026-11-04 14:00:00.000000",
  "modified_by": "Administrator",
  "module": "Its Your Profile",
  "name": "Business Profile",

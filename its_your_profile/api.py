@@ -17,7 +17,7 @@ def read_visiting_card(file_url: str):
 	Marks the file as read so saving the profile doesn't queue a second, background scan.
 	"""
 	from its_your_profile import ai
-	from its_your_profile.tasks import CARD_FIELD_MAP
+	from its_your_profile.tasks import CARD_FIELD_MAP, card_links, save_card_logo
 
 	if frappe.session.user == "Guest":
 		frappe.throw(_("Please log in to read a visiting card"), frappe.PermissionError)
@@ -32,7 +32,8 @@ def read_visiting_card(file_url: str):
 	)
 
 	mime_type = mimetypes.guess_type(file.file_name or file_url)[0] or "image/jpeg"
-	details = ai.extract_card_details(file.get_content(), mime_type)
+	content = file.get_content()
+	details = ai.extract_card_details(content, mime_type)
 	colours = card_colours(details)
 
 	values = {
@@ -57,11 +58,20 @@ def read_visiting_card(file_url: str):
 			title=_("Card not readable"),
 		)
 
-	# Remembered for the Save that follows: marks the card as read (no background scan) and
-	# carries its colours, which the user form has no boxes for
-	frappe.cache.set_value(card_read_cache_key(file_url), {"colours": colours}, expires_in_sec=3600)
+	# The desk form shows the logo at once; the user form has no logo box, so Save takes it from the cache
+	logo = save_card_logo(content, details.logo_box)
+	if logo:
+		values["company_logo"] = logo
 
-	return {**values, **colours}
+	# Remembered for the Save that follows: marks the card as read (no background scan) and
+	# carries its colours and logo, which the user form has no boxes for
+	frappe.cache.set_value(
+		card_read_cache_key(file_url), {"colours": colours, "logo": logo}, expires_in_sec=3600
+	)
+
+	# Social links printed on the card, for the form's Profile Links table (not a field of its own)
+	links = [{"platform": p, "label": label, "url": url} for p, label, url in card_links(details.social_links)]
+	return {**values, **colours, "_links": links}
 
 
 @frappe.whitelist(methods=["POST"])
@@ -150,6 +160,16 @@ def rotate_visiting_card(name: str, fieldname: str, direction: str):
 	except Exception:
 		pass  # an old photo left behind is harmless; the profile already points at the new one
 	return {"file_url": new_file.file_url}
+
+
+@frappe.whitelist(methods=["POST"])
+def rewrite_faqs(name: str):
+	"""Desk button: have the AI write the FAQs again from the profile's current facts."""
+	from its_your_profile.tasks import write_faqs
+
+	frappe.get_doc("Business Profile", name).check_permission("write")
+	write_faqs(name, replace=True)
+	return {"count": frappe.db.count("Business Profile FAQ", {"parent": name, "parenttype": "Business Profile"})}
 
 
 @frappe.whitelist(methods=["POST"])

@@ -30,6 +30,11 @@ app_license = "mit"
 # `mount_on` on that same record, and its entries are appended to the host's rail. Mounting keeps
 # the companion off the apps screen, so it takes precedence over any add_to_apps_screen above.
 
+# Owners' menu after they log in (the web form's account pages)
+standard_portal_menu_items = [
+	{"title": "Notifications", "route": "/notifications"},
+]
+
 # Includes in <head>
 # ------------------
 
@@ -67,7 +72,8 @@ app_license = "mit"
 # ----------
 
 # application home page (will override Website Settings)
-# home_page = "login"
+# The public landing page in www/home.html
+home_page = "home"
 
 # website user home page (by Role)
 # role_home_page = {
@@ -80,8 +86,11 @@ app_license = "mit"
 # automatically create page for each record of this doctype
 website_generators = ["Business Profile"]
 
-# Serves /llms.txt as plain-text Markdown
-page_renderer = ["its_your_profile.llms_txt.LLMsTxtPage"]
+# Serves /llms.txt, /llms-full.txt and /robots.txt as plain text
+page_renderer = ["its_your_profile.llms_txt.CrawlerTextPage"]
+
+# Visit logs never stop a Business Profile from being deleted
+ignore_links_on_delete = ["Profile Visit"]
 
 # automatically load and sync documents of this doctype from downstream apps
 # importable_doctypes = [doctype_1]
@@ -185,6 +194,14 @@ page_renderer = ["its_your_profile.llms_txt.LLMsTxtPage"]
 # 		"its_your_profile.tasks.monthly"
 # 	],
 # }
+
+# CHANGE NOTE 2026-11-05: monthly WhatsApp report to each business, 1st of the month at 10:00
+# (site time zone). Does nothing until switched on in Its Your Profile Settings.
+scheduler_events = {
+	"cron": {
+		"0 10 1 * *": ["its_your_profile.monthly_report.send_monthly_reports"],
+	},
+}
 
 # Testing
 # -------

@@ -1,0 +1,89 @@
+{% extends "templates/web.html" %}
+
+{% block title %}{{ _("It's Your Profile · Notifications") }}{% endblock %}
+
+{% block page_content %}
+<style>
+	.iyp-nt { --ink: #141936; --text: #3E4468; --muted: #565C80; --line: #DCE3FA; --blue: #2B3FD6; --sky: #EEF3FF; --peach: #FFF1E6; --orange: #C25200; --mint: #E9FBF1; --green: #0E7A45; --lilac: #F3EEFF; --purple: #5B3CC4;
+		max-width: 760px; margin: 0 auto; padding: 8px 0 40px; color: var(--ink); }
+	.iyp-nt h1 { font-size: clamp(1.6rem, 4vw, 2.1rem); font-weight: 800; letter-spacing: -.02em; margin: 8px 0 4px; }
+	.iyp-nt-sub { color: var(--muted); margin: 0 0 20px; }
+
+	.iyp-week { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 28px; }
+	.iyp-stat { border-radius: 18px; padding: 16px; animation: iyp-nt-up .5s ease backwards; }
+	.iyp-stat:nth-child(2) { animation-delay: .08s; }
+	.iyp-stat:nth-child(3) { animation-delay: .16s; }
+	.iyp-stat b { display: block; font-size: 1.8rem; font-weight: 800; line-height: 1.1; }
+	.iyp-stat span { font-size: .85rem; color: var(--text); }
+	.iyp-stat.view { background: var(--sky); } .iyp-stat.view b { color: var(--blue); }
+	.iyp-stat.lead { background: var(--peach); } .iyp-stat.lead b { color: var(--orange); }
+	.iyp-stat.ai { background: var(--lilac); } .iyp-stat.ai b { color: var(--purple); }
+
+	.iyp-day { font-size: .8rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 22px 0 8px; }
+	.iyp-list { list-style: none; margin: 0; padding: 0; border: 1px solid var(--line); border-radius: 18px; overflow: hidden; background: #fff; }
+	.iyp-alert { display: flex; gap: 12px; align-items: flex-start; padding: 14px 16px; border-top: 1px solid var(--line); animation: iyp-nt-up .4s ease backwards; animation-delay: calc(var(--i, 0) * 40ms); }
+	.iyp-alert:first-child { border-top: 0; }
+	.iyp-alert.new { background: #FAFBFF; }
+	.iyp-dot { width: 10px; height: 10px; border-radius: 50%; margin-top: 7px; flex: none; }
+	.iyp-alert.view .iyp-dot { background: var(--blue); }
+	.iyp-alert.lead .iyp-dot { background: #FF8A3D; }
+	.iyp-alert.ai .iyp-dot { background: var(--purple); }
+	.iyp-alert:not(.new) .iyp-dot { opacity: .3; }
+	.iyp-alert p { margin: 0; line-height: 1.5; color: var(--ink); }
+	.iyp-alert.new p { font-weight: 600; }
+	.iyp-alert small { color: var(--muted); font-size: .8rem; }
+	.iyp-alert a { color: var(--blue) !important; }
+	.iyp-new-tag { display: inline-block; margin-left: 6px; padding: 1px 8px; border-radius: 999px; background: var(--blue); color: #fff; font-size: .7rem; font-weight: 700; vertical-align: middle; }
+
+	.iyp-empty { text-align: center; padding: 40px 20px; border: 1px dashed var(--line); border-radius: 18px; color: var(--muted); background: var(--sky); }
+	.iyp-empty b { display: block; color: var(--ink); font-size: 1.1rem; margin-bottom: 6px; }
+	.iyp-empty a { display: inline-block; margin-top: 14px; padding: 10px 20px; border-radius: 14px; background: var(--blue); color: #fff !important; font-weight: 700; text-decoration: none !important; }
+
+	@keyframes iyp-nt-up { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+	@media (prefers-reduced-motion: reduce) { .iyp-stat, .iyp-alert { animation: none; } }
+	@media (max-width: 520px) { .iyp-week { gap: 8px; } .iyp-stat { padding: 12px; } .iyp-stat b { font-size: 1.4rem; } }
+</style>
+
+<div class="iyp-nt">
+	<h1>{{ _("Notifications") }}</h1>
+	<p class="iyp-nt-sub">
+		{% if unread %}{{ _("{0} new since you last looked.").format(unread) }}{% else %}{{ _("Who viewed your page, who tapped to contact you, and which AI read it.") }}{% endif %}
+	</p>
+
+	{% if has_profile %}
+	<div class="iyp-week" aria-label="{{ _('Last 7 days') }}">
+		<div class="iyp-stat view"><b>{{ week.views }}</b><span>{{ _("Views this week") }}</span></div>
+		<div class="iyp-stat lead"><b>{{ week.leads }}</b><span>{{ _("Calls, WhatsApps & more") }}</span></div>
+		<div class="iyp-stat ai"><b>{{ week.ai }}</b><span>{{ _("AI visits") }}</span></div>
+	</div>
+	{% endif %}
+
+	{% if days %}
+		{% for day in days %}
+		<div class="iyp-day">{{ day.label }}</div>
+		<ul class="iyp-list">
+			{% for alert in day.alerts %}
+			<li class="iyp-alert {{ alert.kind }}{% if not alert.read %} new{% endif %}" style="--i: {{ loop.index0 }}">
+				<span class="iyp-dot" aria-hidden="true"></span>
+				<div>
+					<p>{{ alert.subject }}{% if not alert.read %}<span class="iyp-new-tag">{{ _("New") }}</span>{% endif %}</p>
+					<small>{{ alert.when }}{% if alert.url %} · <a href="{{ alert.url }}">{{ _("Open page") }}</a>{% endif %}</small>
+				</div>
+			</li>
+			{% endfor %}
+		</ul>
+		{% endfor %}
+	{% elif has_profile %}
+		<div class="iyp-empty">
+			<b>{{ _("No visits yet") }}</b>
+			{{ _("Share your page on WhatsApp and LinkedIn. You'll see here when people view it or tap to call you.") }}
+		</div>
+	{% else %}
+		<div class="iyp-empty">
+			<b>{{ _("You don't have a business page yet") }}</b>
+			{{ _("Create one and we'll tell you here who views it.") }}<br>
+			<a href="/my-business/new">{{ _("Create free page") }}</a>
+		</div>
+	{% endif %}
+</div>
+{% endblock %}

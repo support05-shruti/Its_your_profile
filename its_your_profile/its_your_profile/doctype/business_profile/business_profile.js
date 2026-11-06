@@ -106,9 +106,10 @@ function read_card(frm, fieldname) {
 			freeze: true,
 			freeze_message: __("Reading the visiting card..."),
 		})
-		.then(async ({ message: values }) => {
+		.then(async ({ message }) => {
+			const { _links: card_links = [], ...values } = message || {};
 			// Only fill empty fields, so anything already typed (or read from the front) is kept
-			const empty = Object.entries(values || {}).filter(([field]) => !frm.doc[field]);
+			const empty = Object.entries(values).filter(([field]) => !frm.doc[field]);
 			await frm.set_value(Object.fromEntries(empty));
 			frappe.show_alert({
 				message: empty.length
@@ -116,6 +117,9 @@ function read_card(frm, fieldname) {
 					: __("No new details found on this side of the card."),
 				indicator: empty.length ? "green" : "orange",
 			});
+			if (add_links(frm, card_links)) {
+				frappe.show_alert({ message: __("Added links printed on the card."), indicator: "green" });
+			}
 			update_maps_url(frm);
 			read_links(frm);
 		});
@@ -132,6 +136,25 @@ function update_maps_url(frm) {
 		.join(", ");
 	const url = MAPS_PREFIX + encodeURIComponent(query).replace(/%20/g, "+");
 	if (url !== current) frm.set_value("google_maps_url", url);
+}
+
+// Add links to the Profile Links table, skipping platforms (and URLs) it already has
+function add_links(frm, links) {
+	if (!links.length) return 0;
+	const key = (r) => `${r.platform}|${r.label || ""}`;
+	const clean = (u) => (u || "").replace(/\/+$/, "").toLowerCase();
+	const have = new Set((frm.doc.profile_links || []).map(key));
+	const have_urls = new Set((frm.doc.profile_links || []).map((r) => clean(r.url)));
+
+	let added = 0;
+	links.forEach((link) => {
+		if (have.has(key(link)) || have_urls.has(clean(link.url))) return;
+		frm.add_child("profile_links", link);
+		have.add(key(link));
+		added++;
+	});
+	frm.refresh_field("profile_links");
+	return added;
 }
 
 // Read the website's profile links and add the new ones to the table
@@ -155,19 +178,7 @@ function read_links(frm) {
 				frm.set_value("google_maps_url", message.map_url);
 			}
 
-			const key = (r) => `${r.platform}|${r.label || ""}`;
-			const clean = (u) => (u || "").replace(/\/+$/, "").toLowerCase();
-			const have = new Set((frm.doc.profile_links || []).map(key));
-			const have_urls = new Set((frm.doc.profile_links || []).map((r) => clean(r.url)));
-
-			let added = 0;
-			links.forEach((link) => {
-				if (have.has(key(link)) || have_urls.has(clean(link.url))) return;
-				frm.add_child("profile_links", link);
-				have.add(key(link));
-				added++;
-			});
-			frm.refresh_field("profile_links");
+			const added = add_links(frm, links);
 
 			frappe.show_alert({
 				message: added
@@ -241,11 +252,76 @@ function add_refresh_summary_button(frm) {
 	});
 }
 
+// Have the AI write the FAQs again from the profile's current facts (replaces the table)
+function add_rewrite_faqs_button(frm) {
+	if (frm.is_new() || !frm.doc.company_name) return;
+	frm.add_custom_button(
+		frm.doc.faqs && frm.doc.faqs.length ? __("Write FAQs Again") : __("Write FAQs"),
+		() => {
+			const run = () =>
+				frappe
+					.call({
+						method: "its_your_profile.api.rewrite_faqs",
+						args: { name: frm.doc.name },
+						freeze: true,
+						freeze_message: __("Writing questions and answers..."),
+					})
+					.then(({ message }) => {
+						frappe.show_alert({
+							message: message.count
+								? __("{0} FAQs written. Please check them.", [message.count])
+								: __("Not enough facts on this profile to write FAQs"),
+							indicator: message.count ? "green" : "orange",
+						});
+						frm.reload_doc();
+					});
+			const confirm_and_run = () =>
+				frm.doc.faqs && frm.doc.faqs.length
+					? frappe.confirm(__("Replace the current FAQs with new ones?"), run)
+					: run();
+			frm.is_dirty() ? frm.save().then(confirm_and_run) : confirm_and_run();
+		},
+		__("AI")
+	);
+}
+
+// The "Listed on It's Your Profile" badge for the owner's own website: a link back to the page
+// tells Google and AI search that the website and this profile are the same business
+function add_badge_button(frm) {
+	if (frm.is_new() || !frm.doc.route || !frm.doc.published) return;
+	frm.add_custom_button(
+		__("Website Badge"),
+		() => {
+			const page = frappe.urllib.get_full_url("/" + frm.doc.route);
+			const image = frappe.urllib.get_full_url("/assets/its_your_profile/images/iyp-badge.svg");
+			const code =
+				`<a href="${page}" target="_blank" rel="noopener" title="${frappe.utils.escape_html(frm.doc.company_name)} on It's Your Profile">` +
+				`<img src="${image}" alt="Listed on It's Your Profile" width="190" height="52"></a>`;
+			const d = new frappe.ui.Dialog({
+				title: __("Badge for the owner's website"),
+				fields: [
+					{ fieldtype: "HTML", options: `<p class="text-muted">${__("Paste this code on the business's own website, e.g. in its footer.")}</p><p>${code}</p>` },
+					{ fieldname: "code", fieldtype: "Code", label: __("Code"), default: code, read_only: 1 },
+				],
+				primary_action_label: __("Copy Code"),
+				primary_action() {
+					frappe.utils.copy_to_clipboard(code);
+					d.hide();
+				},
+			});
+			d.show();
+		},
+		__("AI")
+	);
+}
+
 const handlers = {
 	refresh(frm) {
 		add_welcome_email_button(frm);
 		add_read_again_button(frm);
 		add_refresh_summary_button(frm);
+		add_rewrite_faqs_button(frm);
+		add_badge_button(frm);
 		style_card_previews(frm);
 	},
 	visiting_card(frm) {

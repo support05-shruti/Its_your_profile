@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="190" height="52" viewBox="0 0 190 52" role="img" aria-label="Listed on It's Your Profile">
+  <rect x="0.5" y="0.5" width="189" height="51" rx="12" fill="#ffffff" stroke="#DCE3FA"/>
+  <rect x="12" y="17" width="22" height="15" rx="3" fill="#FFB27A" transform="rotate(-10 23 24.5)"/>
+  <rect x="17" y="14" width="22" height="15" rx="3" fill="#2B3FD6"/>
+  <text x="50" y="22" font-family="Sora, Segoe UI, Arial, sans-serif" font-size="10" font-weight="600" fill="#565C80">Listed on</text>
+  <text x="50" y="38" font-family="Sora, Segoe UI, Arial, sans-serif" font-size="14" font-weight="800" fill="#141936">It's Your Profile</text>
+</svg>

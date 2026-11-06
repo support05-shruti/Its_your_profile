@@ -15,9 +15,10 @@ frappe.ready(function () {
 				freeze: true,
 				freeze_message: __("Reading your visiting card..."),
 			})
-			.then(({ message: values }) => {
+			.then(({ message }) => {
+				const { _links: card_links = [], ...values } = message || {};
 				// Only fill empty boxes, so anything already typed (or read from the front) is kept
-				const filled = Object.entries(values || {}).filter(([fieldname, value]) => {
+				const filled = Object.entries(values).filter(([fieldname, value]) => {
 					if (web_form.get_value(fieldname) || !web_form.fields_dict[fieldname]) return false;
 					web_form.set_value(fieldname, value);
 					return true;
@@ -28,6 +29,9 @@ frappe.ready(function () {
 						: __("No new details found on this side of the card."),
 					indicator: filled.length ? "green" : "orange",
 				});
+				if (add_links(card_links)) {
+					frappe.show_alert({ message: __("Added links printed on the card."), indicator: "green" });
+				}
 				// The card may have given us an address and a website: use them straight away
 				update_maps_url();
 				read_links(web_form.get_value("website_url"));
@@ -35,6 +39,46 @@ frappe.ready(function () {
 	};
 	web_form.on("visiting_card", (field, file_url) => read_card(file_url));
 	web_form.on("visiting_card_back", (field, file_url) => read_card(file_url));
+
+	// Frappe's Upload → crop window has no rotate button, but its Cropper (window.cropper) can rotate;
+	// add ↺ ↻ buttons there, as on the desk form. The turn is kept when Crop is clicked.
+	const add_cropper_rotate_buttons = () => {
+		document.querySelectorAll(".image-cropper-actions").forEach((actions) => {
+			if (actions.querySelector(".cropper-rotate")) return;
+			const $buttons = $(`<div class="cropper-rotate btn-group ml-2">
+				<button type="button" class="btn btn-default btn-sm" data-degrees="-90" title="${__("Rotate Left")}">↺</button>
+				<button type="button" class="btn btn-default btn-sm" data-degrees="90" title="${__("Rotate Right")}">↻</button>
+			</div>`);
+			$buttons.find("button").on("click", function () {
+				rotate_cropper($(this).data("degrees"));
+			});
+			$(actions).children().first().css("display", "flex").append($buttons);
+		});
+	};
+
+	// Turn the photo itself and load it back into the cropper, which then fits it to the box.
+	// (Cropper's own rotate() leaves the turned photo overflowing the box.)
+	const rotate_cropper = (degrees) => {
+		const cropper = window.cropper;
+		if (!cropper) return;
+		const source = cropper.element;
+		const width = source.naturalWidth;
+		const height = source.naturalHeight;
+
+		const canvas = document.createElement("canvas");
+		canvas.width = height;
+		canvas.height = width;
+		const ctx = canvas.getContext("2d");
+		ctx.translate(height / 2, width / 2);
+		ctx.rotate((degrees * Math.PI) / 180);
+		ctx.drawImage(source, -width / 2, -height / 2);
+
+		// Frappe's cropper builds a new Cropper on every image load, which would replace the working one
+		source.onload = null;
+		cropper.replace(canvas.toDataURL("image/jpeg", 0.95));
+	};
+
+	new MutationObserver(add_cropper_rotate_buttons).observe(document.body, { childList: true, subtree: true });
 
 	// "Take Photo" on phones: opens the camera straight away. The normal Attach button stays
 	// for picking a photo from the gallery.
@@ -122,6 +166,27 @@ frappe.ready(function () {
 		web_form.on(f, update_maps_url)
 	);
 
+	// Add links to the Profile Links table, skipping platforms (and URLs) it already has
+	const add_links = (links) => {
+		const field = web_form.fields_dict.profile_links;
+		if (!field || !links.length) return 0;
+		const rows = (field.df.data = field.grid.get_data() || []);
+		const key = (r) => `${r.platform}|${r.label || ""}`;
+		const clean = (u) => (u || "").replace(/\/+$/, "").toLowerCase();
+		const have = new Set(rows.map(key));
+		const have_urls = new Set(rows.map((r) => clean(r.url)));
+
+		let added = 0;
+		links.forEach((link) => {
+			if (have.has(key(link)) || have_urls.has(clean(link.url))) return;
+			rows.push({ idx: rows.length + 1, __islocal: true, ...link, label: link.label || "" });
+			have.add(key(link));
+			added++;
+		});
+		field.grid.refresh();
+		return added;
+	};
+
 	// Read the website's profile links as soon as a website is given, and add them to the table
 	let last_links_url = null;
 	const read_links = (url) => {
@@ -144,21 +209,7 @@ frappe.ready(function () {
 					web_form.set_value("google_maps_url", message.map_url);
 				}
 
-				const field = web_form.fields_dict.profile_links;
-				const rows = (field.df.data = field.grid.get_data() || []);
-				const key = (r) => `${r.platform}|${r.label || ""}`;
-				const clean = (u) => (u || "").replace(/\/+$/, "").toLowerCase();
-				const have = new Set(rows.map(key));
-				const have_urls = new Set(rows.map((r) => clean(r.url)));
-
-				let added = 0;
-				links.forEach((link) => {
-					if (have.has(key(link)) || have_urls.has(clean(link.url))) return;
-					rows.push({ idx: rows.length + 1, __islocal: true, ...link, label: link.label || "" });
-					have.add(key(link));
-					added++;
-				});
-				field.grid.refresh();
+				const added = add_links(links);
 
 				frappe.show_alert({
 					message: added

@@ -1,0 +1,108 @@
+{
+ "actions": [],
+ "autoname": "hash",
+ "creation": "2026-11-04 12:00:00.000000",
+ "description": "One page view, button tap or crawler visit on a Business Profile. Written by its_your_profile.tracking.",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "business_profile",
+  "event",
+  "visitor",
+  "column_break_main",
+  "source",
+  "crawler",
+  "details_section",
+  "referrer",
+  "path"
+ ],
+ "fields": [
+  {
+   "fieldname": "business_profile",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Business Profile",
+   "options": "Business Profile",
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "event",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Event",
+   "options": "View\nCall\nWhatsApp\nEmail\nDirections\nWebsite\nSave Contact\nShare\nSocial Link\nCrawl",
+   "read_only": 1
+  },
+  {
+   "fieldname": "visitor",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Visitor",
+   "options": "Person\nAI Crawler\nSearch Crawler",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_main",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "Where a person came from: ChatGPT, Perplexity, Gemini, Claude, Google, Facebook, Direct…",
+   "fieldname": "source",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Source",
+   "read_only": 1
+  },
+  {
+   "fieldname": "crawler",
+   "fieldtype": "Data",
+   "in_standard_filter": 1,
+   "label": "Crawler",
+   "read_only": 1
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "details_section",
+   "fieldtype": "Section Break",
+   "label": "Details"
+  },
+  {
+   "fieldname": "referrer",
+   "fieldtype": "Small Text",
+   "label": "Referrer",
+   "read_only": 1
+  },
+  {
+   "description": "Page a crawler fetched, e.g. /llms.txt",
+   "fieldname": "path",
+   "fieldtype": "Data",
+   "label": "Path",
+   "read_only": 1
+  }
+ ],
+ "in_create": 1,
+ "links": [],
+ "modified": "2026-11-04 12:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Its Your Profile",
+ "name": "Profile Visit",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "delete": 1,
+   "export": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager"
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
+}

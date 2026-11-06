@@ -15,7 +15,15 @@
   "email_section",
   "send_welcome_email",
   "column_break_email",
-  "welcome_email_account"
+  "welcome_email_account",
+  "whatsapp_section",
+  "send_monthly_whatsapp_report",
+  "whatsapp_phone_number_id",
+  "whatsapp_access_token",
+  "column_break_whatsapp",
+  "whatsapp_template_name",
+  "whatsapp_template_language",
+  "whatsapp_api_version"
  ],
  "fields": [
   {
@@ -90,11 +98,66 @@
    "fieldtype": "Link",
    "label": "Send From",
    "options": "Email Account"
+  },
+  {
+   "fieldname": "whatsapp_section",
+   "fieldtype": "Section Break",
+   "label": "Monthly WhatsApp Report"
+  },
+  {
+   "default": "0",
+   "description": "On: on the 1st of each month at 10:00, every business with activity last month gets a WhatsApp report (AI crawler reads, visitors from AI apps, page views, taps) on the first number on its page. Each message has a fee from Meta.",
+   "fieldname": "send_monthly_whatsapp_report",
+   "fieldtype": "Check",
+   "label": "Send Monthly WhatsApp Report"
+  },
+  {
+   "depends_on": "eval:doc.send_monthly_whatsapp_report",
+   "description": "From Meta WhatsApp Manager → API Setup (the ID, not the phone number itself)",
+   "fieldname": "whatsapp_phone_number_id",
+   "fieldtype": "Data",
+   "label": "WhatsApp Phone Number ID",
+   "mandatory_depends_on": "eval:doc.send_monthly_whatsapp_report"
+  },
+  {
+   "depends_on": "eval:doc.send_monthly_whatsapp_report",
+   "description": "A permanent System User token from Meta Business Settings, with whatsapp_business_messaging permission",
+   "fieldname": "whatsapp_access_token",
+   "fieldtype": "Password",
+   "label": "WhatsApp Access Token",
+   "mandatory_depends_on": "eval:doc.send_monthly_whatsapp_report"
+  },
+  {
+   "fieldname": "column_break_whatsapp",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "monthly_profile_report",
+   "depends_on": "eval:doc.send_monthly_whatsapp_report",
+   "description": "An approved Utility template with 9 body variables: {{1}} business name, {{2}} month, {{3}} AI crawler reads, {{4}} visitors from AI apps, {{5}} page views, {{6}} WhatsApp taps, {{7}} calls, {{8}} contact saves, {{9}} page link",
+   "fieldname": "whatsapp_template_name",
+   "fieldtype": "Data",
+   "label": "Template Name"
+  },
+  {
+   "default": "en",
+   "depends_on": "eval:doc.send_monthly_whatsapp_report",
+   "description": "The template's language code in WhatsApp Manager, e.g. en or en_US",
+   "fieldname": "whatsapp_template_language",
+   "fieldtype": "Data",
+   "label": "Template Language"
+  },
+  {
+   "depends_on": "eval:doc.send_monthly_whatsapp_report",
+   "description": "e.g. v23.0. Leave empty to use your Meta app's default version.",
+   "fieldname": "whatsapp_api_version",
+   "fieldtype": "Data",
+   "label": "Graph API Version"
   }
  ],
  "issingle": 1,
  "links": [],
- "modified": "2026-10-26 18:00:00.000000",
+ "modified": "2026-11-05 14:02:26.000000",
  "modified_by": "Administrator",
  "module": "Its Your Profile",
  "name": "Its Your Profile Settings",

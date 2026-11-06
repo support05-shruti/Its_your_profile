@@ -46,10 +46,15 @@ def scan_visiting_card(profile: str):
 	try:
 		# Front first, so its values win; the optional back side only fills what's still blank
 		results = []
+		logo_url = None
 		for file_url in sides:
 			file = frappe.get_doc("File", {"file_url": file_url})
 			mime_type = mimetypes.guess_type(file.file_name or file_url)[0] or "image/jpeg"
-			results.append(ai.extract_card_details(file.get_content(), mime_type))
+			content = file.get_content()
+			details = ai.extract_card_details(content, mime_type)
+			results.append(details)
+			if not logo_url and not doc.company_logo:
+				logo_url = save_card_logo(content, details.logo_box, profile)
 
 		# The AI call is slow; reload so edits saved meanwhile aren't overwritten (TimestampMismatchError)
 		doc = frappe.get_doc("Business Profile", profile)
@@ -65,9 +70,12 @@ def scan_visiting_card(profile: str):
 			for fieldname, value in card_colours(details).items():
 				if value and not doc.get(fieldname):
 					doc.set(fieldname, value)
+			add_profile_links(doc, card_links(details.social_links))
 
 		if not doc.website_url:
 			doc.website_url = website_from_email(doc.email)
+		if logo_url and not doc.company_logo:
+			doc.company_logo = logo_url
 
 		doc.card_scan_status = "Completed"
 		doc.flags.from_scan = True
@@ -79,6 +87,242 @@ def scan_visiting_card(profile: str):
 		frappe.db.set_value("Business Profile", profile, "card_scan_status", "Failed")
 
 	frappe.db.commit()
+
+
+AUTO_LOGO_NAME = re.compile(r"^/files/logo-[0-9a-f]{8}\.png$")
+
+
+def add_logo_from_card(profile: str, redo: bool = False):
+	"""Fill a missing Company Logo from the card photos, front first. Touches nothing else.
+	With redo, a logo cut from the card earlier is cut again; one uploaded by hand is kept."""
+	doc = frappe.get_doc("Business Profile", profile)
+	if doc.company_logo and not (redo and AUTO_LOGO_NAME.match(doc.company_logo)):
+		return
+	old_logo = doc.company_logo
+	try:
+		for file_url in (doc.visiting_card, doc.visiting_card_back):
+			if not file_url:
+				continue
+			file = frappe.get_doc("File", {"file_url": file_url})
+			mime_type = mimetypes.guess_type(file.file_name or file_url)[0] or "image/jpeg"
+			content = file.get_content()
+			details = ai.extract_card_details(content, mime_type)
+			if logo_url := save_card_logo(content, details.logo_box, profile):
+				doc.db_set("company_logo", logo_url, update_modified=False)
+				break
+		else:
+			# No clean logo found this time: show the initials rather than the old rough cut
+			if old_logo:
+				doc.db_set("company_logo", None, update_modified=False)
+		if old_logo and old_logo != doc.company_logo:
+			for name in frappe.get_all("File", filters={"file_url": old_logo}, pluck="name"):
+				frappe.delete_doc("File", name, ignore_permissions=True)
+	except Exception:
+		frappe.db.rollback()
+		logger.exception(f"Logo from card failed for {profile}")
+		return
+	frappe.db.commit()
+
+
+def save_card_logo(content: bytes, box: list[float] | None, profile: str | None = None) -> str | None:
+	"""Cut the logo out of a card photo, using the box the AI found ([ymin, xmin, ymax, xmax] on a
+	0-1000 scale), and save it as a public file for the profile page. None if no clean logo is found."""
+	import io
+
+	from PIL import Image, ImageOps
+
+	if not box or len(box) != 4:
+		return None
+	ymin, xmin, ymax, xmax = (min(max(float(v), 0), 1000) / 1000 for v in box)
+	# A sliver is a misread; a box over most of the card is the whole card, not a logo
+	if ymax - ymin < 0.02 or xmax - xmin < 0.02 or (ymax - ymin) * (xmax - xmin) > 0.7:
+		return None
+
+	try:
+		image = ImageOps.exif_transpose(Image.open(io.BytesIO(content))).convert("RGB")
+	except Exception:
+		return None  # a format Pillow can't open, e.g. HEIC
+
+	logo = cut_out_logo(image, (xmin, ymin, xmax, ymax))
+	if not logo:
+		return None
+	buffer = io.BytesIO()
+	logo.save(buffer, format="PNG")
+
+	file = frappe.get_doc(
+		{
+			"doctype": "File",
+			"file_name": f"logo-{frappe.generate_hash(length=8)}.png",
+			"attached_to_doctype": "Business Profile" if profile else None,
+			"attached_to_name": profile,
+			"attached_to_field": "company_logo" if profile else None,
+			"is_private": 0,
+			"content": buffer.getvalue(),
+		}
+	).insert(ignore_permissions=True)
+	return file.file_url
+
+
+# Logo cleanup works on a small copy of the photo; the final cut is made from the full-size one
+LOGO_WORK_SIZE = 400
+# How far (0-255) a pixel's colour must be from the card's paper to count as printed ink
+INK_THRESHOLD = 45
+# Ink fades in between these, so the edges of letters stay smooth on the page
+INK_FADE = (18, 70)
+
+
+def cut_out_logo(image, box):
+	"""Cut the logo out of a card photo, clean: on a transparent background, without the card's
+	other print (names, lines, patterns) or the photo's shadows. `box` is the AI's rough guess
+	(left, top, right, bottom as 0-1 fractions). None if no clean logo can be found."""
+	from PIL import Image, ImageChops, ImageFilter, ImageOps
+
+	width, height = image.size
+	left, top, right, bottom = box
+	# Look beyond the AI's box, which is rough and can clip the logo
+	margin_x, margin_y = (right - left) * 0.25, (bottom - top) * 0.25
+	region = (
+		max(0, int((left - margin_x) * width)),
+		max(0, int((top - margin_y) * height)),
+		min(width, int((right + margin_x) * width)),
+		min(height, int((bottom + margin_y) * height)),
+	)
+	area = image.crop(region)
+	scale = min(1, LOGO_WORK_SIZE / max(area.size))
+	small = area.resize((max(1, round(area.width * scale)), max(1, round(area.height * scale))))
+	w, h = small.size
+
+	paper = paper_colour(small)
+	ink = ink_strength(small, paper)
+	labels, shapes = find_shapes([v > INK_THRESHOLD for v in ink.getdata()], w, h)
+
+	# Shapes running off the edge are patterns, borders or shadows bigger than any logo;
+	# specks are dust and photo noise
+	min_size = max(4, w * h * 0.0005)
+	shapes = [s for s in shapes if s["size"] >= min_size and not touches_edge(s["box"], w, h)]
+	if not shapes:
+		return None
+
+	# Start from the biggest shape inside the AI's box, usually the logo's symbol, and take in the
+	# shapes close to it (the name, a tagline). Print further away is the rest of the card.
+	ai_box = (
+		(left * width - region[0]) * scale,
+		(top * height - region[1]) * scale,
+		(right * width - region[0]) * scale,
+		(bottom * height - region[1]) * scale,
+	)
+	inside = [s for s in shapes if box_gap(s["box"], ai_box) == 0] or shapes
+	seed = max(inside, key=lambda s: s["size"])
+	reach = max(seed["box"][2] - seed["box"][0], seed["box"][3] - seed["box"][1]) * 0.6
+	group, group_box = [seed], seed["box"]
+	added = True
+	while added:
+		added = False
+		for shape in shapes:
+			if shape not in group and box_gap(shape["box"], group_box) <= reach:
+				group.append(shape)
+				group_box = union_box(group_box, shape["box"])
+				added = True
+
+	# Too small to be read on the page
+	if group_box[2] - group_box[0] < w * 0.08 or group_box[3] - group_box[1] < h * 0.06:
+		return None
+
+	# A little room so letter edges aren't cut
+	pad = max(2, round(max(group_box[2] - group_box[0], group_box[3] - group_box[1]) * 0.03))
+	cut_small = (
+		max(0, group_box[0] - pad),
+		max(0, group_box[1] - pad),
+		min(w, group_box[2] + pad),
+		min(h, group_box[3] + pad),
+	)
+	cut = (
+		region[0] + int(cut_small[0] / scale),
+		region[1] + int(cut_small[1] / scale),
+		region[0] + min(area.width, round(cut_small[2] / scale)),
+		region[1] + min(area.height, round(cut_small[3] / scale)),
+	)
+	logo = image.crop(cut)
+
+	# Paper becomes transparent, ink stays; only the logo's own shapes are kept
+	low, high = INK_FADE
+	alpha = ink_strength(logo, paper).point(
+		lambda v: 0 if v <= low else 255 if v >= high else (v - low) * 255 // (high - low)
+	)
+	keep_labels = {s["label"] for s in group}
+	keep = Image.new("L", (w, h))
+	keep.putdata([255 if label in keep_labels else 0 for label in labels])
+	keep = keep.filter(ImageFilter.MaxFilter(3)).crop(cut_small).resize(logo.size, Image.BILINEAR)
+	alpha = ImageChops.multiply(alpha, keep)
+
+	# Photos make print look dull and greyish; stretch the colours back to full strength
+	# (preserve_tone keeps the brand's hue instead of stretching each colour channel apart)
+	logo = ImageOps.autocontrast(logo, cutoff=1, preserve_tone=True).convert("RGBA")
+	logo.putalpha(alpha)
+	return logo.crop(alpha.getbbox() or (0, 0, *logo.size))
+
+
+def paper_colour(image):
+	"""The card's background colour: the most common colour, in coarse steps to ignore photo noise."""
+	from collections import Counter
+
+	counts = Counter((r >> 4, g >> 4, b >> 4) for r, g, b in image.getdata())
+	r, g, b = counts.most_common(1)[0][0]
+	return ((r << 4) + 8, (g << 4) + 8, (b << 4) + 8)
+
+
+def ink_strength(image, paper):
+	"""Greyscale image of how far each pixel's colour is from the paper: 0 is paper, 255 is far off."""
+	from PIL import Image, ImageChops
+
+	r, g, b = ImageChops.difference(image, Image.new("RGB", image.size, paper)).split()
+	return ImageChops.lighter(ImageChops.lighter(r, g), b)
+
+
+def find_shapes(mask, width, height):
+	"""Group touching ink pixels into shapes. Returns a label per pixel (0 for paper) and the shapes,
+	each with its label, bounding box (left, top, right, bottom) and size in pixels."""
+	labels = [0] * len(mask)
+	shapes = []
+	for start, is_ink in enumerate(mask):
+		if not is_ink or labels[start]:
+			continue
+		label = len(shapes) + 1
+		labels[start] = label
+		stack = [start]
+		x0 = x1 = start % width
+		y0 = y1 = start // width
+		size = 0
+		while stack:
+			i = stack.pop()
+			size += 1
+			x, y = i % width, i // width
+			x0, x1, y0, y1 = min(x0, x), max(x1, x), min(y0, y), max(y1, y)
+			for ny in (y - 1, y, y + 1):
+				if 0 <= ny < height:
+					for nx in (x - 1, x, x + 1):
+						if 0 <= nx < width:
+							j = ny * width + nx
+							if mask[j] and not labels[j]:
+								labels[j] = label
+								stack.append(j)
+		shapes.append({"label": label, "box": (x0, y0, x1 + 1, y1 + 1), "size": size})
+	return labels, shapes
+
+
+def touches_edge(box, width, height):
+	return box[0] <= 0 or box[1] <= 0 or box[2] >= width or box[3] >= height
+
+
+def box_gap(a, b):
+	"""Distance between two boxes; 0 when they overlap."""
+	dx = max(0, b[0] - a[2], a[0] - b[2])
+	dy = max(0, b[1] - a[3], a[1] - b[3])
+	return max(dx, dy)
+
+
+def union_box(a, b):
+	return (min(a[0], b[0]), min(a[1], b[1]), max(a[2], b[2]), max(a[3], b[3]))
 
 
 def scrape_website(profile: str):
@@ -101,7 +345,14 @@ def scrape_website(profile: str):
 		if not insights.ai_summary and ai._setting("gemini_api_key"):
 			# Sites built in the browser (Hostinger Horizons, Wix...) give almost no text; look the company up instead
 			researched = ai.research_company(doc.company_name, doc.website_url, doc.city)
-			for field in ("ai_summary", "business_nature", "linkedin_url", "facebook_url", "established_year"):
+			for field in (
+				"ai_summary",
+				"services",
+				"business_nature",
+				"linkedin_url",
+				"facebook_url",
+				"established_year",
+			):
 				if not getattr(insights, field):
 					setattr(insights, field, getattr(researched, field))
 		links = social_links(soups)
@@ -117,6 +368,9 @@ def scrape_website(profile: str):
 			doc.business_nature = insights.business_nature
 		if not doc.established_year and insights.established_year:
 			doc.established_year = insights.established_year
+		# The owner's own list wins; the AI only fills an empty one
+		if not (doc.services or "").strip() and insights.services:
+			doc.services = "\n".join(s.strip() for s in insights.services[:10] if s.strip())
 		# The AI only fills a platform the page's own <a> links didn't give us
 		for platform, url in (("LinkedIn", insights.linkedin_url), ("Facebook", insights.facebook_url)):
 			if url and not any(p == platform for p, _label, _url in links):
@@ -130,6 +384,34 @@ def scrape_website(profile: str):
 		frappe.db.rollback()
 		frappe.log_error(f"Website scrape failed for {profile}")
 		logger.exception(f"Website scrape failed for {profile}")
+
+
+def write_faqs(profile: str, replace: bool = False):
+	"""Have the AI write FAQs from the profile's facts. Leaves FAQs someone already wrote alone
+	unless `replace` (the desk's Write FAQs Again button)."""
+	doc = frappe.get_doc("Business Profile", profile)
+	if (doc.faqs and not replace) or not doc.company_name:
+		return
+
+	try:
+		answer = ai.write_faqs(doc.get_facts_for_ai())
+		faqs = [f for f in answer.faqs if f.question.strip() and f.answer.strip()][:6]
+		if not faqs:
+			return
+
+		# The AI call is slow; reload so edits saved meanwhile aren't overwritten
+		doc = frappe.get_doc("Business Profile", profile)
+		if doc.faqs and not replace:
+			return
+		doc.set("faqs", [{"question": f.question.strip(), "answer": f.answer.strip()} for f in faqs])
+		doc.save(ignore_permissions=True)
+		frappe.db.commit()
+	except Exception:
+		frappe.db.rollback()
+		frappe.log_error(f"Writing FAQs failed for {profile}")
+		logger.exception(f"Writing FAQs failed for {profile}")
+		if replace:
+			raise
 
 
 LINKEDIN_PERSON = re.compile(r"^https?://([a-z]{2,3}\.)?linkedin\.com/in/[^/?#\s]+", re.I)
@@ -320,23 +602,41 @@ LINK_RULES = (
 SHARE_PATHS = ("/sharer", "/share", "/intent", "/shareArticle", "/dialog/")
 
 
+def link_kind(href: str) -> tuple[str, str | None] | None:
+	"""(platform, label) of a profile link on a known site (LINK_RULES), else None."""
+	parsed = urlparse(href)
+	host, path = (parsed.hostname or "").removeprefix("www."), parsed.path or ""
+	if parsed.scheme not in ("http", "https") or any(s in path for s in SHARE_PATHS):
+		return None
+	for suffix, path_part, platform, label in LINK_RULES:
+		if (host == suffix or host.endswith("." + suffix)) and path_part in path:
+			return platform, label
+	return None
+
+
 def social_links(soups: list[BeautifulSoup]) -> list[tuple[str, str | None, str]]:
 	"""Find the company's profile links on its pages, one per platform, as (platform, label, url)."""
 	found, seen = [], set()
 	for soup in soups:
 		for a in soup.find_all("a", href=True):
 			href = a["href"].strip()
-			parsed = urlparse(href)
-			host, path = (parsed.hostname or "").removeprefix("www."), parsed.path or ""
-			if parsed.scheme not in ("http", "https") or any(s in path for s in SHARE_PATHS):
-				continue
-			for suffix, path_part, platform, label in LINK_RULES:
-				if (host == suffix or host.endswith("." + suffix)) and path_part in path:
-					key = (platform, label)
-					if key not in seen:
-						seen.add(key)
-						found.append((platform, label, href))
-					break
+			if (kind := link_kind(href)) and kind not in seen:
+				seen.add(kind)
+				found.append((*kind, href))
+	return found
+
+
+def card_links(urls: list[str] | None) -> list[tuple[str, str | None, str]]:
+	"""Profile links the AI read off a card, one per platform, as (platform, label, url).
+	Only known sites are kept, so a misread website or email never ends up as a profile link."""
+	found, seen = [], set()
+	for url in urls or []:
+		url = (url or "").strip()
+		if url and "://" not in url:
+			url = "https://" + url
+		if (kind := link_kind(url)) and kind not in seen:
+			seen.add(kind)
+			found.append((*kind, url))
 	return found
 
 

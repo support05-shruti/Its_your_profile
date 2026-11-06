@@ -4,62 +4,132 @@
 
 {% block page_content %}
 <style>
-	.iyp-hero { padding: 32px 0 24px; border-bottom: 1px solid var(--border-color, #e2e6e9); margin-bottom: 24px; }
-	.iyp-hero h1 { font-size: 2rem; margin-bottom: 8px; }
-	.iyp-hero p { max-width: 60ch; color: var(--text-muted, #5a6875); }
-	.iyp-search { display: flex; flex-wrap: wrap; gap: 8px; margin: 16px 0 8px; }
-	.iyp-search input, .iyp-search select { flex: 1 1 180px; min-width: 0; }
-	.iyp-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; }
-	.iyp-card { border: 1px solid var(--border-color, #e2e6e9); border-radius: 10px; padding: 16px;
-		border-top: 4px solid var(--iyp-card, #1f5f8b); display: grid; gap: 6px; align-content: start; }
-	.iyp-card h2 { font-size: 1.05rem; margin: 0; }
-	.iyp-card h2 a { color: var(--iyp-card, inherit); text-decoration: none; }
-	.iyp-card h2 a:hover { text-decoration: underline; }
-	.iyp-meta { font-size: .85rem; color: var(--text-muted, #5a6875); }
-	.iyp-card p { font-size: .9rem; margin: 0; }
+	.iyp-dir { --ink: #1b2430; --muted: #5f6b7a; --line: #e6e9ee; --accent: #1f5f8b; color: var(--ink); padding-bottom: 32px; }
+	.iyp-dir .iyp-i { width: 18px; height: 18px; flex: none; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+	.iyp-hero {
+		position: relative; overflow: hidden; border-radius: 20px; margin-top: 8px; padding: 40px 32px 32px; color: #fff;
+		background: linear-gradient(135deg, var(--accent) 0%, #0f2d44 100%);
+		box-shadow: 0 1px 2px rgba(16,24,40,.05), 0 12px 32px -12px rgba(16,24,40,.35);
+	}
+	.iyp-hero::before { content: ""; position: absolute; width: 340px; height: 340px; border-radius: 50%; right: -90px; top: -160px; background: rgba(255,255,255,.08); }
+	.iyp-hero::after { content: ""; position: absolute; width: 180px; height: 180px; border-radius: 50%; right: 180px; bottom: -110px; background: rgba(255,255,255,.05); }
+	.iyp-hero > * { position: relative; z-index: 1; }
+	.iyp-hero h1 { color: #fff; font-size: clamp(1.7rem, 4vw, 2.4rem); font-weight: 800; letter-spacing: -.02em; margin: 0 0 8px; }
+	.iyp-hero p { max-width: 58ch; opacity: .88; line-height: 1.6; margin: 0 0 22px; }
+
+	.iyp-search { display: flex; flex-wrap: wrap; gap: 8px; background: #fff; padding: 6px; border-radius: 16px; box-shadow: 0 12px 30px -10px rgba(0,0,0,.4); }
+	.iyp-search label { flex: 1 1 260px; min-width: 0; display: flex; align-items: center; gap: 8px; padding: 0 12px; margin: 0; color: #8a94a3; }
+	.iyp-search input { flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; padding: 10px 0; font-size: 1rem; color: var(--ink); }
+	.iyp-search select { flex: 0 1 180px; min-width: 0; border: 0; border-left: 1px solid var(--line); background: transparent; padding: 0 12px; color: var(--ink); font-size: .95rem; }
+	.iyp-search button { flex: none; border: 0; border-radius: 12px; padding: 11px 22px; background: var(--accent); color: #fff; font-weight: 600; cursor: pointer; }
+	.iyp-search button:hover { background: #174a6c; }
+	.iyp-hero-cta { display: inline-flex; align-items: center; gap: 6px; margin-top: 16px; color: #fff !important; font-weight: 600; opacity: .9; }
+	.iyp-hero-cta:hover { opacity: 1; }
+
+	.iyp-pills { display: flex; flex-wrap: wrap; gap: 8px; margin: 20px 0 8px; }
+	.iyp-pill {
+		padding: 7px 15px; border-radius: 999px; border: 1px solid var(--line); background: #fff; font-size: .88rem; font-weight: 600;
+		color: #364152 !important; text-decoration: none !important; transition: all .15s ease;
+	}
+	.iyp-pill:hover { border-color: var(--ink); }
+	.iyp-pill.on { background: var(--ink); border-color: var(--ink); color: #fff !important; }
+	.iyp-meta { font-size: .88rem; color: var(--muted); margin: 8px 0 16px; }
+
+	.iyp-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
+	.iyp-card {
+		--c: var(--accent);
+		position: relative; display: grid; gap: 10px; align-content: start; background: #fff; border: 1px solid var(--line);
+		border-radius: 16px; padding: 18px; box-shadow: 0 1px 2px rgba(16,24,40,.05);
+		transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease;
+	}
+	.iyp-card:hover { transform: translateY(-4px); border-color: color-mix(in srgb, var(--c) 35%, #fff); box-shadow: 0 18px 36px -16px color-mix(in srgb, var(--c) 60%, transparent); }
+	.iyp-head { display: flex; gap: 12px; align-items: center; }
+	.iyp-av { width: 46px; height: 46px; border-radius: 13px; flex: none; display: grid; place-items: center; background: var(--c); color: #fff; font-weight: 800; font-size: 1.25rem; }
+	.iyp-card h2 { font-size: 1.02rem; font-weight: 700; margin: 0; line-height: 1.3; }
+	.iyp-card h2 a { color: var(--ink) !important; text-decoration: none !important; }
+	/* The whole card opens the profile */
+	.iyp-card h2 a::after { content: ""; position: absolute; inset: 0; border-radius: 16px; }
+	.iyp-card small { color: var(--muted); font-size: .8rem; }
+	.iyp-card p { margin: 0; font-size: .9rem; color: #364152; line-height: 1.55; }
+	.iyp-foot { display: flex; justify-content: space-between; align-items: center; margin-top: auto; padding-top: 10px; border-top: 1px solid #eef0f3; font-size: .85rem; }
+	.iyp-call { position: relative; z-index: 1; display: inline-flex; align-items: center; gap: 6px; color: var(--c) !important; font-weight: 600; text-decoration: none !important; }
+	.iyp-call .iyp-i { width: 15px; height: 15px; }
+	.iyp-view { color: var(--muted); margin-left: auto; }
+
+	.iyp-empty { text-align: center; padding: 48px 16px; border: 1px dashed var(--line); border-radius: 16px; color: var(--muted); }
+	.iyp-empty b { display: block; color: var(--ink); font-size: 1.1rem; margin-bottom: 6px; }
+
+	@media (max-width: 767px) {
+		.iyp-hero { padding: 28px 20px 22px; margin: 0 -15px; border-radius: 0 0 20px 20px; }
+		.iyp-search select { border-left: 0; border-top: 1px solid var(--line); flex-basis: 100%; padding: 10px 12px; }
+		.iyp-search button { flex: 1 1 100%; }
+	}
+	@media (prefers-reduced-motion: reduce) { .iyp-card, .iyp-pill { transition: none; } }
 </style>
 
-<section class="iyp-hero">
-	<h1>{{ _("It's Your Profile") }}</h1>
-	<p>{{ _("A free business directory built for AI search. When people ask ChatGPT or Gemini for a business like yours, a clear profile page helps them find you. Make yours from your visiting card in a minute.") }}</p>
-	<a class="btn btn-primary" href="/my-business/new">{{ _("Register your business") }}</a>
-</section>
+<div class="iyp-dir">
+	<section class="iyp-hero">
+		<h1>{{ _("Find trusted local businesses") }}</h1>
+		<p>{{ _("A free business directory built for AI search. When people ask ChatGPT or Gemini for a business like yours, a clear profile page helps them find you.") }}</p>
+		<form class="iyp-search" method="get" action="/directory" role="search">
+			{% if nature %}<input type="hidden" name="nature" value="{{ nature | e }}">{% endif %}
+			<label>
+				<svg class="iyp-i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+				<input type="search" name="q" value="{{ q | e }}" placeholder="{{ _('Search by name, product, service or city') }}" aria-label="{{ _('Search') }}">
+			</label>
+			<select name="city" aria-label="{{ _('City') }}">
+				<option value="">{{ _("All cities") }}</option>
+				{% for c in cities %}<option value="{{ c | e }}" {% if c == city %}selected{% endif %}>{{ c | e }}</option>{% endfor %}
+			</select>
+			<button type="submit">{{ _("Search") }}</button>
+		</form>
+		<a class="iyp-hero-cta" href="/my-business/new">{{ _("Register your business free") }} →</a>
+	</section>
 
-<form class="iyp-search" method="get" action="/directory" role="search">
-	<input class="form-control" type="search" name="q" value="{{ q | e }}"
-		placeholder="{{ _('Search by name, product, service or city') }}" aria-label="{{ _('Search') }}">
-	<select class="form-control" name="nature" aria-label="{{ _('Business type') }}">
-		<option value="">{{ _("All business types") }}</option>
-		{% for n in natures %}<option value="{{ n }}" {% if n == nature %}selected{% endif %}>{{ _(n) }}</option>{% endfor %}
-	</select>
-	<select class="form-control" name="city" aria-label="{{ _('City') }}">
-		<option value="">{{ _("All cities") }}</option>
-		{% for c in cities %}<option value="{{ c | e }}" {% if c == city %}selected{% endif %}>{{ c | e }}</option>{% endfor %}
-	</select>
-	<button class="btn btn-default" type="submit">{{ _("Search") }}</button>
-</form>
+	<nav class="iyp-pills" aria-label="{{ _('Business type') }}">
+		<a class="iyp-pill {% if not nature %}on{% endif %}" href="/directory?q={{ q | urlencode }}&city={{ city | urlencode }}">{{ _("All") }}</a>
+		{% for n in natures %}
+		<a class="iyp-pill {% if n == nature %}on{% endif %}" href="/directory?nature={{ n | urlencode }}&q={{ q | urlencode }}&city={{ city | urlencode }}">{{ _(n) }}</a>
+		{% endfor %}
+	</nav>
 
-<p class="iyp-meta">
-	{% if q or nature or city %}
-		{{ _("{0} found").format(businesses | length) }} · <a href="/directory">{{ _("Clear search") }}</a>
+	<p class="iyp-meta">
+		{% if q or nature or city %}
+			{{ _("{0} found").format(businesses | length) }} · <a href="/directory">{{ _("Clear search") }}</a>
+		{% else %}
+			{{ _("{0} businesses listed").format(total) }}
+		{% endif %}
+	</p>
+
+	{% if businesses %}
+	<div class="iyp-grid">
+		{% for b in businesses %}
+		<article class="iyp-card" {% if b.colour %}style="--c: {{ b.colour }}"{% endif %}>
+			<div class="iyp-head">
+				<span class="iyp-av" aria-hidden="true">{{ (b.company_name or "?")[0] | upper | e }}</span>
+				<div>
+					<h2><a href="/{{ b.route }}">{{ b.company_name | e }}</a></h2>
+					<small>{{ _(b.business_nature) if b.business_nature else "" }}{% if b.business_nature and b.city %} · {% endif %}{{ (b.city or "") | e }}</small>
+				</div>
+			</div>
+			{% if b.summary %}<p>{{ b.summary | e }}</p>{% endif %}
+			<div class="iyp-foot">
+				{% if b.call %}
+				<a class="iyp-call" href="tel:{{ b.call | e }}">
+					<svg class="iyp-i" viewBox="0 0 24 24" aria-hidden="true"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/></svg>{{ _("Call") }}
+				</a>
+				{% endif %}
+				<span class="iyp-view">{{ _("View profile") }} →</span>
+			</div>
+		</article>
+		{% endfor %}
+	</div>
 	{% else %}
-		{{ _("{0} businesses listed").format(total) }}
+	<div class="iyp-empty">
+		<b>{{ _("No businesses match your search yet") }}</b>
+		{{ _("Try another word or city, or") }} <a href="/my-business/new">{{ _("add your business") }}</a>.
+	</div>
 	{% endif %}
-</p>
-
-{% if businesses %}
-<div class="iyp-grid">
-	{% for b in businesses %}
-	<article class="iyp-card" {% if b.colour %}style="--iyp-card: {{ b.colour }}"{% endif %}>
-		<h2><a href="/{{ b.route }}">{{ b.company_name | e }}</a></h2>
-		<div class="iyp-meta">
-			{{ b.business_nature or "" }}{% if b.business_nature and b.city %} · {% endif %}{{ (b.city or "") | e }}
-		</div>
-		{% if b.summary %}<p>{{ b.summary | e }}</p>{% endif %}
-	</article>
-	{% endfor %}
 </div>
-{% else %}
-<p>{{ _("No businesses match your search yet.") }} <a href="/my-business/new">{{ _("Add yours") }}</a></p>
-{% endif %}
 {% endblock %}

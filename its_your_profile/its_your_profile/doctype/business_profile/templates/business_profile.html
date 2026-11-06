@@ -6,106 +6,735 @@
 <script type="application/ld+json">
 {{ json_ld }}
 </script>
+<meta property="og:type" content="business.business">
+<meta property="og:title" content="{{ company_name | e }}">
+<meta property="og:url" content="{{ page_url | e }}">
+{#- The same profile as plain Markdown, which AI crawlers read without the page around it -#}
+<link rel="alternate" type="text/markdown" href="{{ markdown_url | e }}" title="{{ company_name | e }} (Markdown)">
+{% if og_image %}<meta property="og:image" content="{{ og_image | e }}">{% endif %}
 {% endblock %}
 
 {% block page_content %}
+{#- Lucide icons (MIT), inline so the page needs no icon font -#}
+{% macro icon(name) -%}
+{%- set paths = {
+	"phone": '<path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/>',
+	"whatsapp": '<path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/><path d="M9 10a.5.5 0 0 0 1 0V9a.5.5 0 0 0-1 0v1a5 5 0 0 0 5 5h1a.5.5 0 0 0 0-1h-1a.5.5 0 0 0 0 1"/>',
+	"mail": '<rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 6L2 7"/>',
+	"globe": '<circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>',
+	"pin": '<path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/>',
+	"user": '<path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>',
+	"users": '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>',
+	"calendar": '<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>',
+	"briefcase": '<rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>',
+	"download": '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/>',
+	"share": '<circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.59 13.51 6.83 3.98M15.41 6.51l-6.82 3.98"/>',
+	"copy": '<rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>',
+	"sparkles": '<path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3Z"/>',
+	"linkedin": '<path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-4 0v7h-4v-7a6 6 0 0 1 6-6z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/>',
+	"facebook": '<path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/>',
+	"instagram": '<rect x="2" y="2" width="20" height="20" rx="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><path d="M17.5 6.5h.01"/>',
+	"youtube": '<path d="M2.5 17a24.12 24.12 0 0 1 0-10 2 2 0 0 1 1.4-1.4 49.56 49.56 0 0 1 16.2 0A2 2 0 0 1 21.5 7a24.12 24.12 0 0 1 0 10 2 2 0 0 1-1.4 1.4 49.55 49.55 0 0 1-16.2 0A2 2 0 0 1 2.5 17"/><path d="m10 15 5-3-5-3z"/>',
+	"twitter": '<path d="M4 4l16 16M20 4 4 20"/>',
+	"store": '<path d="m2 7 4.41-4.41A2 2 0 0 1 7.83 2h8.34a2 2 0 0 1 1.42.59L22 7"/><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><path d="M2 7h20v3a2 2 0 0 1-2 2 2.7 2.7 0 0 1-2-1 2.7 2.7 0 0 1-4 0 2.7 2.7 0 0 1-4 0 2.7 2.7 0 0 1-4 0 2.7 2.7 0 0 1-2 1 2 2 0 0 1-2-2V7z"/>',
+	"link": '<path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>',
+	"qr": '<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3h-3zM21 14v.01M21 21h-4v-1M14 21v-1"/>',
+	"rotate": '<path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/>',
+	"arrow": '<path d="M5 12h14"/><path d="m12 5 7 7-7 7"/>',
+	"check": '<path d="M20 6 9 17l-5-5"/>',
+	"external": '<path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>',
+	"quote": '<path d="M16 3a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2 1 1 0 0 1 1 1v1a2 2 0 0 1-2 2 1 1 0 0 0-1 1v2a1 1 0 0 0 1 1 6 6 0 0 0 6-6V5a2 2 0 0 0-2-2z"/><path d="M5 3a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2 1 1 0 0 1 1 1v1a2 2 0 0 1-2 2 1 1 0 0 0-1 1v2a1 1 0 0 0 1 1 6 6 0 0 0 6-6V5a2 2 0 0 0-2-2z"/>',
+	"card": '<rect x="2" y="5" width="20" height="14" rx="2"/><path d="M6 10h6M6 14h4"/><circle cx="16.5" cy="12" r="2"/>',
+} -%}
+<svg class="iyp-i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ paths[name] | safe }}</svg>
+{%- endmacro %}
+{#- CHANGE NOTE 2026-11-05: WhatsApp buttons open with this message pre-filled, so the owner sees in
+    the chat that the lead came from It's Your Profile, even without the tracking counts -#}
+{% set wa_text = "?text=" ~ (_("Hi, I found you on itsyourprofile.com") | urlencode) %}
+{#- Keyed by platform, or by the label of an "Other" link (see LINK_RULES in tasks.py) -#}
+{% set social_icons = {
+	"LinkedIn": "linkedin", "Facebook": "facebook", "Google Profile": "globe", "BNI": "users",
+	"Instagram": "instagram", "YouTube": "youtube", "X (Twitter)": "twitter", "WhatsApp": "whatsapp",
+	"IndiaMART": "store", "Justdial": "store",
+} %}
+{%- set initials = ((company_name or "?").split() | reject("in", ["&", "-", "|"]) | list)[:2] | map("first") | join | upper -%}
+{%- set person_initials = ((contact_person or "").split() | list)[:2] | map("first") | join | upper -%}
+{#- The first sentence of the summary, as a one-line tagline under the name -#}
+{%- set summary_text = (ai_summary | striptags) if ai_summary else (entity_summary or "") -%}
+{#- Abbreviations like "Pvt." or "No." don't end the sentence -#}
+{%- set ns = namespace(tagline="", done=false) -%}
+{%- for part in summary_text.split(". ") if not ns.done -%}
+	{%- set ns.tagline = ns.tagline ~ (". " if ns.tagline else "") ~ part -%}
+	{%- set last_word = (part.split() or [""])[-1] | lower -%}
+	{%- if last_word not in ["pvt", "ltd", "co", "inc", "no", "dr", "mr", "mrs", "ms", "st", "rd", "bros", "nr", "opp"] %}{% set ns.done = true %}{% endif -%}
+{%- endfor -%}
+{%- set tagline = ns.tagline | trim -%}
+{%- if tagline and not tagline.endswith(".") %}{% set tagline = tagline ~ "." %}{% endif -%}
+{%- set address = [address_line, city, state] | select | join(", ") ~ ((" - " ~ pincode) if pincode else "") -%}
+
 {#- Colours come from the visiting card (validated hex codes only), darkened to stay readable -#}
 <style>
-	.business-profile {
-		--iyp-name: {{ page_name_color or "inherit" }};
-		--iyp-brand: {{ page_brand_color or "var(--primary, #1f5f8b)" }};
-		border-top: 6px solid var(--iyp-brand);
-		padding-top: 24px;
+	.iyp {
+		--b: {{ page_brand_color or "#1F5F8B" }};
+		--n: {{ page_name_color or page_brand_color or "#1F5F8B" }};
+		--b-soft: color-mix(in srgb, var(--b) 8%, #fff);
+		--b-soft-2: color-mix(in srgb, var(--b) 14%, #fff);
+		--b-line: color-mix(in srgb, var(--b) 22%, #fff);
+		--b-deep: color-mix(in srgb, var(--b) 55%, #0b1220);
+		--ink: #101828; --ink-2: #344054; --muted: #667085; --line: #eaecf0; --bg: #f8f9fb;
+		--radius: 20px;
+		--shadow: 0 1px 2px rgba(16,24,40,.04), 0 12px 32px -12px rgba(16,24,40,.14);
+		color: var(--ink);
+		padding: 8px 0 32px;
 	}
-	.business-profile h1 { color: var(--iyp-name); }
-	.business-profile h2 { color: var(--iyp-brand); }
-	.business-profile a { color: var(--iyp-brand); }
+	.iyp *, .iyp *::before, .iyp *::after { box-sizing: border-box; }
+	.iyp .iyp-i { width: 18px; height: 18px; flex: none; }
+	.iyp a { text-decoration: none !important; }
+
+	/* Cover + identity card */
+	.iyp-cover {
+		position: relative; height: 190px; border-radius: var(--radius) var(--radius) 0 0; overflow: hidden;
+		background:
+			radial-gradient(circle at 85% -20%, rgba(255,255,255,.28) 0, transparent 45%),
+			radial-gradient(circle at 10% 120%, rgba(255,255,255,.14) 0, transparent 40%),
+			linear-gradient(120deg, var(--b) 0%, var(--b-deep) 100%);
+	}
+	.iyp-cover::after {
+		content: ""; position: absolute; inset: 0; opacity: .18;
+		background-image: radial-gradient(rgba(255,255,255,.9) 1px, transparent 1.4px); background-size: 22px 22px;
+		mask-image: linear-gradient(90deg, transparent 0%, #000 60%);
+		-webkit-mask-image: linear-gradient(90deg, transparent 0%, #000 60%);
+	}
+	.iyp-id {
+		position: relative; background: #fff; border: 1px solid var(--line); border-top: 0;
+		border-radius: 0 0 var(--radius) var(--radius); box-shadow: var(--shadow); padding: 0 32px 28px;
+	}
+	.iyp-id-top { display: flex; gap: 24px; align-items: flex-end; flex-wrap: wrap; }
+	.iyp-avatar {
+		width: 120px; height: 120px; margin-top: -60px; border-radius: 28px; flex: none; display: grid; place-items: center;
+		background: #fff; color: var(--n); font-size: 2.6rem; font-weight: 800; letter-spacing: -.03em;
+		border: 5px solid #fff; box-shadow: 0 16px 36px -14px rgba(16,24,40,.45);
+		background-image: linear-gradient(160deg, var(--b-soft-2), #fff 70%);
+	}
+	/* Logos cut from cards are often wide (symbol + name), so the box grows sideways to fit */
+	.iyp-avatar.iyp-avatar-logo {
+		width: auto; min-width: 120px; max-width: 100%; padding: 14px 20px; background: #fff;
+	}
+	/* Fixed height so small logos are scaled up, wide ones are fitted whole, never clipped */
+	.iyp-avatar-logo img { display: block; height: 88px; width: auto; max-width: 280px; object-fit: contain; }
+	@media (max-width: 767px) {
+		.iyp-avatar.iyp-avatar-logo { min-width: 92px; padding: 10px 14px; }
+		.iyp-avatar-logo img { height: 68px; max-width: min(240px, 70vw); }
+	}
+	.iyp-id-name { flex: 1; min-width: 240px; padding-top: 18px; }
+	.iyp-id h1 {
+		color: var(--ink); font-size: clamp(1.6rem, 3.6vw, 2.25rem); font-weight: 800; letter-spacing: -.025em;
+		margin: 0 0 10px; line-height: 1.15; overflow-wrap: anywhere;
+	}
+	.iyp-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+	.iyp-chip {
+		display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px; border-radius: 999px;
+		background: var(--b-soft); border: 1px solid var(--b-line); color: var(--b); font-size: .82rem; font-weight: 600;
+	}
+	.iyp-chip .iyp-i { width: 14px; height: 14px; }
+	.iyp-tagline { margin: 18px 0 0; max-width: 760px; font-size: 1.05rem; line-height: 1.65; color: var(--ink-2); }
+
+	.iyp-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 22px; }
+	.iyp-btn {
+		display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 11px 18px; border-radius: 12px;
+		font-weight: 600; font-size: .95rem; border: 1px solid transparent; cursor: pointer; line-height: 1.2;
+		transition: transform .15s ease, box-shadow .15s ease, background .15s ease, border-color .15s ease;
+	}
+	.iyp-btn:hover { transform: translateY(-2px); }
+	.iyp-btn-primary { background: var(--b); color: #fff !important; box-shadow: 0 8px 20px -8px var(--b); }
+	.iyp-btn-primary:hover { background: color-mix(in srgb, var(--b) 85%, #000); }
+	.iyp-btn-wa { background: #25D366; color: #fff !important; box-shadow: 0 8px 20px -8px rgba(37,211,102,.7); }
+	.iyp-btn-outline { background: #fff; color: var(--ink-2) !important; border-color: var(--line); }
+	.iyp-btn-outline:hover { border-color: var(--b); color: var(--b) !important; }
+	.iyp-btn-outline .iyp-i { color: var(--b); }
+
+	/* Facts strip */
+	.iyp-facts {
+		display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); margin-top: 26px;
+		border: 1px solid var(--line); border-radius: 16px; background: var(--bg); overflow: hidden;
+	}
+	.iyp-fact { display: flex; align-items: center; gap: 12px; padding: 16px 18px; border-left: 1px solid var(--line); min-width: 0; }
+	.iyp-fact:first-child { border-left: 0; }
+	.iyp-fact-icon { width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; background: #fff; color: var(--b); border: 1px solid var(--line); flex: none; }
+	.iyp-fact b { display: block; font-size: 1.15rem; font-weight: 800; letter-spacing: -.01em; color: var(--ink); line-height: 1.2; overflow-wrap: anywhere; }
+	.iyp-fact span { font-size: .78rem; color: var(--muted); }
+
+	/* Layout */
+	.iyp-grid { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 24px; margin-top: 24px; align-items: start; }
+	.iyp-main, .iyp-side { display: grid; gap: 24px; min-width: 0; }
+	.iyp-side { position: sticky; top: 80px; }
+	.iyp-card { background: #fff; border: 1px solid var(--line); border-radius: var(--radius); padding: 26px; box-shadow: var(--shadow); min-width: 0; }
+	.iyp-card h2 { display: flex; align-items: center; gap: 10px; font-size: 1.1rem; font-weight: 700; margin: 0 0 18px; color: var(--ink); }
+	.iyp-h-icon { width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center; background: var(--b-soft); color: var(--b); flex: none; }
+	.iyp-h-icon .iyp-i { width: 17px; height: 17px; }
+
+	/* About */
+	.iyp-about { line-height: 1.8; color: var(--ink-2); font-size: 1rem; }
+	.iyp-about p:last-child { margin-bottom: 0; }
+	.iyp-sub { font-size: .8rem; font-weight: 700; color: var(--muted); margin: 24px 0 12px; letter-spacing: .02em; }
+	.iyp-services { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; list-style: none; margin: 0; padding: 0; }
+	.iyp-services li {
+		display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-radius: 14px;
+		background: var(--b-soft); border: 1px solid var(--b-line); font-size: .92rem; font-weight: 500; color: var(--ink-2);
+	}
+	.iyp-services li .iyp-tick { width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; background: var(--b); color: #fff; flex: none; }
+	.iyp-services li .iyp-i { width: 14px; height: 14px; stroke-width: 3; }
+	.iyp-quote {
+		position: relative; margin-top: 24px; padding: 20px 22px 20px 58px; border-radius: 16px; background: var(--bg);
+		border: 1px solid var(--line); line-height: 1.75; color: var(--ink-2); font-style: italic;
+	}
+	.iyp-quote > .iyp-i { position: absolute; left: 20px; top: 20px; width: 24px; height: 24px; color: var(--b); opacity: .6; }
+	.iyp-quote small { display: block; margin-top: 8px; font-style: normal; font-weight: 600; color: var(--muted); font-size: .8rem; }
+
+	/* Contact */
+	.iyp-person { display: flex; align-items: center; gap: 14px; padding: 14px; border-radius: 16px; background: var(--b-soft); border: 1px solid var(--b-line); margin-bottom: 10px; color: var(--ink) !important; }
+	.iyp-person-avatar { width: 48px; height: 48px; border-radius: 50%; display: grid; place-items: center; background: var(--b); color: #fff; font-weight: 700; flex: none; }
+	.iyp-person-text { min-width: 0; flex: 1; }
+	.iyp-person-text b { display: block; font-size: 1rem; overflow-wrap: anywhere; }
+	.iyp-person-text span { font-size: .82rem; color: var(--muted); }
+	.iyp-person .iyp-li { width: 32px; height: 32px; border-radius: 9px; display: grid; place-items: center; background: #0A66C2; color: #fff; flex: none; }
+	.iyp-person .iyp-li .iyp-i { width: 16px; height: 16px; }
+	.iyp-contact { display: grid; }
+	.iyp-row { display: flex; align-items: center; gap: 12px; padding: 12px 4px; border-bottom: 1px dashed var(--line); color: var(--ink) !important; }
+	.iyp-row:last-child { border-bottom: 0; }
+	a.iyp-row:hover .iyp-row-text div, .iyp-row a:hover div { color: var(--b); }
+	.iyp-row-icon { width: 38px; height: 38px; border-radius: 11px; display: grid; place-items: center; background: var(--b-soft); color: var(--b); flex: none; }
+	.iyp-row-text { min-width: 0; flex: 1; color: inherit !important; }
+	.iyp-row-text small { display: block; font-size: .75rem; color: var(--muted); }
+	.iyp-row-text div { font-weight: 600; overflow-wrap: anywhere; line-height: 1.4; transition: color .15s ease; }
+	.iyp-copy { border: 0; background: transparent; color: var(--muted); padding: 7px; border-radius: 9px; cursor: pointer; flex: none; }
+	.iyp-copy:hover { color: var(--b); background: var(--b-soft); }
+	.iyp-copy .iyp-i { width: 16px; height: 16px; }
+
+	/* Socials */
+	.iyp-socials { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+	.iyp-social {
+		display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 14px; border: 1px solid var(--line);
+		color: var(--ink-2) !important; font-weight: 600; font-size: .88rem; transition: all .15s ease; min-width: 0;
+	}
+	.iyp-social span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+	.iyp-social .iyp-s-icon { width: 32px; height: 32px; border-radius: 10px; display: grid; place-items: center; background: var(--b-soft); color: var(--b); flex: none; }
+	.iyp-social .iyp-s-icon .iyp-i { width: 16px; height: 16px; }
+	.iyp-social:hover { border-color: var(--b); transform: translateY(-2px); box-shadow: var(--shadow); }
+
+	/* Save & share */
+	.iyp-share-card { text-align: center; }
+	.iyp-qr-box { display: inline-block; padding: 14px; border-radius: 18px; background: #fff; border: 1px solid var(--line); box-shadow: var(--shadow); }
+	#iyp-qr-code { width: 168px; height: 168px; display: grid; place-items: center; color: var(--muted); }
+	#iyp-qr-code img, #iyp-qr-code canvas { display: block; width: 168px !important; height: 168px !important; }
+	.iyp-qr-caption { margin: 12px 0 18px; font-size: .85rem; color: var(--muted); }
+	.iyp-tools { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+	.iyp-tools .iyp-btn { width: 100%; padding: 11px 10px; }
+	.iyp-tools .iyp-wide { grid-column: 1 / -1; }
+
+	/* Visiting card flip */
+	.iyp-flip { perspective: 1400px; cursor: pointer; max-width: 560px; margin: 0 auto; }
+	.iyp-flip-inner { position: relative; transition: transform .7s cubic-bezier(.2,.8,.2,1); transform-style: preserve-3d; }
+	.iyp-flip.flipped .iyp-flip-inner { transform: rotateY(180deg); }
+	.iyp-flip img { display: block; width: 100%; border-radius: 14px; box-shadow: 0 24px 48px -20px rgba(16,24,40,.5); backface-visibility: hidden; }
+	.iyp-flip .iyp-back { position: absolute; inset: 0; height: 100%; object-fit: cover; transform: rotateY(180deg); }
+	.iyp-flip-hint { display: flex; justify-content: center; align-items: center; gap: 6px; margin-top: 14px; font-size: .85rem; color: var(--muted); }
+	.iyp-flip-hint .iyp-i { width: 14px; height: 14px; }
+
+	/* Location */
+	.iyp-addr { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin: -4px 0 16px; color: var(--ink-2); }
+	.iyp-addr p { margin: 0; flex: 1; min-width: 200px; line-height: 1.6; }
+	.iyp-map { width: 100%; height: 300px; border: 0; border-radius: 14px; display: block; background: var(--bg); }
+
+	/* CTA */
+	.iyp-cta {
+		position: relative; overflow: hidden; margin-top: 32px; border-radius: var(--radius); padding: 30px 32px;
+		display: flex; flex-wrap: wrap; gap: 18px; align-items: center; justify-content: space-between;
+		background: linear-gradient(120deg, #0f172a, #1e293b); color: #cbd5e1;
+	}
+	.iyp-cta::after { content: ""; position: absolute; width: 260px; height: 260px; right: -60px; top: -120px; border-radius: 50%; background: var(--b); opacity: .35; filter: blur(30px); }
+	.iyp-cta > div { position: relative; z-index: 1; }
+	.iyp-cta strong { display: flex; align-items: center; gap: 8px; color: #fff; font-size: 1.2rem; margin-bottom: 4px; }
+	.iyp-cta .iyp-cta-links { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; }
+	.iyp-cta .iyp-btn-white { background: #fff; color: #0f172a !important; }
+	.iyp-cta a.iyp-link { color: #cbd5e1 !important; font-weight: 500; }
+	.iyp-cta a.iyp-link:hover { color: #fff !important; }
+
+	/* FAQs: plain <details>, so they open and close without any script */
+	.iyp-faq { display: flex; flex-direction: column; gap: 10px; }
+	.iyp-faq details { border: 1px solid var(--line); border-radius: 14px; padding: 0 16px; background: #fff; transition: border-color .2s ease, box-shadow .2s ease; }
+	.iyp-faq details[open] { border-color: var(--b); box-shadow: 0 10px 24px -18px rgba(16,24,40,.35); }
+	.iyp-faq summary { cursor: pointer; list-style: none; padding: 14px 28px 14px 0; font-weight: 700; color: var(--ink); position: relative; }
+	.iyp-faq summary::-webkit-details-marker { display: none; }
+	.iyp-faq summary::after { content: "+"; position: absolute; right: 0; top: 50%; transform: translateY(-50%); font-size: 1.3rem; font-weight: 600; color: var(--b); transition: transform .2s ease; }
+	.iyp-faq details[open] summary::after { transform: translateY(-50%) rotate(45deg); }
+	.iyp-faq p { margin: 0 0 14px; color: var(--ink-2); line-height: 1.65; }
+
+	/* Mobile action bar */
+	.iyp-bar { display: none; }
+	.iyp-toast {
+		position: fixed; left: 50%; bottom: 96px; transform: translate(-50%, 20px); opacity: 0; pointer-events: none;
+		background: #0f172a; color: #fff; padding: 10px 18px; border-radius: 999px; font-size: .9rem; z-index: 1050;
+		transition: all .25s ease;
+	}
+	.iyp-toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+	/* Reveal on scroll (only when JS runs) */
+	.iyp-js .iyp-reveal { opacity: 0; transform: translateY(16px); transition: opacity .6s ease, transform .6s ease; }
+	.iyp-js .iyp-reveal.in { opacity: 1; transform: none; }
+
+	/* Scroll progress in the brand colour; the cover's dots drift and move slower than the page */
+	.iyp-progress { position: fixed; top: 0; left: 0; right: 0; height: 3px; z-index: 1100; pointer-events: none; background: var(--b); transform: scaleX(0); transform-origin: 0 50%; }
+	@keyframes iyp-drift { to { background-position: 22px 22px; } }
+	.iyp-js .iyp-cover::after { transform: translateY(var(--py, 0px)); animation: iyp-drift 5s linear infinite; }
+
+	/* Entrance: logo pops, then name, tagline, chips, buttons and facts rise one after another
+	   (backwards fill, so hover effects work again once each one has arrived) */
+	@keyframes iyp-rise { from { opacity: 0; transform: translateY(18px); } }
+	@keyframes iyp-pop { 0% { opacity: 0; transform: scale(.7); } 70% { transform: scale(1.05); } }
+	@keyframes iyp-bar-up { from { transform: translateY(110%); } }
+	.iyp-js .iyp-avatar { animation: iyp-pop .7s .1s cubic-bezier(.2,.8,.2,1) backwards; }
+	.iyp-js .iyp-id h1 { animation: iyp-rise .6s .25s ease backwards; }
+	.iyp-js .iyp-tagline { animation: iyp-rise .6s .4s ease backwards; }
+	.iyp-js .iyp-chips > *, .iyp-js .iyp-actions > *, .iyp-js .iyp-fact {
+		animation: iyp-rise .55s ease backwards; animation-delay: calc(.35s + var(--i, 0) * 70ms);
+	}
+	.iyp-js .iyp-actions > * { animation-delay: calc(.5s + var(--i, 0) * 70ms); }
+	.iyp-js .iyp-fact { animation-delay: calc(.7s + var(--i, 0) * 90ms); }
+
+	/* Services tick in one by one once their card is on screen */
+	.iyp-js .iyp-reveal .iyp-services li {
+		opacity: 0; transform: translateX(-12px); transition: opacity .45s ease, transform .45s ease;
+		transition-delay: calc(.2s + var(--i, 0) * 70ms);
+	}
+	.iyp-js .iyp-reveal.in .iyp-services li { opacity: 1; transform: none; }
+
+	@media (prefers-reduced-motion: reduce) {
+		.iyp-js .iyp-reveal { opacity: 1; transform: none; transition: none; }
+		.iyp-flip-inner, .iyp-btn, .iyp-social { transition: none; }
+		.iyp-js .iyp-reveal .iyp-services li { opacity: 1; transform: none; transition: none; }
+		.iyp-js .iyp-avatar, .iyp-js .iyp-id h1, .iyp-js .iyp-tagline, .iyp-js .iyp-chips > *,
+		.iyp-js .iyp-actions > *, .iyp-js .iyp-fact, .iyp-js .iyp-cover::after, .iyp-js .iyp-bar { animation: none !important; }
+		.iyp-progress { display: none; }
+	}
+
+	@media (max-width: 991px) {
+		.iyp-grid { grid-template-columns: minmax(0, 1fr); }
+		.iyp-side { position: static; }
+	}
+	@media (max-width: 767px) {
+		.iyp { padding: 0 0 100px; }
+		.iyp-cover { height: 130px; border-radius: 0; margin: 0 -15px; }
+		.iyp-id { margin: 0 -15px; border-radius: 0 0 24px 24px; border-left: 0; border-right: 0; padding: 0 18px 22px; }
+		.iyp-id-top { gap: 14px; }
+		.iyp-avatar { width: 92px; height: 92px; margin-top: -46px; font-size: 2rem; border-radius: 24px; border-width: 4px; }
+		.iyp-id-name { min-width: 0; flex-basis: 100%; padding-top: 0; }
+		.iyp-tagline { font-size: 1rem; margin-top: 14px; }
+		.iyp-actions { display: grid; grid-template-columns: 1fr 1fr; }
+		.iyp-actions .iyp-btn-primary, .iyp-actions .iyp-btn-wa { display: none; }
+		.iyp-facts { grid-template-columns: 1fr 1fr; }
+		.iyp-fact { border-left: 0; border-top: 1px solid var(--line); padding: 14px; }
+		.iyp-fact:nth-child(-n+2) { border-top: 0; }
+		.iyp-fact:nth-child(even) { border-left: 1px solid var(--line); }
+		.iyp-fact:last-child:nth-child(odd) { grid-column: 1 / -1; }
+		.iyp-fact-icon { width: 34px; height: 34px; border-radius: 10px; }
+		.iyp-fact b { font-size: 1rem; }
+		.iyp-card { padding: 20px; }
+		.iyp-grid, .iyp-main, .iyp-side { gap: 16px; }
+		.iyp-grid { margin-top: 16px; }
+		.iyp-services { grid-template-columns: 1fr; }
+		.iyp-map { height: 240px; }
+		.iyp-cta { padding: 24px 20px; }
+		.iyp-bar {
+			display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 8px; position: fixed; left: 0; right: 0; bottom: 0;
+			padding: 10px 12px calc(10px + env(safe-area-inset-bottom)); background: rgba(255,255,255,.94);
+			backdrop-filter: blur(12px); border-top: 1px solid var(--line); z-index: 1040; box-shadow: 0 -8px 24px -12px rgba(16,24,40,.2);
+		}
+		.iyp-bar a {
+			display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 8px 4px; border-radius: 12px;
+			font-size: .75rem; font-weight: 600; color: var(--b) !important; background: var(--b-soft);
+		}
+		.iyp-js .iyp-bar { animation: iyp-bar-up .5s .9s cubic-bezier(.2,.8,.2,1) backwards; }
+		.iyp-bar a.call { background: var(--b); color: #fff !important; }
+		.iyp-bar a.wa { background: #25D366; color: #fff !important; }
+		.iyp-bar .iyp-i { width: 20px; height: 20px; }
+	}
 </style>
-<article class="business-profile">
-	<h1>{{ company_name }}</h1>
 
-	{% if business_nature or city %}
-	<p class="text-muted">
-		{{ business_nature or "" }}{% if business_nature and city %} · {% endif %}{{ city or "" }}{% if state %}, {{ state }}{% endif %}
-	</p>
-	{% endif %}
+<article class="iyp">
+	<div class="iyp-progress" aria-hidden="true"></div>
+	<div class="iyp-cover" aria-hidden="true"></div>
+	<header class="iyp-id">
+		<div class="iyp-id-top">
+			{% if logo_url %}
+			<div class="iyp-avatar iyp-avatar-logo"><img src="{{ logo_url | e }}" alt="{{ _('{0} logo').format(company_name) | e }}"></div>
+			{% else %}
+			<div class="iyp-avatar" aria-hidden="true">{{ initials or "?" }}</div>
+			{% endif %}
+			<div class="iyp-id-name">
+				<h1>{{ company_name | e }}</h1>
+				<div class="iyp-chips">
+					{% if business_nature %}<span class="iyp-chip">{{ icon("briefcase") }}{{ _(business_nature) }}</span>{% endif %}
+					{% if city %}<span class="iyp-chip">{{ icon("pin") }}{{ city | e }}{% if state %}, {{ state | e }}{% endif %}</span>{% endif %}
+					{% if established_year %}<span class="iyp-chip">{{ icon("calendar") }}{{ _("Since {0}").format(established_year) }}</span>{% endif %}
+				</div>
+			</div>
+		</div>
+		{% if tagline %}<p class="iyp-tagline">{{ tagline | e }}</p>{% endif %}
 
-	{% if about_business or ai_summary %}
-	<section class="mt-4">
-		<h2 class="h5">{{ _("About") }}</h2>
-		{% if about_business %}<p>{{ about_business | e | replace("\n", "<br>") }}</p>{% endif %}
-		{% if ai_summary %}<div>{{ ai_summary }}</div>{% endif %}
-	</section>
-	{% endif %}
+		<div class="iyp-actions">
+			{% if phone_numbers %}<a class="iyp-btn iyp-btn-primary" href="tel:{{ phone_numbers[0] | e }}">{{ icon("phone") }}{{ _("Call Now") }}</a>{% endif %}
+			{% if whatsapp_number %}<a class="iyp-btn iyp-btn-wa" href="https://wa.me/{{ whatsapp_number }}{{ wa_text }}" target="_blank" rel="noopener">{{ icon("whatsapp") }}WhatsApp</a>{% endif %}
+			{% if email %}<a class="iyp-btn iyp-btn-outline" href="mailto:{{ email | e }}">{{ icon("mail") }}{{ _("Email") }}</a>{% endif %}
+			{% if google_maps_url %}<a class="iyp-btn iyp-btn-outline" href="{{ google_maps_url | e }}" target="_blank" rel="noopener">{{ icon("pin") }}{{ _("Directions") }}</a>{% endif %}
+			{% if website_url %}<a class="iyp-btn iyp-btn-outline" href="{{ website_url | e }}" target="_blank" rel="noopener">{{ icon("globe") }}{{ _("Website") }}</a>{% endif %}
+			<button class="iyp-btn iyp-btn-outline" type="button" data-save>{{ icon("download") }}{{ _("Save Contact") }}</button>
+		</div>
 
-	<section class="mt-4">
-		<h2 class="h5">{{ _("Contact") }}</h2>
-		<dl class="row">
-			{% if contact_person %}
-			<dt class="col-sm-3">{{ _("Contact Person") }}</dt>
-			<dd class="col-sm-9">{{ contact_person }}{% if designation %} ({{ designation }}){% endif %}</dd>
-			{% endif %}
-			{% if phone %}
-			<dt class="col-sm-3">{{ _("Phone") }}</dt>
-			<dd class="col-sm-9"><a href="tel:{{ phone }}">{{ phone }}</a></dd>
-			{% endif %}
-			{% if email %}
-			<dt class="col-sm-3">{{ _("Email") }}</dt>
-			<dd class="col-sm-9"><a href="mailto:{{ email }}">{{ email }}</a></dd>
-			{% endif %}
-			{% if website_url %}
-			<dt class="col-sm-3">{{ _("Website") }}</dt>
-			<dd class="col-sm-9"><a href="{{ website_url }}" rel="noopener" target="_blank">{{ website_url }}</a></dd>
-			{% endif %}
-			{% if address_line or city %}
-			<dt class="col-sm-3">{{ _("Address") }}</dt>
-			<dd class="col-sm-9">
-				{{ address_line or "" }}{% if city %}, {{ city }}{% endif %}{% if state %}, {{ state }}{% endif %}{% if pincode %} - {{ pincode }}{% endif %}
-				{% if google_maps_url %}<br><a href="{{ google_maps_url }}" rel="noopener" target="_blank">{{ _("View on map") }}</a>{% endif %}
-			</dd>
-			{% endif %}
-		</dl>
-	</section>
-
-	{% if map_embed_url %}
-	<section class="mt-4">
-		<h2 class="h5">{{ _("Location") }}</h2>
-		<iframe src="{{ map_embed_url | e }}" title="{{ _('Map of {0}').format(company_name) | e }}"
-			width="100%" height="320" style="border: 0; border-radius: 8px;" loading="lazy"
-			referrerpolicy="no-referrer-when-downgrade" allowfullscreen></iframe>
-	</section>
-	{% endif %}
-
-	{% if established_year or employee_range %}
-	<section class="mt-4">
-		<h2 class="h5">{{ _("Company Facts") }}</h2>
-		<dl class="row">
-			{% if established_year %}
-			<dt class="col-sm-3">{{ _("Established") }}</dt>
-			<dd class="col-sm-9">{{ established_year }}</dd>
+		{% if years_in_business or employee_range or business_nature or city %}
+		<div class="iyp-facts">
+			{% if years_in_business %}
+			<div class="iyp-fact"><span class="iyp-fact-icon">{{ icon("calendar") }}</span><div><b data-count="{{ years_in_business }}">{{ years_in_business }}+</b><span>{{ _("Years in business") }}</span></div></div>
 			{% endif %}
 			{% if employee_range %}
-			<dt class="col-sm-3">{{ _("Employees") }}</dt>
-			<dd class="col-sm-9">{{ employee_range }}</dd>
+			<div class="iyp-fact"><span class="iyp-fact-icon">{{ icon("users") }}</span><div><b>{{ employee_range | e }}</b><span>{{ _("Team size") }}</span></div></div>
 			{% endif %}
-		</dl>
-	</section>
-	{% endif %}
+			{% if business_nature %}
+			<div class="iyp-fact"><span class="iyp-fact-icon">{{ icon("briefcase") }}</span><div><b>{{ _(business_nature) }}</b><span>{{ _("Business type") }}</span></div></div>
+			{% endif %}
+			{% if city %}
+			<div class="iyp-fact"><span class="iyp-fact-icon">{{ icon("pin") }}</span><div><b>{{ city | e }}</b><span>{{ state | e if state else _("Location") }}</span></div></div>
+			{% endif %}
+		</div>
+		{% endif %}
+	</header>
 
-	{% if doc.profile_links %}
-	<section class="mt-4">
-		<h2 class="h5">{{ _("Find us on") }}</h2>
-		<p>
-			{% for link in doc.profile_links %}
-			<a href="{{ link.url }}" rel="noopener" target="_blank">{{ link.label if link.platform == "Other" and link.label else link.platform }}</a>{% if not loop.last %} · {% endif %}
-			{% endfor %}
-		</p>
-	</section>
-	{% endif %}
+	<div class="iyp-grid">
+		<div class="iyp-main">
+			{% if about_business or ai_summary or entity_summary or services %}
+			<section class="iyp-card iyp-reveal">
+				<h2><span class="iyp-h-icon">{{ icon("sparkles") }}</span>{{ _("About the Business & Services") }}</h2>
+				{#- Third-person facts first: AI search engines quote this over marketing copy -#}
+				{% if ai_summary %}
+				<div class="iyp-about">{{ ai_summary }}</div>
+				{% elif entity_summary %}
+				<p class="iyp-about">{{ entity_summary | e }}</p>
+				{% endif %}
+				{% if services %}
+				<div class="iyp-sub">{{ _("Products & services") }}</div>
+				<ul class="iyp-services">
+					{% for service in services %}<li><span class="iyp-tick">{{ icon("check") }}</span>{{ service | e }}</li>{% endfor %}
+				</ul>
+				{% endif %}
+				{% if about_business %}
+				<blockquote class="iyp-quote">
+					{{ icon("quote") }}
+					{{ about_business | e | replace("\n", "<br>") }}
+					<small>{{ _("In their words") }}{% if contact_person %} · {{ contact_person | e }}{% endif %}</small>
+				</blockquote>
+				{% endif %}
+			</section>
+			{% endif %}
 
-	<footer class="mt-5 pt-3 border-top">
-		<p class="text-muted mb-2">{{ _("Is your business easy for AI assistants like ChatGPT to find? Get a free profile page from your visiting card.") }}</p>
-		<a href="/my-business/new">{{ _("Register your business") }}</a> · <a href="/directory">{{ _("Browse the directory") }}</a>
+			{% if faq_items %}
+			<section class="iyp-card iyp-reveal" id="faq">
+				<h2><span class="iyp-h-icon">{{ icon("sparkles") }}</span>{{ _("Frequently Asked Questions") }}</h2>
+				<div class="iyp-faq">
+					{% for row in faq_items %}
+					<details {% if loop.first %}open{% endif %}>
+						<summary>{{ row.question | e }}</summary>
+						<p>{{ row.answer | e }}</p>
+					</details>
+					{% endfor %}
+				</div>
+			</section>
+			{% endif %}
+
+			{% if card_images %}
+			<section class="iyp-card iyp-reveal">
+				<h2><span class="iyp-h-icon">{{ icon("card") }}</span>{{ _("Visiting Card") }}</h2>
+				{% if card_images | length > 1 %}
+				<div class="iyp-flip" role="button" tabindex="0" aria-label="{{ _('Flip visiting card') }}">
+					<div class="iyp-flip-inner">
+						<img src="{{ card_images[0] | e }}" alt="{{ _('Visiting card of {0} (front)').format(company_name) | e }}" loading="lazy">
+						<img class="iyp-back" src="{{ card_images[1] | e }}" alt="{{ _('Visiting card of {0} (back)').format(company_name) | e }}" loading="lazy">
+					</div>
+				</div>
+				<div class="iyp-flip-hint">{{ icon("rotate") }}{{ _("Tap the card to flip it") }}</div>
+				{% else %}
+				<div class="iyp-flip"><div class="iyp-flip-inner">
+					<img src="{{ card_images[0] | e }}" alt="{{ _('Visiting card of {0}').format(company_name) | e }}" loading="lazy">
+				</div></div>
+				{% endif %}
+			</section>
+			{% endif %}
+
+			{% if map_embed_url %}
+			<section class="iyp-card iyp-reveal">
+				<h2><span class="iyp-h-icon">{{ icon("pin") }}</span>{{ _("Location") }}</h2>
+				<div class="iyp-addr">
+					{% if address_line or city %}<p>{{ address | e }}</p>{% endif %}
+					{% if google_maps_url %}<a class="iyp-btn iyp-btn-outline" href="{{ google_maps_url | e }}" target="_blank" rel="noopener">{{ icon("external") }}{{ _("Open in Maps") }}</a>{% endif %}
+				</div>
+				<iframe class="iyp-map" src="{{ map_embed_url | e }}" title="{{ _('Map of {0}').format(company_name) | e }}"
+					loading="lazy" referrerpolicy="no-referrer-when-downgrade" allowfullscreen></iframe>
+			</section>
+			{% endif %}
+		</div>
+
+		<aside class="iyp-side">
+			<section class="iyp-card iyp-reveal">
+				<h2><span class="iyp-h-icon">{{ icon("phone") }}</span>{{ _("Contact") }}</h2>
+				{% if contact_person %}
+				<{{ "a" if contact_linkedin_url else "div" }} class="iyp-person" {% if contact_linkedin_url %}href="{{ contact_linkedin_url | e }}" target="_blank" rel="noopener"{% endif %}>
+					<span class="iyp-person-avatar" aria-hidden="true">{{ person_initials }}</span>
+					<span class="iyp-person-text"><b>{{ contact_person | e }}</b><span>{{ designation | e if designation else _("Contact Person") }}</span></span>
+					{% if contact_linkedin_url %}<span class="iyp-li" title="LinkedIn">{{ icon("linkedin") }}</span>{% endif %}
+				</{{ "a" if contact_linkedin_url else "div" }}>
+				{% endif %}
+				<div class="iyp-contact">
+					{% for p in phone_numbers %}
+					<div class="iyp-row">
+						<span class="iyp-row-icon">{{ icon("phone") }}</span>
+						<a class="iyp-row-text" href="tel:{{ p | e }}"><small>{{ _("Phone") }}</small><div>{{ p | e }}</div></a>
+						<button class="iyp-copy" type="button" data-copy="{{ p | e }}" title="{{ _('Copy') }}" aria-label="{{ _('Copy phone number') }}">{{ icon("copy") }}</button>
+					</div>
+					{% endfor %}
+					{% if email %}
+					<div class="iyp-row">
+						<span class="iyp-row-icon">{{ icon("mail") }}</span>
+						<a class="iyp-row-text" href="mailto:{{ email | e }}"><small>{{ _("Email") }}</small><div>{{ email | e }}</div></a>
+						<button class="iyp-copy" type="button" data-copy="{{ email | e }}" title="{{ _('Copy') }}" aria-label="{{ _('Copy email') }}">{{ icon("copy") }}</button>
+					</div>
+					{% endif %}
+					{% if website_url %}
+					<a class="iyp-row" href="{{ website_url | e }}" target="_blank" rel="noopener">
+						<span class="iyp-row-icon">{{ icon("globe") }}</span>
+						<span class="iyp-row-text"><small>{{ _("Website") }}</small><div>{{ website_url.split("://", 1)[-1].rstrip("/") | e }}</div></span>
+					</a>
+					{% endif %}
+					{% if address_line or city %}
+					<{{ "a" if google_maps_url else "div" }} class="iyp-row" {% if google_maps_url %}href="{{ google_maps_url | e }}" target="_blank" rel="noopener"{% endif %}>
+						<span class="iyp-row-icon">{{ icon("pin") }}</span>
+						<span class="iyp-row-text"><small>{{ _("Address") }}</small><div>{{ address | e }}</div></span>
+					</{{ "a" if google_maps_url else "div" }}>
+					{% endif %}
+				</div>
+			</section>
+
+			{% if doc.profile_links %}
+			<section class="iyp-card iyp-reveal">
+				<h2><span class="iyp-h-icon">{{ icon("link") }}</span>{{ _("Find us on") }}</h2>
+				<div class="iyp-socials">
+					{% for link in doc.profile_links %}
+					<a class="iyp-social" href="{{ link.url | e }}" rel="noopener" target="_blank">
+						<span class="iyp-s-icon">{{ icon(social_icons.get(link.label if link.platform == "Other" else link.platform, "link")) }}</span>
+						<span>{{ (link.label if link.platform == "Other" and link.label else link.platform) | e }}</span>
+					</a>
+					{% endfor %}
+				</div>
+			</section>
+			{% endif %}
+
+			<section class="iyp-card iyp-share-card iyp-reveal">
+				<h2><span class="iyp-h-icon">{{ icon("qr") }}</span>{{ _("Save & Share") }}</h2>
+				<div class="iyp-qr-box"><div id="iyp-qr-code">{{ icon("qr") }}</div></div>
+				<p class="iyp-qr-caption">{{ _("Scan to open this page on your phone") }}</p>
+				<div class="iyp-tools">
+					<button class="iyp-btn iyp-btn-primary iyp-wide" type="button" data-save>{{ icon("download") }}{{ _("Save Contact") }}</button>
+					<button class="iyp-btn iyp-btn-outline" type="button" id="iyp-share">{{ icon("share") }}{{ _("Share") }}</button>
+					<button class="iyp-btn iyp-btn-outline" type="button" id="iyp-qr-download">{{ icon("qr") }}{{ _("Get QR") }}</button>
+				</div>
+			</section>
+		</aside>
+	</div>
+
+	<footer class="iyp-cta iyp-reveal">
+		<div>
+			<strong>{{ icon("sparkles") }}{{ _("Is your business easy for AI to find?") }}</strong>
+			{{ _("Get a free profile page like this from your visiting card, in a minute.") }}
+		</div>
+		<div class="iyp-cta-links">
+			<a class="iyp-btn iyp-btn-white" href="/my-business/new">{{ _("Register your business") }}{{ icon("arrow") }}</a>
+			<a class="iyp-link" href="/directory">{{ _("Browse the directory") }}</a>
+		</div>
 	</footer>
+
+	<nav class="iyp-bar" aria-label="{{ _('Quick actions') }}">
+		{% if phone_numbers %}<a class="call" href="tel:{{ phone_numbers[0] | e }}">{{ icon("phone") }}{{ _("Call") }}</a>{% endif %}
+		{% if whatsapp_number %}<a class="wa" href="https://wa.me/{{ whatsapp_number }}{{ wa_text }}" target="_blank" rel="noopener">{{ icon("whatsapp") }}WhatsApp</a>{% endif %}
+		{% if google_maps_url %}<a href="{{ google_maps_url | e }}" target="_blank" rel="noopener">{{ icon("pin") }}{{ _("Directions") }}</a>{% endif %}
+		{% if email %}<a href="mailto:{{ email | e }}">{{ icon("mail") }}{{ _("Email") }}</a>{% endif %}
+	</nav>
+	<div class="iyp-toast" id="iyp-toast" role="status" aria-live="polite"></div>
 </article>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js" defer></script>
+<script>
+(function () {
+	var page = document.querySelector(".iyp");
+	var pageUrl = {{ page_url | tojson }};
+	var title = {{ (company_name or "") | tojson }};
+	var vcard = {{ vcard }};
+	var fileName = (title || "contact").replace(/[^\w\- ]+/g, "").trim() || "contact";
+	page.classList.add("iyp-js");
+
+	// Count this visit and every tap for the owner's report, with where the visitor came from
+	// (ChatGPT, Google...). Links still open directly; the count goes out in the background.
+	var landing = {
+		profile: {{ doc.name | tojson }},
+		referrer: document.referrer,
+		utm: new URLSearchParams(location.search).get("utm_source") || ""
+	};
+	// CHANGE NOTE 2026-11-05: remember where the visitor first came from for this browser tab, so a
+	// reload or a tap after moving around the page is still credited to e.g. ChatGPT, not "Direct".
+	try {
+		var sourceKey = "iyp_src_" + landing.profile;
+		var firstSource = JSON.parse(sessionStorage.getItem(sourceKey) || "null");
+		if (firstSource) {
+			landing.referrer = firstSource.referrer;
+			landing.utm = firstSource.utm;
+		} else {
+			sessionStorage.setItem(sourceKey, JSON.stringify({ referrer: landing.referrer, utm: landing.utm }));
+		}
+	} catch (e) { /* storage blocked: use this page load's referrer */ }
+	var websiteUrl = {{ (website_url or "") | tojson }};
+	function track(event) {
+		var headers = { "Content-Type": "application/x-www-form-urlencoded" };
+		if (window.frappe && frappe.csrf_token) headers["X-Frappe-CSRF-Token"] = frappe.csrf_token;
+		fetch("/api/method/its_your_profile.tracking.track", {
+			method: "POST", headers: headers, keepalive: true, credentials: "same-origin",
+			body: new URLSearchParams(Object.assign({ event: event }, landing))
+		}).catch(function () {});
+	}
+	function eventFor(el) {
+		if (el.matches("[data-save]")) return "Save Contact";
+		if (el.id === "iyp-share") return "Share";
+		var href = el.getAttribute("href") || "";
+		if (href.indexOf("tel:") === 0) return "Call";
+		if (href.indexOf("mailto:") === 0) return "Email";
+		if (href.indexOf("https://wa.me/") === 0) return "WhatsApp";
+		if (/google\.[a-z.]+\/maps|maps\.app\.goo\.gl|goo\.gl\/maps/.test(href)) return "Directions";
+		if (websiteUrl && href === websiteUrl) return "Website";
+		if (el.closest(".iyp-socials") || el.matches(".iyp-person[href]")) return "Social Link";
+	}
+	track("View");
+	page.addEventListener("click", function (e) {
+		var el = e.target.closest("a, button");
+		var event = el && eventFor(el);
+		if (event) track(event);
+	});
+
+	function toast(text) {
+		var t = document.getElementById("iyp-toast");
+		t.textContent = text;
+		t.classList.add("show");
+		clearTimeout(t._timer);
+		t._timer = setTimeout(function () { t.classList.remove("show"); }, 1800);
+	}
+
+	function download(href, name) {
+		var a = document.createElement("a");
+		a.href = href;
+		a.download = name;
+		document.body.appendChild(a);
+		a.click();
+		setTimeout(function () { a.remove(); }, 500);
+	}
+
+	// Fade sections in as they scroll into view; count the years up
+	var reveal = page.querySelectorAll(".iyp-reveal");
+	var countUp = function (root) {
+		root.querySelectorAll("[data-count]").forEach(function (el) {
+			var end = +el.dataset.count, start = performance.now();
+			(function step(now) {
+				var p = Math.min((now - start) / 900, 1);
+				el.textContent = Math.round(end * (1 - Math.pow(1 - p, 3))) + "+";
+				if (p < 1) requestAnimationFrame(step);
+			})(start);
+		});
+	};
+	countUp(page.querySelector(".iyp-id"));
+
+	// Number the items of each group, which CSS turns into one-after-another delays
+	page.querySelectorAll(".iyp-chips, .iyp-actions, .iyp-facts, .iyp-services").forEach(function (group) {
+		Array.prototype.forEach.call(group.children, function (child, i) { child.style.setProperty("--i", i); });
+	});
+
+	// Scroll progress bar, and the cover's dots moving slower than the page (parallax)
+	var progress = page.querySelector(".iyp-progress");
+	var cover = page.querySelector(".iyp-cover");
+	var stillMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+	var ticking = false;
+	function onScroll() {
+		var y = window.scrollY;
+		var max = document.documentElement.scrollHeight - window.innerHeight;
+		progress.style.transform = "scaleX(" + (max > 0 ? Math.min(y / max, 1) : 0) + ")";
+		if (!stillMotion && y < 600) cover.style.setProperty("--py", (y * 0.35).toFixed(1) + "px");
+		ticking = false;
+	}
+	window.addEventListener("scroll", function () {
+		if (!ticking) { ticking = true; requestAnimationFrame(onScroll); }
+	}, { passive: true });
+	onScroll();
+	if ("IntersectionObserver" in window) {
+		var io = new IntersectionObserver(function (entries) {
+			entries.forEach(function (e) {
+				if (!e.isIntersecting) return;
+				e.target.classList.add("in");
+				io.unobserve(e.target);
+			});
+		}, { threshold: 0.08 });
+		reveal.forEach(function (el) { io.observe(el); });
+	} else {
+		reveal.forEach(function (el) { el.classList.add("in"); });
+	}
+
+	page.querySelectorAll("[data-copy]").forEach(function (btn) {
+		btn.addEventListener("click", function () {
+			navigator.clipboard.writeText(btn.dataset.copy).then(function () { toast({{ _("Copied!") | tojson }}); });
+		});
+	});
+
+	var flip = page.querySelector(".iyp-flip[role=button]");
+	if (flip) {
+		var turn = function () { flip.classList.toggle("flipped"); };
+		flip.addEventListener("click", turn);
+		flip.addEventListener("keydown", function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); turn(); } });
+	}
+
+	page.querySelectorAll("[data-save]").forEach(function (btn) {
+		btn.addEventListener("click", function () {
+			var url = URL.createObjectURL(new Blob([vcard], { type: "text/vcard" }));
+			download(url, fileName + ".vcf");
+			setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+		});
+	});
+
+	document.getElementById("iyp-share").addEventListener("click", function () {
+		if (navigator.share) {
+			navigator.share({ title: title, url: pageUrl }).catch(function () {});
+		} else {
+			window.open("https://wa.me/?text=" + encodeURIComponent(title + " - " + pageUrl), "_blank", "noopener");
+		}
+	});
+
+	// The QR library loads deferred; draw the code once it is there
+	var qrBox = document.getElementById("iyp-qr-code");
+	window.addEventListener("load", function () {
+		if (!window.QRCode) return;
+		qrBox.innerHTML = "";
+		new QRCode(qrBox, {
+			text: pageUrl, width: 336, height: 336,
+			colorDark: getComputedStyle(page).getPropertyValue("--b").trim() || "#1F5F8B", colorLight: "#ffffff",
+			correctLevel: QRCode.CorrectLevel.M
+		});
+	});
+	document.getElementById("iyp-qr-download").addEventListener("click", function () {
+		var canvas = qrBox.querySelector("canvas");
+		if (!canvas) return toast({{ _("QR code is still loading") | tojson }});
+		download(canvas.toDataURL("image/png"), fileName + " QR.png");
+	});
+})();
+</script>
 {% endblock %}
