@@ -14,6 +14,13 @@
 .navbar .nav-link { color: #3F3A5E !important; font-weight: 500; }
 .navbar .nav-link:hover { color: #3B2E7E !important; }
 
+/* No "Switch To Desk" / "Apps" in the website's user menu (2026-11-06): the backend stays out of
+   sight; staff reach it from the home page's "Backend" link or /desk */
+.switch-to-desk, .dropdown-item.apps { display: none !important; }
+
+/* Loading splash: our logo, sized like Frappe's */
+.splash img { max-width: 220px !important; height: auto; }
+
 /* ---------- Shared page background: login and the owner's dashboard ---------- */
 body[data-path="login"], body[data-path="notifications"] {
 	position: relative; isolation: isolate;
@@ -89,3 +96,28 @@ body[data-path="login"] .sign-up-message { color: #5A5578 !important; }
 @media (prefers-reduced-motion: reduce) {
 	body[data-path]::before, body[data-path]::after, body[data-path="login"] .page-card, body[data-path="login"] .page-card::before { animation: none !important; }
 }
+
+/* ---------- Mobile-friendly pass (2026-11-06) ---------- */
+@media (max-width: 767px) {
+	/* 16px text in inputs stops iPhones from zooming in when a box is tapped */
+	body[data-path="login"] .form-control,
+	[data-doctype="Web Form"] .form-control,
+	[data-doctype="Web Form"] select,
+	[data-doctype="Web Form"] textarea { font-size: 16px !important; }
+	/* Frappe's collapsible top-bar menu as a clean panel */
+	.navbar .navbar-collapse { background: #fff; border: 1px solid #E4DFF3; border-radius: 18px; margin-top: 10px; padding: 8px 12px; box-shadow: 0 24px 50px -24px rgba(30, 24, 56, .4); }
+	.navbar .nav-link { padding: 12px 6px !important; font-size: 16px; }
+	.navbar-toggler { border: 1px solid #E4DFF3 !important; border-radius: 12px !important; padding: 8px 10px !important; }
+}
+/* Owner's dashboard on phones: full-width, easy-to-tap buttons */
+@media (max-width: 520px) {
+	body[data-path="notifications"] .iyp-biz { padding: 16px; border-radius: 20px; }
+	body[data-path="notifications"] .iyp-biz-actions { width: 100%; }
+	body[data-path="notifications"] .iyp-biz-actions .iyp-b { flex: 1 1 100%; justify-content: center; min-height: 46px; }
+	body[data-path="notifications"] .iyp-hello-avatar { width: 48px; height: 48px; border-radius: 14px; }
+	body[data-path="notifications"] .iyp-alert { padding: 12px; }
+}
+
+/* Android-friendly (2026-11-06): no grey flash on tap, no double-tap delay, buttons press in */
+a, button, label, .btn, summary { -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
+.btn:active, .es-button:active { transform: scale(.97); }

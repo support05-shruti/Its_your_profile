@@ -75,6 +75,47 @@ def read_visiting_card(file_url: str):
 
 
 @frappe.whitelist(methods=["POST"])
+def create_profile_from_card(file_url: str, values=None, links=None):
+	"""Home page "Scan now" (2026-11-06): save a Business Profile from a card just read by
+	read_visiting_card, without leaving the home page. The read is cached for that file, so the
+	save takes the card's colours and logo and needs no background scan.
+
+	Only the card's own fields are accepted from the browser; the owner is the logged-in user."""
+	from its_your_profile.tasks import CARD_FIELD_MAP
+
+	if frappe.session.user == "Guest":
+		frappe.throw(_("Please log in to create your page"), frappe.PermissionError)
+
+	file = frappe.get_doc("File", {"file_url": file_url})
+	if not frappe.has_permission("File", "read", doc=file):
+		frappe.throw(_("Not permitted"), frappe.PermissionError)
+
+	values = frappe.parse_json(values) if values else {}
+	allowed = set(CARD_FIELD_MAP.values())
+	doc = frappe.new_doc("Business Profile")
+	for fieldname, value in (values or {}).items():
+		if fieldname in allowed and isinstance(value, str) and value.strip():
+			doc.set(fieldname, value.strip()[:500])
+	doc.visiting_card = file_url
+
+	for link in (frappe.parse_json(links) if links else []) or []:
+		if isinstance(link, dict) and link.get("url") and link.get("platform"):
+			doc.append(
+				"profile_links",
+				{"platform": link["platform"], "label": (link.get("label") or "")[:140], "url": link["url"][:500]},
+			)
+
+	# Same as the My Business web form, which owners use to create their profile
+	doc.insert(ignore_permissions=True)
+	return {
+		"name": doc.name,
+		"company_name": doc.company_name,
+		"page_url": "/" + doc.route if doc.published and doc.route else None,
+		"edit_url": f"/my-business/{doc.name}/edit",
+	}
+
+
+@frappe.whitelist(methods=["POST"])
 def read_website_links(url: str):
 	"""Fetch a website (homepage + contact page) and return its profile links, so the form's
 	Profile Links table fills in before Save. No AI involved, so it answers in seconds."""

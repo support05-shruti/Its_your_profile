@@ -6,6 +6,11 @@
 {{ super() }}
 <meta name="description" content="{{ description | e }}">
 <link rel="apple-touch-icon" href="/assets/its_your_profile/images/iyp-favicon.png">
+{#- Android (2026-11-06): address bar in our colours, and "Add to Home screen" installs the site like an app -#}
+<meta name="theme-color" content="#F3F0FB" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#100D22" media="(prefers-color-scheme: dark)">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="manifest" href="/assets/its_your_profile/manifest.json">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=Instrument+Serif:ital@1&display=swap" rel="stylesheet">
@@ -40,9 +45,15 @@
 	<div class="iyp-wrap iyp-nav-row">
 		<!-- Brand logo (2026-11-06): the image already carries the name, so no separate text -->
 		<a class="iyp-brand" href="/">
-			<img class="iyp-logo" src="/assets/its_your_profile/images/iyp-logo.png" alt="It's Your Profile" width="1465" height="505">
+			<img class="iyp-logo iyp-logo-light" src="/assets/its_your_profile/images/iyp-logo.png" alt="It's Your Profile" width="1465" height="505">
+			<img class="iyp-logo iyp-logo-dark" src="/assets/its_your_profile/images/iyp-logo-dark.png" alt="It's Your Profile" width="1465" height="505">
 		</a>
-		<nav class="iyp-links" aria-label="{{ _('Main') }}">
+		<!-- Phone/tablet menu button (2026-11-06): home.js opens the links as a dropdown panel -->
+		<button class="iyp-menu-btn" type="button" aria-expanded="false" aria-controls="iyp-menu" aria-label="{{ _('Menu') }}">
+			<svg class="iyp-i iyp-menu-open" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+			<svg class="iyp-i iyp-menu-close" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
+		</button>
+		<nav class="iyp-links" id="iyp-menu" aria-label="{{ _('Main') }}">
 			<a href="#how">{{ _("How it works") }}</a>
 			<a href="#why">{{ _("Why AI") }}</a>
 			<a href="#who">{{ _("Who it's for") }}</a>
@@ -78,7 +89,7 @@
 
 			<!-- Upload card (2026-11-06): drop the visiting card photo right here, or switch to a website
 			     link. home.js keeps the photo in the tab and the form at create_url uploads and reads it. -->
-			<div class="iyp-start iyp-upload" data-create-url="{{ create_url }}">
+			<div class="iyp-start iyp-upload" data-create-url="{{ create_url }}" data-logged-in="{{ 1 if logged_in else 0 }}">
 				<div class="iyp-tabs" role="tablist" aria-label="{{ _('How to start') }}">
 					<button type="button" role="tab" id="iyp-tab-card" aria-controls="iyp-pane-card" aria-selected="true">
 						<svg class="iyp-i" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13" r="3.5"/></svg>
@@ -102,8 +113,81 @@
 						<span class="iyp-drop-hint">{{ _("or take a photo with your phone camera · JPG, PNG") }}</span>
 						<input id="iyp-card-file" class="iyp-sr" type="file" accept="image/*">
 					</label>
+					<!-- Scan right here (2026-11-06): photo ready → Scan now → check details → page live.
+					     home.js uploads the photo, reads it (api.read_visiting_card) and saves the page
+					     (api.create_profile_from_card), all without leaving the home page. -->
+					{%- set scan_labels = {
+						"company_name": _("Company name"), "contact_person": _("Your name"), "designation": _("Designation"),
+						"phone": _("Phone"), "email": _("Email"), "website_url": _("Website"),
+						"address_line": _("Address"), "city": _("City"), "state": _("State"), "pincode": _("Pincode"),
+					} -%}
+					<div class="iyp-scan" data-state="preview" data-labels="{{ scan_labels | tojson | e }}" hidden>
+						<div class="iyp-scan-photo"><img alt="{{ _('Your visiting card') }}"><span class="iyp-scan-laser" aria-hidden="true"></span></div>
+
+						<div class="iyp-scan-step" data-show="preview">
+							<p class="iyp-scan-title">{{ _("Your card is ready") }} ✓</p>
+							<p class="iyp-scan-sub">{{ _("Tap Scan now and our AI will read the details in a few seconds.") }}</p>
+							<div class="iyp-scan-actions">
+								<button type="button" class="iyp-btn iyp-btn-upload iyp-scan-go" data-scan-now>⚡ {{ _("Scan now") }}</button>
+								<button type="button" class="iyp-btn iyp-btn-ghost" data-scan-change>{{ _("Change photo") }}</button>
+							</div>
+						</div>
+
+						<div class="iyp-scan-step" data-show="scanning" role="status">
+							<p class="iyp-scan-title">{{ _("Reading your card...") }}</p>
+							<p class="iyp-scan-sub">{{ _("Finding your name, phone, email and address. This takes about 10–20 seconds.") }}</p>
+							<div class="iyp-scan-bar" aria-hidden="true"><span></span></div>
+						</div>
+
+						<div class="iyp-scan-step" data-show="result">
+							<p class="iyp-scan-title">✅ {{ _("We read your card") }}</p>
+							<p class="iyp-scan-sub">{{ _("Check the details and fix anything that's wrong.") }}</p>
+							<div class="iyp-scan-fields"></div>
+							<div class="iyp-scan-actions">
+								<button type="button" class="iyp-btn iyp-btn-upload" data-scan-create>✨ {{ _("Create my page") }}</button>
+								<button type="button" class="iyp-btn iyp-btn-ghost" data-scan-change>{{ _("Scan another card") }}</button>
+							</div>
+						</div>
+
+						<div class="iyp-scan-step" data-show="saving" role="status">
+							<p class="iyp-scan-title">{{ _("Creating your page...") }}</p>
+							<div class="iyp-scan-bar" aria-hidden="true"><span></span></div>
+						</div>
+
+						<div class="iyp-scan-step" data-show="done">
+							<p class="iyp-scan-title">🎉 {{ _("Your page is live!") }}</p>
+							<p class="iyp-scan-sub" data-done-name></p>
+							<div class="iyp-scan-actions">
+								<a class="iyp-btn iyp-btn-upload" data-done-view target="_blank" rel="noopener">{{ _("View my page") }} ↗</a>
+								<a class="iyp-btn iyp-btn-ghost" data-done-edit>{{ _("Add more details") }}</a>
+								<a class="iyp-btn iyp-btn-ghost" href="/notifications">{{ _("My Dashboard") }}</a>
+							</div>
+						</div>
+
+						<div class="iyp-scan-step" data-show="error" role="alert">
+							<p class="iyp-scan-title">😕 {{ _("Couldn't read this card") }}</p>
+							<p class="iyp-scan-sub" data-error></p>
+							<div class="iyp-scan-actions">
+								<button type="button" class="iyp-btn iyp-btn-upload" data-scan-retry>{{ _("Try again") }}</button>
+								<button type="button" class="iyp-btn iyp-btn-ghost" data-scan-change>{{ _("Choose another photo") }}</button>
+							</div>
+						</div>
+					</div>
+
 					<p class="iyp-drop-note" aria-live="polite">{{ _("Front side is enough. You can add the back side on the next step.") }}</p>
 				</div>
+
+				<!-- Log in first (2026-11-06): visitors who are not logged in see this when they try to upload -->
+				<dialog class="iyp-editor iyp-ask" aria-labelledby="iyp-ask-title">
+					<button type="button" class="iyp-editor-x" data-ask-close aria-label="{{ _('Close') }}">×</button>
+					<span class="iyp-ask-icon" aria-hidden="true">🔐</span>
+					<h2 id="iyp-ask-title">{{ _("Sign up or log in to scan your card") }}</h2>
+					<p class="iyp-editor-help">{{ _("Your business page is saved to your free account, so you can edit it and see who visits. It takes a few seconds.") }}</p>
+					<div class="iyp-ask-actions">
+						<a class="iyp-btn iyp-btn-primary" data-ask-signup href="/login?redirect-to=%2F#signup">✨ {{ _("Sign up free") }}</a>
+						<a class="iyp-btn iyp-btn-ghost" data-ask-login href="/login?redirect-to=%2F">{{ _("I already have an account · Log in") }}</a>
+					</div>
+				</dialog>
 
 				<!-- Crop & rotate window (2026-11-06): opens after a photo is chosen; home.js drives it -->
 				<dialog class="iyp-editor" aria-labelledby="iyp-editor-title">

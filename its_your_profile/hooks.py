@@ -39,6 +39,8 @@ standard_portal_menu_items = [
 # An icon uploaded in Website Settings > Favicon still takes priority over this.
 website_context = {
 	"favicon": "/assets/its_your_profile/images/iyp-favicon.png",
+	# Loading splash (after login and while the backend loads) shows our logo, not Frappe's (2026-11-06)
+	"splash_image": "/assets/its_your_profile/images/iyp-logo.png",
 	# Our logo in Frappe's top bar (web forms, login and other standard pages)
 	"brand_html": '<img src="/assets/its_your_profile/images/iyp-logo.png" alt="It\'s Your Profile" style="height:46px;width:auto;max-height:none;max-width:none">',  # Frappe caps brand images at 22px
 	# Footer credit on every standard page (web form, business pages, directory, login...),

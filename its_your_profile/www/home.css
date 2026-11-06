@@ -52,8 +52,9 @@ body { margin: 0; background: #fff; color: var(--iyp-ink); font-family: Sora, sy
 /* Brand logo image (2026-11-06); width follows the height so it never stretches */
 .iyp-logo { display: block; height: 52px; width: auto; }
 @media (max-width: 720px) { .iyp-logo { height: 40px; } }
-/* Navy logo on the dark theme needs a light backdrop to stay readable */
-[data-iyp-theme="dark"] .iyp-logo { background: #fff; border-radius: 10px; padding: 4px 8px; }
+/* Dark theme: the light-text version of the logo (iyp-logo-dark.png) instead of the navy one */
+.iyp-logo-dark, [data-iyp-theme="dark"] .iyp-logo-light { display: none; }
+[data-iyp-theme="dark"] .iyp-logo-dark { display: block; }
 .iyp-links { display: flex; align-items: center; gap: 26px; flex-wrap: wrap; font-size: 15px; font-weight: 500; }
 .iyp-links a:not(.iyp-btn) { color: var(--iyp-text); text-decoration: none; }
 .iyp-links a:not(.iyp-btn):hover { color: var(--iyp-blue); }
@@ -251,7 +252,6 @@ body { margin: 0; background: #fff; color: var(--iyp-ink); font-family: Sora, sy
 /* Phone */
 @media (max-width: 720px) {
 	.iyp-wrap { padding-left: 16px; padding-right: 16px; }
-	.iyp-links a:not(.iyp-btn) { display: none; }
 	.iyp-hero-inner { padding-top: 28px; padding-bottom: 56px; gap: 20px; }
 	.iyp-hero h1 { font-size: 40px; }
 	.iyp-lead { font-size: 17px; }
@@ -490,3 +490,101 @@ body { margin: 0; background: #fff; color: var(--iyp-ink); font-family: Sora, sy
 /* Developer credit in the footer (2026-11-06) */
 .iyp-foot .iyp-credit a { color: var(--iyp-blue); font-weight: 700; }
 .iyp-foot .iyp-credit a:hover { color: var(--iyp-orange-dark); text-decoration: underline; }
+
+/* "Log in to upload" window (2026-11-06) */
+.iyp-ask { width: min(440px, calc(100vw - 32px)); text-align: center; position: relative; padding-top: 34px; }
+.iyp-ask .iyp-editor-x { position: absolute; right: 14px; top: 14px; }
+.iyp-ask-icon { display: grid; place-items: center; width: 64px; height: 64px; margin: 0 auto 14px; border-radius: 20px; font-size: 30px; background: linear-gradient(135deg, #F3F0FB, #FFF1E6); }
+.iyp-ask .iyp-editor-help { margin: 8px 0 22px; }
+.iyp-ask-actions { display: flex; flex-direction: column; gap: 10px; }
+.iyp-ask-actions .iyp-btn { width: 100%; }
+
+/* ---------- Mobile-friendly pass (2026-11-06) ---------- */
+/* Menu button: hidden on wide screens; below 960px the links open as a dropdown panel */
+.iyp-menu-btn { display: none; align-items: center; justify-content: center; width: 46px; height: 46px; margin-left: auto; padding: 0; border: 1px solid var(--iyp-line); border-radius: 14px; background: #fff; color: var(--iyp-ink); cursor: pointer; }
+.iyp-menu-btn .iyp-menu-close, .iyp-menu-btn[aria-expanded="true"] .iyp-menu-open { display: none; }
+.iyp-menu-btn[aria-expanded="true"] .iyp-menu-close { display: block; }
+.iyp-menu-btn:focus-visible { outline: 2px solid var(--iyp-blue); outline-offset: 2px; }
+@keyframes iyp-menu-in { from { opacity: 0; transform: translateY(-8px); } }
+@media (max-width: 960px) {
+	.iyp-nav-row { position: relative; flex-wrap: nowrap; padding-top: 12px; padding-bottom: 12px; }
+	.iyp-menu-btn { display: inline-flex; }
+	.iyp-links {
+		display: none; position: absolute; left: 16px; right: 16px; top: calc(100% + 4px);
+		flex-direction: column; align-items: stretch; gap: 2px; padding: 10px;
+		background: #fff; border: 1px solid var(--iyp-line); border-radius: 22px;
+		box-shadow: 0 30px 60px -24px rgba(30, 24, 56, .45);
+	}
+	.iyp-links.open { display: flex; animation: iyp-menu-in .2s ease; }
+	.iyp-links a:not(.iyp-btn) { display: flex; align-items: center; min-height: 48px; padding: 0 14px; border-radius: 12px; font-size: 16px; }
+	.iyp-links a:not(.iyp-btn):hover, .iyp-links a:not(.iyp-btn):active { background: var(--iyp-sky); }
+	.iyp-links .iyp-theme { width: 100%; height: 48px; justify-content: flex-start; gap: 10px; padding: 0 14px; border: 0; background: transparent; }
+	.iyp-links .iyp-theme::after { content: "Dark mode"; font-size: 16px; font-weight: 500; color: var(--iyp-text); }
+	[data-iyp-theme="dark"] .iyp-links .iyp-theme::after { content: "Light mode"; }
+	.iyp-links .iyp-btn { margin-top: 6px; min-height: 50px; }
+	[data-iyp-theme="dark"] .iyp-links { background: var(--iyp-surface); border-color: var(--iyp-soft); }
+	[data-iyp-theme="dark"] .iyp-menu-btn { background: var(--iyp-surface); border-color: var(--iyp-soft); color: var(--iyp-ink); }
+}
+/* Phones: smaller headline, comfortable tap sizes, no sideways scrolling */
+@media (max-width: 480px) {
+	.iyp-hero h1 { font-size: 34px; }
+	.iyp-home h2, .iyp-find h2, .iyp-pricing h2 { font-size: 30px; }
+	.iyp-cta h2 { font-size: 30px; }
+	.iyp-pill { font-size: 12.5px; padding: 7px 12px; }
+	.iyp-tabs button { padding: 10px 10px 12px; font-size: 14px; }
+	.iyp-drop-icons svg { width: 32px; height: 32px; }
+	.iyp-drop-text { font-size: 15px; }
+	.iyp-card { width: 260px; height: 160px; padding: 18px; }
+	.iyp-phone { width: 250px; }
+	.iyp-panel { padding: 22px; border-radius: 24px; }
+	.iyp-step, .iyp-feature { padding: 22px; }
+	.iyp-audience span { padding: 10px 16px; font-size: 14px; }
+	.iyp-price-amount { font-size: 52px; }
+	.iyp-foot-row { flex-direction: column; align-items: center; text-align: center; padding-bottom: 70px; } /* room for the credit badge */
+}
+.iyp-home { overflow-x: clip; }
+
+/* Jumping to a section (#how, #pricing...) leaves room for the sticky header */
+section[id] { scroll-margin-top: 84px; }
+
+/* ---------- Scan on the home page (2026-11-06) ---------- */
+.iyp-drop[hidden], .iyp-scan[hidden], .iyp-scan-step[hidden], .iyp-btn[hidden] { display: none !important; }
+@keyframes iyp-laser { 0% { top: 4%; } 50% { top: 92%; } 100% { top: 4%; } }
+@keyframes iyp-bar { 0% { left: -40%; } 100% { left: 100%; } }
+@keyframes iyp-scan-in { from { opacity: 0; transform: translateY(10px); } }
+.iyp-scan { display: flex; flex-direction: column; align-items: center; gap: 16px; padding: 6px 0 2px; animation: iyp-scan-in .35s ease; }
+.iyp-scan-photo { position: relative; width: min(100%, 420px); border-radius: 16px; overflow: hidden; background: #F6F4FC; box-shadow: 0 22px 44px -22px rgba(30, 24, 56, .45); }
+.iyp-scan-photo img { display: block; width: 100%; max-height: 260px; object-fit: contain; }
+.iyp-scan-laser { display: none; position: absolute; left: 0; right: 0; height: 3px; border-radius: 3px; background: linear-gradient(90deg, transparent, #E87012, #FFB27A, #E87012, transparent); box-shadow: 0 0 18px 4px rgba(232, 112, 18, .55); }
+.iyp-scan[data-state="scanning"] .iyp-scan-laser { display: block; animation: iyp-laser 2.2s ease-in-out infinite; }
+.iyp-scan[data-state="scanning"] .iyp-scan-photo img { filter: saturate(.85) brightness(.97); }
+.iyp-scan-step { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 8px; animation: iyp-scan-in .3s ease; }
+.iyp-home .iyp-scan-title { font-size: 18px; font-weight: 800; letter-spacing: -0.02em; color: var(--iyp-ink); }
+.iyp-home .iyp-scan-sub { font-size: 14px; color: var(--iyp-muted); max-width: 460px; }
+.iyp-scan-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-top: 8px; width: 100%; }
+.iyp-scan-go { min-width: 220px; font-size: 17px; animation: iyp-pulse 2.4s ease-in-out infinite; }
+.iyp-scan-bar { position: relative; width: min(100%, 320px); height: 6px; margin-top: 6px; border-radius: 6px; background: var(--iyp-line); overflow: hidden; }
+.iyp-scan-bar span { position: absolute; top: 0; bottom: 0; width: 40%; border-radius: 6px; background: linear-gradient(90deg, #3B2E7E, #E87012); animation: iyp-bar 1.3s ease-in-out infinite; }
+.iyp-scan-fields { width: 100%; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 8px; text-align: left; }
+.iyp-scan-field { display: flex; flex-direction: column; gap: 6px; margin: 0; }
+.iyp-scan-field.wide { grid-column: 1 / -1; }
+.iyp-scan-field span { font-size: 13px; font-weight: 600; color: var(--iyp-text); }
+.iyp-start .iyp-scan-field input { flex: none; width: 100%; min-height: 48px; padding: 12px 14px; border: 1px solid #B9B4CC; border-radius: 12px; font-size: 16px; background: #fff; color: var(--iyp-ink); box-sizing: border-box; }
+.iyp-start .iyp-scan-field input:focus { outline: none; border-color: var(--iyp-blue); box-shadow: 0 0 0 3px rgba(107, 85, 214, .18); }
+.iyp-start .iyp-scan-field input.need { border-color: #E5484D; box-shadow: 0 0 0 3px rgba(229, 72, 77, .15); }
+@media (max-width: 560px) {
+	.iyp-scan-fields { grid-template-columns: 1fr; }
+	.iyp-scan-actions .iyp-btn { flex: 1 1 100%; }
+	.iyp-scan-go { min-width: 0; }
+}
+[data-iyp-theme="dark"] .iyp-start .iyp-scan-field input { background: var(--iyp-band); border-color: var(--iyp-soft); }
+[data-iyp-theme="dark"] .iyp-scan-photo { background: var(--iyp-band); }
+
+/* ---------- Android-friendly (2026-11-06) ---------- */
+/* No grey flash on tap, no double-tap zoom delay, smooth momentum scrolling */
+.iyp-home a, .iyp-home button, .iyp-home label, .iyp-nav a, .iyp-nav button { -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
+/* Windows fit the screen even when Android's address bar shows or hides */
+.iyp-editor { max-height: calc(100dvh - 32px); }
+.iyp-editor-stage { height: min(420px, 50dvh); }
+/* Taps feel like taps: buttons press in slightly */
+.iyp-btn:active, .iyp-tabs button:active, .iyp-menu-btn:active { transform: scale(.97); }

@@ -70,6 +70,30 @@
 	}, { passive: true });
 	onScroll();
 
+	// CHANGE NOTE 2026-11-06: phone/tablet menu. The ☰ button opens the header links as a panel;
+	// tapping a link, tapping outside or pressing Esc closes it.
+	var menuBtn = document.querySelector(".iyp-menu-btn");
+	var menu = document.getElementById("iyp-menu");
+	if (menuBtn && menu) {
+		var setMenu = function (open) {
+			menu.classList.toggle("open", open);
+			menuBtn.setAttribute("aria-expanded", open ? "true" : "false");
+		};
+		menuBtn.addEventListener("click", function (e) {
+			e.stopPropagation();
+			setMenu(!menu.classList.contains("open"));
+		});
+		menu.addEventListener("click", function (e) {
+			if (e.target.closest("a")) setMenu(false);
+		});
+		document.addEventListener("click", function (e) {
+			if (menu.classList.contains("open") && !menu.contains(e.target)) setMenu(false);
+		});
+		document.addEventListener("keydown", function (e) {
+			if (e.key === "Escape" && menu.classList.contains("open")) { setMenu(false); menuBtn.focus(); }
+		});
+	}
+
 	// CHANGE NOTE
 	// Date: 2026-11-05
 	// Change: Dark theme toggle button in the header.
@@ -171,6 +195,168 @@
 			window.location.href = createUrl;
 		}
 
+		// CHANGE NOTE 2026-11-06: scan on the home page. After the crop, the card shows with a
+		// "Scan now" button; the photo is uploaded, read by the AI (api.read_visiting_card), the
+		// details are shown to check, and "Create my page" saves it (api.create_profile_from_card).
+		// No redirect. Needs a logged-in visitor (the upload and the AI read are per account).
+		var scan = upload.querySelector(".iyp-scan");
+		var scanImg = scan && scan.querySelector(".iyp-scan-photo img");
+		var scanFields = scan && scan.querySelector(".iyp-scan-fields");
+		var scanLabels = {};
+		try { scanLabels = JSON.parse(scan.getAttribute("data-labels") || "{}"); } catch (e) { /* defaults below */ }
+		var FIELD_ORDER = ["company_name", "contact_person", "designation", "phone", "email", "website_url", "address_line", "city", "state", "pincode"];
+		var ALWAYS_SHOW = ["company_name", "contact_person", "phone", "email"];
+		var INPUT_HINTS = {
+			phone: { type: "tel", inputmode: "tel", autocomplete: "tel" },
+			email: { type: "email", inputmode: "email", autocomplete: "email" },
+			website_url: { type: "url", inputmode: "url", autocomplete: "url" },
+			pincode: { type: "text", inputmode: "numeric", autocomplete: "postal-code" },
+			contact_person: { type: "text", autocomplete: "name" },
+			company_name: { type: "text", autocomplete: "organization" }
+		};
+		var scanState = { dataUrl: null, fileUrl: null, read: null };
+
+		function csrfToken() {
+			return (window.frappe && frappe.csrf_token) || "";
+		}
+		// Frappe's error text: _server_messages (a JSON list of JSON objects) or the exception line
+		function errorText(data, fallback) {
+			try {
+				if (data && data._server_messages) {
+					var msgs = JSON.parse(data._server_messages).map(function (m) {
+						try { return JSON.parse(m).message; } catch (e) { return m; }
+					});
+					var div = document.createElement("div");
+					div.innerHTML = msgs.join(" ");
+					if (div.textContent.trim()) return div.textContent.trim();
+				}
+				if (data && data.exception) return String(data.exception).split(":").slice(1).join(":").trim() || fallback;
+			} catch (e) { /* fall through */ }
+			return fallback;
+		}
+		function call(method, params) {
+			return fetch("/api/method/" + method, {
+				method: "POST",
+				credentials: "same-origin",
+				headers: { "Content-Type": "application/x-www-form-urlencoded", "X-Frappe-CSRF-Token": csrfToken(), Accept: "application/json" },
+				body: new URLSearchParams(params)
+			}).then(function (r) {
+				return r.json().catch(function () { return {}; }).then(function (data) {
+					if (!r.ok) throw new Error(errorText(data, "Something went wrong. Please try again."));
+					return data.message;
+				});
+			});
+		}
+		function uploadPhoto(dataUrl) {
+			if (scanState.fileUrl) return Promise.resolve(scanState.fileUrl); // already uploaded (Try again)
+			return fetch(dataUrl).then(function (r) { return r.blob(); }).then(function (blob) {
+				var form = new FormData();
+				form.append("file", blob, "visiting-card-" + Date.now() + ".jpg");
+				form.append("is_private", "1");
+				return fetch("/api/method/upload_file", {
+					method: "POST", credentials: "same-origin",
+					headers: { "X-Frappe-CSRF-Token": csrfToken(), Accept: "application/json" },
+					body: form
+				});
+			}).then(function (r) {
+				return r.json().catch(function () { return {}; }).then(function (data) {
+					if (!r.ok || !data.message || !data.message.file_url) throw new Error(errorText(data, "The photo could not be uploaded. Please try again."));
+					scanState.fileUrl = data.message.file_url;
+					return scanState.fileUrl;
+				});
+			});
+		}
+
+		function setScan(state) {
+			scan.setAttribute("data-state", state);
+			scan.querySelectorAll("[data-show]").forEach(function (el) { el.hidden = el.getAttribute("data-show") !== state; });
+		}
+		function showScan(dataUrl) {
+			if (!scan) { sendToForm(dataUrl); return; } // older page without the scan panel
+			scanState = { dataUrl: dataUrl, fileUrl: null, read: null };
+			scanImg.src = dataUrl;
+			if (drop) drop.hidden = true;
+			say("");
+			scan.hidden = false;
+			setScan("preview");
+			scan.scrollIntoView({ behavior: "smooth", block: "center" });
+		}
+		function resetScan() {
+			scan.hidden = true;
+			if (drop) drop.hidden = false;
+			say(noteText);
+			if (fileInput) fileInput.click();
+		}
+		function renderFields(values) {
+			scanFields.innerHTML = "";
+			FIELD_ORDER.forEach(function (fieldname) {
+				var value = values[fieldname] || "";
+				if (!value && ALWAYS_SHOW.indexOf(fieldname) === -1) return;
+				var wrap = document.createElement("label");
+				wrap.className = "iyp-scan-field" + (fieldname === "address_line" ? " wide" : "");
+				var span = document.createElement("span");
+				span.textContent = scanLabels[fieldname] || fieldname.replace(/_/g, " ");
+				var input = document.createElement("input");
+				var hint = INPUT_HINTS[fieldname] || { type: "text" };
+				Object.keys(hint).forEach(function (k) { input.setAttribute(k, hint[k]); });
+				input.name = fieldname;
+				input.value = value;
+				wrap.appendChild(span);
+				wrap.appendChild(input);
+				scanFields.appendChild(wrap);
+			});
+		}
+		function scanNow() {
+			setScan("scanning");
+			uploadPhoto(scanState.dataUrl).then(function (fileUrl) {
+				return call("its_your_profile.api.read_visiting_card", { file_url: fileUrl });
+			}).then(function (read) {
+				scanState.read = read || {};
+				renderFields(scanState.read);
+				setScan("result");
+				var first = scanFields.querySelector("input");
+				if (first && window.matchMedia("(pointer: fine)").matches) first.focus();
+			}).catch(function (err) {
+				scan.querySelector("[data-error]").textContent = err.message;
+				setScan("error");
+			});
+		}
+		function createPage() {
+			var values = {};
+			scanFields.querySelectorAll("input").forEach(function (input) { values[input.name] = input.value.trim(); });
+			if (!values.company_name) {
+				var box = scanFields.querySelector("input[name=company_name]");
+				if (box) { box.focus(); box.classList.add("need"); }
+				return;
+			}
+			setScan("saving");
+			call("its_your_profile.api.create_profile_from_card", {
+				file_url: scanState.fileUrl,
+				values: JSON.stringify(values),
+				links: JSON.stringify((scanState.read && scanState.read._links) || [])
+			}).then(function (made) {
+				scan.querySelector("[data-done-name]").textContent = made.company_name || "";
+				var view = scan.querySelector("[data-done-view]");
+				if (made.page_url) { view.href = made.page_url; view.hidden = false; } else { view.hidden = true; }
+				scan.querySelector("[data-done-edit]").href = made.edit_url;
+				setScan("done");
+			}).catch(function (err) {
+				scan.querySelector("[data-error]").textContent = err.message;
+				setScan("error");
+			});
+		}
+		if (scan) {
+			scan.querySelectorAll("[data-scan-now], [data-scan-retry]").forEach(function (b) {
+				b.addEventListener("click", function () {
+					// A failed save (card already read) retries the save; otherwise read again
+					if (scanState.read && b.hasAttribute("data-scan-retry")) createPage(); else scanNow();
+				});
+			});
+			scan.querySelectorAll("[data-scan-change]").forEach(function (b) { b.addEventListener("click", resetScan); });
+			scan.querySelector("[data-scan-create]").addEventListener("click", createPage);
+			scanFields.addEventListener("input", function (e) { e.target.classList.remove("need"); });
+		}
+
 		// CHANGE NOTE 2026-11-06: crop & rotate window. Cropper.js (MIT, same tool Frappe's forms use)
 		// loads from cdnjs only when a photo is chosen. If it can't load, the photo goes on uncropped.
 		var CROPPER_JS = "https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.js";
@@ -193,7 +379,7 @@
 			return cropperReady;
 		}
 
-		var editor = upload.querySelector(".iyp-editor");
+		var editor = upload.querySelector(".iyp-editor:not(.iyp-ask)");
 		var editorImg = editor && editor.querySelector(".iyp-editor-stage img");
 		var cropper = null;
 		var original = null; // the photo as chosen, for Reset
@@ -256,8 +442,7 @@
 				var canvas = cropper.getCroppedCanvas({ maxWidth: MAX_SIDE, maxHeight: MAX_SIDE, fillColor: "#fff", imageSmoothingQuality: "high" });
 				var dataUrl = canvas ? canvas.toDataURL("image/jpeg", 0.85) : original;
 				closeEditor();
-				say("Getting your card ready...");
-				sendToForm(dataUrl);
+				showScan(dataUrl); // scan right here on the home page (2026-11-06)
 			});
 		}
 
@@ -270,10 +455,45 @@
 			say("Opening your photo...");
 			shrink(file).then(function (dataUrl) {
 				if (editor && editor.showModal) openEditor(dataUrl);
-				else sendToForm(dataUrl);
+				else showScan(dataUrl);
 			}, function () {
 				say("This photo could not be opened. Please try a JPG or PNG photo.", true);
 			});
+		}
+
+		// CHANGE NOTE 2026-11-06: visitors who are not logged in are asked to log in before uploading
+		// (click, drop or website link). After login they land on the form, which has the upload.
+		var loggedIn = upload.getAttribute("data-logged-in") === "1";
+		var ask = upload.querySelector(".iyp-ask");
+		var askLogin = ask && ask.querySelector("[data-ask-login]");
+		var webForm = upload.querySelector(".iyp-web");
+		// Back to the home page after login/sign-up, where the card is scanned (a website link goes to the form)
+		var askSignup = ask && ask.querySelector("[data-ask-signup]");
+		function askToLogIn(target) {
+			var back = encodeURIComponent(target || "/");
+			if (!ask || !ask.showModal) { window.location.href = "/login?redirect-to=" + back; return; }
+			if (askLogin) askLogin.href = "/login?redirect-to=" + back;
+			if (askSignup) askSignup.href = "/login?redirect-to=" + back + "#signup";
+			ask.showModal();
+		}
+		if (ask) {
+			ask.querySelector("[data-ask-close]").addEventListener("click", function () { ask.close(); });
+			ask.addEventListener("click", function (e) { if (e.target === ask) ask.close(); }); // click outside
+		}
+		if (!loggedIn) {
+			if (drop) {
+				drop.addEventListener("click", function (e) { e.preventDefault(); askToLogIn(); });
+				drop.addEventListener("keydown", function (e) {
+					if (e.key === "Enter" || e.key === " ") { e.preventDefault(); askToLogIn(); }
+				});
+			}
+			if (webForm) {
+				webForm.addEventListener("submit", function (e) {
+					e.preventDefault();
+					var site = (webForm.querySelector("input[name=website_url]") || {}).value || "";
+					askToLogIn(createUrl + (site ? "?website_url=" + encodeURIComponent(site.trim()) : ""));
+				});
+			}
 		}
 
 		if (fileInput) {
@@ -295,6 +515,7 @@
 			drop.addEventListener("drop", function (e) {
 				e.preventDefault();
 				drop.classList.remove("over");
+				if (!loggedIn) { askToLogIn(); return; }
 				useFile(e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0]);
 			});
 		}

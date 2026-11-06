@@ -7,7 +7,7 @@
 
 	var css =
 		".iyp-credit-badge{position:fixed;left:16px;bottom:16px;z-index:1030;display:inline-flex;align-items:center;gap:6px;" +
-		"padding:7px 14px;border-radius:999px;background:rgba(255,255,255,.92);border:1px solid #E4DFF3;" +
+		"padding:7px 14px;border-radius:999px;background:rgba(255,255,255,.92);border:1px solid #E4DFF3;margin-bottom:env(safe-area-inset-bottom,0px);" +
 		"-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);box-shadow:0 10px 24px -12px rgba(59,46,126,.45);" +
 		"font:500 12.5px/1.2 Sora,system-ui,-apple-system,sans-serif;color:#5A5578 !important;text-decoration:none !important;" +
 		"transition:transform .2s ease,box-shadow .2s ease,bottom .25s ease;animation:iyp-credit-in .6s .6s cubic-bezier(.2,.8,.2,1) backwards}" +
