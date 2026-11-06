@@ -22,8 +22,21 @@ def get_context(context):
 		frappe.local.flags.redirect_location = "/login?redirect-to=/notifications"
 		raise frappe.Redirect
 
-	profiles = frappe.get_all("Business Profile", filters={"owner": user}, fields=["name", "route"])
+	# CHANGE NOTE 2026-11-06: this page is now the owner's dashboard (where they land after login),
+	# so it also shows who they are and their business page(s) with View / Edit / Share.
+	profiles = frappe.get_all(
+		"Business Profile",
+		filters={"owner": user},
+		fields=["name", "route", "company_name", "city", "state", "business_nature", "company_logo", "published"],
+		order_by="creation desc",
+	)
 	routes = {p.name: p.route for p in profiles}
+	for p in profiles:
+		p.page_url = "/" + p.route if p.published and p.route else None
+		p.edit_url = f"/my-business/{p.name}/edit"
+		p.logo = p.company_logo if (p.company_logo or "").startswith("/files/") else None
+		words = [w for w in (p.company_name or "?").split() if w not in ("&", "-", "|")][:2]
+		p.initials = "".join(w[0] for w in words).upper() or "?"
 
 	alerts = frappe.get_all(
 		"Notification Log",
@@ -56,10 +69,13 @@ def get_context(context):
 
 	context.update(
 		{
-			"title": _("Notifications"),
+			"title": _("My Dashboard"),
 			"days": days,
 			"unread": unread,
 			"has_profile": bool(profiles),
+			"profiles": profiles,
+			"full_name": frappe.utils.get_fullname(user),
+			"user_email": user,
 			"week": week_counts([p.name for p in profiles]),
 		}
 	)

@@ -48,7 +48,8 @@
 			<a href="#who">{{ _("Who it's for") }}</a>
 			{% if is_backend_user %}<a href="/directory">{{ _("Directory") }}</a>{% endif %}
 			<a href="#pricing">{{ _("Pricing") }}</a>
-			{% if logged_in %}<a href="/notifications">{{ _("Notifications") }}</a><a href="/app">{{ _("My account") }}</a>{% else %}<a href="/login">{{ _("Log in") }}</a>{% endif %}
+			{#- 2026-11-06: owners go to their dashboard; /desk is for staff only (desk_guard.py) -#}
+			{% if is_backend_user %}<a href="/desk">{{ _("Backend") }}</a>{% elif logged_in %}<a href="/notifications">{{ _("My Dashboard") }}</a>{% else %}<a href="/login">{{ _("Log in") }}</a>{% endif %}
 			<!-- Dark theme toggle (2026-11-05): home.js switches the theme and updates aria-pressed -->
 			<button class="iyp-theme" type="button" aria-label="{{ _('Dark theme') }}" aria-pressed="false" title="{{ _('Toggle dark theme') }}">
 				<svg class="iyp-i iyp-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5z"/></svg>

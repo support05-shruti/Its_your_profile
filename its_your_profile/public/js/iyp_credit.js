@@ -36,6 +36,13 @@
 		a.innerHTML = "<i aria-hidden=\"true\"></i>Developed by <b>SoftWorld Solutions Pvt. Ltd.</b>";
 		document.body.appendChild(a);
 
+		// Login page: our logo in place of Frappe's (iyp_site.css does it too; this covers browsers
+		// that ignore CSS image replacement)
+		document.querySelectorAll("img.app-logo").forEach(function (img) {
+			img.src = "/assets/its_your_profile/images/iyp-logo.png";
+			img.alt = "It's Your Profile";
+		});
+
 		// Business pages (quick-action bar) and the profile form (sticky save bar) keep a bar at the
 		// bottom on phones; lift the badge above it there
 		if (document.querySelector(".iyp-bar, .web-form-footer")) {

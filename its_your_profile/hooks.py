@@ -32,7 +32,7 @@ app_license = "mit"
 
 # Owners' menu after they log in (the web form's account pages)
 standard_portal_menu_items = [
-	{"title": "Notifications", "route": "/notifications"},
+	{"title": "My Dashboard", "route": "/notifications"},
 ]
 
 # Browser tab icon (2026-11-06): our magnifier logo on every website page instead of Frappe's.
@@ -58,6 +58,11 @@ website_context = {
 # web_include_js = "/assets/its_your_profile/js/its_your_profile.js"
 # "Developed by SoftWorld Solutions Pvt. Ltd." badge fixed on every website page (2026-11-06)
 web_include_js = ["/assets/its_your_profile/js/iyp_credit.js"]
+# Site look for Frappe's standard pages: login page with our logo, owner's dashboard (2026-11-06)
+web_include_css = ["/assets/its_your_profile/css/iyp_site.css"]
+
+# Business owners land on their dashboard (/notifications) right after logging in (2026-11-06)
+on_login = ["its_your_profile.portal.send_owner_to_dashboard"]
 
 # Only staff (System Users) see the Frappe backend; everyone else opening /desk or /app is sent
 # to the home page (2026-11-06). Staff log in at /login.

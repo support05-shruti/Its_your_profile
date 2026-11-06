@@ -1,0 +1,91 @@
+/* It's Your Profile: site-wide look for Frappe's standard pages (2026-11-06).
+   Loaded on every website page via hooks.py web_include_css. Page-specific parts are scoped by
+   body[data-path=...], so the home page (own styles) is not affected. */
+@import url("https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&display=swap");
+
+@keyframes iyp-site-rise { from { opacity: 0; transform: translateY(22px); } }
+@keyframes iyp-site-float { to { transform: translate3d(30px, 40px, 0) scale(1.08); } }
+@keyframes iyp-site-float-2 { to { transform: translate3d(-40px, -30px, 0) scale(.94); } }
+@keyframes iyp-site-shimmer { to { background-position: 200% 0; } }
+
+/* Frappe top bar on every standard page: transparent, with our logo full size */
+.navbar { background: transparent !important; border-bottom: 0 !important; box-shadow: none !important; }
+.navbar .navbar-brand img { height: 46px !important; width: auto !important; max-height: none !important; max-width: none !important; }
+.navbar .nav-link { color: #3F3A5E !important; font-weight: 500; }
+.navbar .nav-link:hover { color: #3B2E7E !important; }
+
+/* ---------- Shared page background: login and the owner's dashboard ---------- */
+body[data-path="login"], body[data-path="notifications"] {
+	position: relative; isolation: isolate;
+	font-family: Sora, system-ui, -apple-system, sans-serif;
+	background: linear-gradient(180deg, #F3F0FB 0, #F6F4FC 380px, #fff 900px) no-repeat, #fff !important;
+	color: #1E1838;
+}
+body[data-path="login"]::before, body[data-path="login"]::after,
+body[data-path="notifications"]::before, body[data-path="notifications"]::after {
+	content: ""; position: fixed; z-index: -1; border-radius: 50%; pointer-events: none;
+}
+body[data-path="login"]::before, body[data-path="notifications"]::before { width: 380px; height: 380px; left: -150px; top: 160px; background: #FFE3CF; opacity: .75; animation: iyp-site-float 12s ease-in-out infinite alternate; }
+body[data-path="login"]::after, body[data-path="notifications"]::after { width: 300px; height: 300px; right: -110px; top: 40px; background: #DDF5E8; opacity: .85; animation: iyp-site-float-2 14s ease-in-out infinite alternate; }
+body[data-path="login"] .web-footer, body[data-path="notifications"] .web-footer,
+body[data-path="login"] .web-footer .footer-info, body[data-path="notifications"] .web-footer .footer-info { background: transparent !important; }
+html { overflow-x: clip; }
+
+/* ---------- Login page ---------- */
+body[data-path="login"] .page-card,
+body[data-path="login"] .login-content.page-card {
+	position: relative; overflow: hidden;
+	max-width: 440px !important; margin: 48px auto 32px !important;
+	padding: 42px 38px 34px !important;
+	background: #fff !important; border: 1px solid #E4DFF3 !important; border-radius: 28px !important;
+	box-shadow: 0 40px 80px -40px rgba(59, 46, 126, .45) !important;
+	animation: iyp-site-rise .7s cubic-bezier(.2, .8, .2, 1) backwards;
+}
+/* Moving brand stripe along the top of the card */
+body[data-path="login"] .page-card::before {
+	content: ""; position: absolute; left: 0; right: 0; top: 0; height: 6px;
+	background: linear-gradient(90deg, #3B2E7E, #6B55D6, #E87012, #6B55D6, #3B2E7E); background-size: 200% 100%;
+	animation: iyp-site-shimmer 6s linear infinite;
+}
+body[data-path="login"] .page-card-head { align-items: center !important; text-align: center !important; gap: 18px !important; }
+/* Our logo in place of Frappe's */
+body[data-path="login"] img.app-logo {
+	content: url("/assets/its_your_profile/images/iyp-logo.png");
+	height: 64px !important; width: auto !important; max-width: 100% !important; max-height: none !important;
+}
+body[data-path="login"] .page-card-head h4 { font-family: Sora, system-ui, sans-serif; font-weight: 800 !important; letter-spacing: -0.035em; color: #1E1838 !important; text-align: center; }
+body[data-path="login"] .page-card-subtitle { color: #5A5578 !important; text-align: center; }
+body[data-path="login"] label { color: #1E1838 !important; font-weight: 600; }
+body[data-path="login"] .form-control {
+	min-height: 46px; background: #fff !important; border: 1px solid #B9B4CC !important; border-radius: 12px !important;
+	color: #1E1838 !important; box-shadow: none !important; font-family: inherit;
+	transition: border-color .2s ease, box-shadow .2s ease;
+}
+body[data-path="login"] .form-control:hover { border-color: #8E88A8 !important; }
+body[data-path="login"] .form-control:focus { border-color: #3B2E7E !important; box-shadow: 0 0 0 4px rgba(107, 85, 214, .16) !important; outline: none; }
+body[data-path="login"] .es-button[data-variant="solid"]:not(.btn-login-option) {
+	min-height: 48px; border: 0 !important; border-radius: 14px !important; color: #fff !important; font-weight: 700 !important; font-family: inherit;
+	background: linear-gradient(90deg, #3B2E7E, #6B55D6, #3B2E7E) !important; background-size: 200% 100% !important;
+	box-shadow: 0 12px 26px -12px rgba(59, 46, 126, .8);
+	transition: transform .15s ease, box-shadow .15s ease, background-position .6s ease;
+}
+body[data-path="login"] .es-button[data-variant="solid"]:not(.btn-login-option):hover { background-position: 100% 0 !important; transform: translateY(-2px); }
+body[data-path="login"] .btn-login-option {
+	min-height: 46px; background: #fff !important; border: 1px solid #D3CCE8 !important; border-radius: 14px !important;
+	color: #1E1838 !important; font-weight: 600 !important; font-family: inherit;
+}
+body[data-path="login"] .btn-login-option:hover { border-color: #3B2E7E !important; color: #3B2E7E !important; }
+body[data-path="login"] .page-card a, body[data-path="login"] .sign-up-message a { color: #3B2E7E !important; font-weight: 600; }
+body[data-path="login"] .page-card a:hover { color: #B55406 !important; }
+body[data-path="login"] .sign-up-message { color: #5A5578 !important; }
+
+@media (max-width: 576px) {
+	body[data-path="login"]::before, body[data-path="login"]::after,
+	body[data-path="notifications"]::before, body[data-path="notifications"]::after { display: none; }
+	body[data-path="login"] .page-card { margin: 20px 12px !important; padding: 34px 22px 26px !important; border-radius: 22px !important; }
+	body[data-path="login"] img.app-logo { height: 52px !important; }
+	.navbar .navbar-brand img { height: 38px !important; }
+}
+@media (prefers-reduced-motion: reduce) {
+	body[data-path]::before, body[data-path]::after, body[data-path="login"] .page-card, body[data-path="login"] .page-card::before { animation: none !important; }
+}

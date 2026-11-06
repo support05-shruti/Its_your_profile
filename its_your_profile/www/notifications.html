@@ -1,6 +1,6 @@
 {% extends "templates/web.html" %}
 
-{% block title %}{{ _("It's Your Profile · Notifications") }}{% endblock %}
+{% block title %}{{ _("It's Your Profile · My Dashboard") }}{% endblock %}
 
 {% block page_content %}
 <style>
@@ -39,16 +39,71 @@
 	.iyp-empty b { display: block; color: var(--ink); font-size: 1.1rem; margin-bottom: 6px; }
 	.iyp-empty a { display: inline-block; margin-top: 14px; padding: 10px 20px; border-radius: 14px; background: var(--blue); color: #fff !important; font-weight: 700; text-decoration: none !important; }
 
+	/* Dashboard (2026-11-06): greeting, the owner's details and business page cards */
+	.iyp-nt { max-width: 860px; font-family: Sora, system-ui, -apple-system, sans-serif; }
+	.iyp-hello { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; margin: 8px 0 22px; animation: iyp-nt-up .5s ease backwards; }
+	.iyp-hello-avatar { width: 58px; height: 58px; border-radius: 18px; display: grid; place-items: center; flex: none; color: #fff; font-size: 1.4rem; font-weight: 800; background: linear-gradient(135deg, #3B2E7E, #6B55D6); box-shadow: 0 14px 28px -14px rgba(59, 46, 126, .8); }
+	.iyp-nt .iyp-hello h1 { margin: 0; font-size: clamp(1.7rem, 4vw, 2.4rem); letter-spacing: -.04em; }
+	.iyp-hello p { margin: 2px 0 0; color: var(--muted); font-size: .92rem; }
+	.iyp-sec { display: flex; align-items: center; gap: 10px; font-size: 1.15rem; font-weight: 800; letter-spacing: -.02em; margin: 30px 0 12px; color: var(--ink); }
+	.iyp-sec::before { content: ""; width: 18px; height: 4px; border-radius: 4px; background: #E87012; }
+	.iyp-sec .iyp-count { margin-left: 4px; padding: 2px 10px; border-radius: 999px; background: #3B2E7E; color: #fff; font-size: .75rem; }
+
+	.iyp-biz { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; padding: 20px 22px; margin-bottom: 12px; background: #fff; border: 1px solid var(--line); border-radius: 24px; box-shadow: 0 24px 50px -30px rgba(59, 46, 126, .45); animation: iyp-nt-up .5s .1s ease backwards; transition: transform .2s ease, box-shadow .2s ease; }
+	.iyp-biz:hover { transform: translateY(-2px); box-shadow: 0 30px 60px -30px rgba(59, 46, 126, .55); }
+	.iyp-biz-logo { width: 72px; height: 72px; border-radius: 18px; flex: none; display: grid; place-items: center; background: linear-gradient(160deg, var(--sky), #fff 70%); border: 1px solid var(--line); color: var(--blue); font-size: 1.5rem; font-weight: 800; overflow: hidden; }
+	.iyp-biz-logo img { max-width: 62px; max-height: 62px; object-fit: contain; }
+	.iyp-biz-text { flex: 1; min-width: 200px; }
+	.iyp-biz-text b { display: block; font-size: 1.15rem; font-weight: 800; letter-spacing: -.02em; color: var(--ink); }
+	.iyp-biz-text small { color: var(--muted); font-size: .85rem; }
+	.iyp-status { display: inline-block; margin-top: 6px; padding: 3px 10px; border-radius: 999px; font-size: .75rem; font-weight: 700; }
+	.iyp-status.live { background: var(--mint); color: var(--green); }
+	.iyp-status.draft { background: var(--peach); color: var(--orange); }
+	.iyp-biz-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+	.iyp-b { display: inline-flex; align-items: center; gap: 6px; padding: 9px 16px; border-radius: 12px; font-size: .88rem; font-weight: 700; text-decoration: none !important; border: 1px solid var(--line); background: #fff; color: var(--ink) !important; cursor: pointer; font-family: inherit; transition: transform .15s ease, border-color .15s ease, color .15s ease; }
+	.iyp-b:hover { transform: translateY(-1px); border-color: var(--blue); color: var(--blue) !important; }
+	.iyp-b.main { border: 0; color: #fff !important; background: linear-gradient(90deg, #3B2E7E, #6B55D6); box-shadow: 0 10px 22px -10px rgba(59, 46, 126, .8); }
+	.iyp-b.main:hover { color: #fff !important; }
+	.iyp-add { display: inline-flex; margin-top: 4px; font-weight: 700; color: var(--blue) !important; text-decoration: none !important; }
+	.iyp-week { margin-top: 4px; }
+	.iyp-stat { border: 1px solid rgba(255, 255, 255, .6); box-shadow: 0 16px 34px -24px rgba(59, 46, 126, .5); }
+
 	@keyframes iyp-nt-up { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
 	@media (prefers-reduced-motion: reduce) { .iyp-stat, .iyp-alert { animation: none; } }
 	@media (max-width: 520px) { .iyp-week { gap: 8px; } .iyp-stat { padding: 12px; } .iyp-stat b { font-size: 1.4rem; } }
 </style>
 
 <div class="iyp-nt">
-	<h1>{{ _("Notifications") }}</h1>
-	<p class="iyp-nt-sub">
-		{% if unread %}{{ _("{0} new since you last looked.").format(unread) }}{% else %}{{ _("Who viewed your page, who tapped to contact you, and which AI read it.") }}{% endif %}
-	</p>
+	<!-- Greeting and the owner's details (2026-11-06) -->
+	<div class="iyp-hello">
+		<span class="iyp-hello-avatar" aria-hidden="true">{{ (full_name or user_email or "?")[0] | upper }}</span>
+		<div>
+			<h1>{{ _("Hi, {0}").format((full_name or "").split(" ")[0] or _("there")) }} 👋</h1>
+			<p>{{ user_email }}</p>
+		</div>
+	</div>
+
+	{% if profiles %}
+	<div class="iyp-sec">{{ _("My business page") if profiles | length == 1 else _("My business pages") }}</div>
+	{% for p in profiles %}
+	<div class="iyp-biz">
+		<div class="iyp-biz-logo">{% if p.logo %}<img src="{{ p.logo | e }}" alt="">{% else %}{{ p.initials }}{% endif %}</div>
+		<div class="iyp-biz-text">
+			<b>{{ p.company_name or _("Untitled business") }}</b>
+			<small>{{ [p.business_nature, p.city, p.state] | select | join(" · ") }}</small><br>
+			{% if p.page_url %}<span class="iyp-status live">● {{ _("Live") }}</span>{% else %}<span class="iyp-status draft">● {{ _("Not published yet") }}</span>{% endif %}
+		</div>
+		<div class="iyp-biz-actions">
+			{% if p.page_url %}<a class="iyp-b main" href="{{ p.page_url }}" target="_blank" rel="noopener">{{ _("View my page") }} ↗</a>{% endif %}
+			<a class="iyp-b" href="{{ p.edit_url }}">✏️ {{ _("Edit details") }}</a>
+			{% if p.page_url %}<button class="iyp-b" type="button" data-share="{{ p.page_url }}" data-title="{{ p.company_name | e }}">🔗 {{ _("Share") }}</button>{% endif %}
+		</div>
+	</div>
+	{% endfor %}
+	{% endif %}
+
+	<div class="iyp-sec">{{ _("Who visited your page") }}{% if unread %}<span class="iyp-count">{{ _("{0} new").format(unread) }}</span>{% endif %}</div>
+	<p class="iyp-nt-sub">{{ _("Who viewed your page, who tapped to contact you, and which AI read it.") }}</p>
 
 	{% if has_profile %}
 	<div class="iyp-week" aria-label="{{ _('Last 7 days') }}">
@@ -86,4 +141,16 @@
 		</div>
 	{% endif %}
 </div>
+
+<script>
+	// Share button: the phone's share sheet, or WhatsApp on computers (2026-11-06)
+	document.querySelectorAll(".iyp-nt [data-share]").forEach(function (btn) {
+		btn.addEventListener("click", function () {
+			var url = location.origin + btn.getAttribute("data-share");
+			var title = btn.getAttribute("data-title") || "";
+			if (navigator.share) navigator.share({ title: title, url: url }).catch(function () {});
+			else window.open("https://wa.me/?text=" + encodeURIComponent(title + " - " + url), "_blank", "noopener");
+		});
+	});
+</script>
 {% endblock %}
