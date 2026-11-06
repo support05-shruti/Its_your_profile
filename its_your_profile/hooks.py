@@ -41,6 +41,9 @@ website_context = {
 	"favicon": "/assets/its_your_profile/images/iyp-favicon.png",
 	# Our logo in Frappe's top bar (web forms, login and other standard pages)
 	"brand_html": '<img src="/assets/its_your_profile/images/iyp-logo.png" alt="It\'s Your Profile" style="height:46px;width:auto;max-height:none;max-width:none">',  # Frappe caps brand images at 22px
+	# Footer credit on every standard page (web form, business pages, directory, login...),
+	# in place of Frappe's "Built on Frappe". The home page has its own footer with the same line.
+	"footer_powered": 'Developed by <a href="https://softworld.co.in" target="_blank" rel="noopener" style="color:#3B2E7E;font-weight:600">SoftWorld Solutions Pvt. Ltd.</a>',
 }
 
 # Includes in <head>
@@ -53,6 +56,8 @@ website_context = {
 # include js, css files in header of web template
 # web_include_css = "/assets/its_your_profile/css/its_your_profile.css"
 # web_include_js = "/assets/its_your_profile/js/its_your_profile.js"
+# "Developed by SoftWorld Solutions Pvt. Ltd." badge fixed on every website page (2026-11-06)
+web_include_js = ["/assets/its_your_profile/js/iyp_credit.js"]
 
 # include custom scss in every website theme (without file extension ".scss")
 # website_theme_scss = "its_your_profile/public/scss/website"

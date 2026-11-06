@@ -333,7 +333,8 @@
 {% block footer %}
 <footer class="iyp-foot">
 	<div class="iyp-wrap iyp-foot-row">
-		<span>© It's Your Profile · itsyourprofile.com</span>
+		<!-- Developer credit (2026-11-06); the same line is on every other page via hooks.py footer_powered -->
+		<span class="iyp-credit">{{ _("Developed by") }} <a href="https://softworld.co.in" target="_blank" rel="noopener">SoftWorld Solutions Pvt. Ltd.</a></span>
 		<nav aria-label="{{ _('Footer') }}">
 			<a href="/directory">{{ _("Directory") }}</a>
 			<a href="#how">{{ _("How it works") }}</a>

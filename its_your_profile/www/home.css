@@ -486,3 +486,7 @@ body { margin: 0; background: #fff; color: var(--iyp-ink); font-family: Sora, sy
 }
 [data-iyp-theme="dark"] .iyp-editor { background: var(--iyp-surface); }
 [data-iyp-theme="dark"] .iyp-editor-x, [data-iyp-theme="dark"] .iyp-editor-tools button { background: var(--iyp-band); border-color: var(--iyp-soft); }
+
+/* Developer credit in the footer (2026-11-06) */
+.iyp-foot .iyp-credit a { color: var(--iyp-blue); font-weight: 700; }
+.iyp-foot .iyp-credit a:hover { color: var(--iyp-orange-dark); text-decoration: underline; }
