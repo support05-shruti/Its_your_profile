@@ -1,0 +1,260 @@
+/* My Business Profile form (2026-11-06): styled to match the home page (logo indigo and orange,
+   Sora font, lavender background, rounded card), with gentle animations. Frappe loads this file
+   only on this form. my_business.js adds the steps strip, the perks and the "iyp-js" class. */
+@import url("https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=Instrument+Serif:ital@1&display=swap");
+
+:root {
+	--iyp-ink: #1E1838;
+	--iyp-text: #3F3A5E;
+	--iyp-muted: #5A5578;
+	--iyp-faint: #7D7898;
+	--iyp-line: #E4DFF3;
+	--iyp-border: #B9B4CC;
+	--iyp-indigo: #3B2E7E;
+	--iyp-indigo-dark: #2E2454;
+	--iyp-violet: #6B55D6;
+	--iyp-orange: #E87012;
+	--iyp-peach: #FFF1E6;
+	--iyp-mint: #E9FBF1;
+}
+
+@keyframes iyp-rise { from { opacity: 0; transform: translateY(22px); } }
+@keyframes iyp-pop { 0% { opacity: 0; transform: scale(.6); } 70% { transform: scale(1.08); } }
+@keyframes iyp-float { to { transform: translate3d(30px, 40px, 0) scale(1.08); } }
+@keyframes iyp-float-2 { to { transform: translate3d(-40px, -30px, 0) scale(.94); } }
+@keyframes iyp-shimmer { to { background-position: 200% 0; } }
+@keyframes iyp-pulse { 50% { box-shadow: 0 0 0 6px rgba(232, 112, 18, 0); } 0%, 100% { box-shadow: 0 0 0 0 rgba(232, 112, 18, .35); } }
+@keyframes iyp-glow { 50% { box-shadow: 0 14px 30px -10px rgba(107, 85, 214, .75); } }
+
+/* ---------- Page ---------- */
+html, body { overflow-x: clip; }
+body {
+	position: relative; isolation: isolate;
+	font-family: Sora, system-ui, -apple-system, sans-serif;
+	background: linear-gradient(180deg, #F3F0FB 0, #F6F4FC 380px, #fff 900px) no-repeat, #fff !important;
+	color: var(--iyp-ink);
+}
+body .form-control, body .btn, body select, body textarea { font-family: inherit; }
+
+/* Soft pastel circles drifting behind the card, like the home page */
+body::before, body::after { content: ""; position: fixed; z-index: -1; border-radius: 50%; pointer-events: none; }
+body::before { width: 380px; height: 380px; left: -150px; top: 180px; background: #FFE3CF; opacity: .75; animation: iyp-float 12s ease-in-out infinite alternate; }
+body::after { width: 300px; height: 300px; right: -110px; top: 60px; background: #DDF5E8; opacity: .85; animation: iyp-float-2 14s ease-in-out infinite alternate; }
+
+/* Top bar: see-through, with our logo (hooks.py brand_html) */
+.navbar { background: transparent !important; border-bottom: 0 !important; box-shadow: none !important; padding-top: 14px; padding-bottom: 14px; }
+.navbar .navbar-brand img { height: 50px !important; width: auto !important; max-height: none !important; max-width: none !important; display: block; }
+.navbar .nav-link { color: var(--iyp-text) !important; font-weight: 500; }
+.navbar .nav-link:hover { color: var(--iyp-indigo) !important; }
+.web-footer, .web-footer .footer-info { background: transparent !important; }
+
+/* Breadcrumbs */
+[data-doctype="Web Form"] .breadcrumb a { color: var(--iyp-indigo) !important; font-weight: 600; }
+[data-doctype="Web Form"] .breadcrumb-item.active, [data-doctype="Web Form"] .breadcrumb-item + .breadcrumb-item::before { color: var(--iyp-faint) !important; }
+
+/* ---------- Card: header and form read as one rounded white card ---------- */
+[data-doctype="Web Form"] .page-content-wrapper .container .page_content { max-width: 900px; }
+[data-doctype="Web Form"] .page-content-wrapper .container .page_content .web-form-header {
+	position: relative; overflow: hidden;
+	border: 1px solid var(--iyp-line); border-bottom: none;
+	border-radius: 28px 28px 0 0;
+	background: #fff;
+	padding: 2.8rem 2.75rem 0;
+	animation: iyp-rise .7s cubic-bezier(.2, .8, .2, 1) backwards;
+}
+/* Moving brand stripe across the top of the card */
+[data-doctype="Web Form"] .page-content-wrapper .container .page_content .web-form-header::before {
+	content: ""; position: absolute; left: 0; right: 0; top: 0; height: 6px;
+	background: linear-gradient(90deg, var(--iyp-indigo), var(--iyp-violet), var(--iyp-orange), var(--iyp-violet), var(--iyp-indigo));
+	background-size: 200% 100%;
+	animation: iyp-shimmer 6s linear infinite;
+}
+/* A faint peach glow in the header's corner */
+[data-doctype="Web Form"] .page-content-wrapper .container .page_content .web-form-header::after {
+	content: ""; position: absolute; right: -90px; top: -110px; width: 280px; height: 280px; border-radius: 50%;
+	background: radial-gradient(circle, rgba(255, 210, 175, .55), transparent 70%); pointer-events: none;
+}
+[data-doctype="Web Form"] .page-content-wrapper .container .page_content .web-form-header > * { position: relative; z-index: 1; }
+[data-doctype="Web Form"] .page-content-wrapper .container .page_content .web-form {
+	border: 1px solid var(--iyp-line); border-top: none;
+	border-radius: 0 0 28px 28px;
+	background: #fff;
+	padding: 1.75rem 2.75rem 0;
+	box-shadow: 0 40px 80px -40px rgba(59, 46, 126, .4);
+	animation: iyp-rise .7s .1s cubic-bezier(.2, .8, .2, 1) backwards;
+}
+[data-doctype="Web Form"] .page-content-wrapper .container .page_content .web-form-header .web-form-head { border-bottom: 0; padding-bottom: 1.5rem; }
+
+/* Title: big, tight, with an indigo-to-violet sheen */
+[data-doctype="Web Form"] .page-content-wrapper .container .page_content h1 {
+	font-size: 2.9rem; font-weight: 800; letter-spacing: -0.045em; line-height: 1.1; padding-bottom: 6px;
+	background: linear-gradient(90deg, var(--iyp-indigo-dark) 0%, var(--iyp-indigo) 45%, var(--iyp-violet) 100%);
+	-webkit-background-clip: text; background-clip: text; color: transparent;
+}
+[data-doctype="Web Form"] .page-content-wrapper .container .page_content .web-form-header .web-form-head .web-form-introduction,
+[data-doctype="Web Form"] .page-content-wrapper .container .page_content .web-form-header .web-form-head .web-form-introduction p {
+	color: var(--iyp-muted); font-size: 1.02rem; line-height: 1.7;
+}
+#not-saved-badge { background: var(--iyp-peach) !important; color: #B55406 !important; border-radius: 999px; padding: 4px 12px; font-weight: 700; animation: iyp-pulse 2s ease-in-out infinite; }
+
+/* Steps strip and perks (added by my_business.js) */
+.iyp-steps { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 22px; }
+.iyp-step {
+	display: inline-flex; align-items: center; gap: 10px; padding: 9px 16px 9px 9px; border-radius: 999px;
+	background: #F6F4FC; border: 1px solid var(--iyp-line); font-size: 14px; font-weight: 600; color: var(--iyp-text);
+	animation: iyp-rise .6s cubic-bezier(.2, .8, .2, 1) backwards; animation-delay: calc(.35s + var(--i, 0) * 120ms);
+}
+.iyp-step b {
+	width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; font-size: 13px;
+	background: #fff; color: var(--iyp-indigo); border: 1px solid var(--iyp-line);
+}
+.iyp-step.on { background: linear-gradient(90deg, var(--iyp-indigo), var(--iyp-violet)); border-color: transparent; color: #fff; box-shadow: 0 12px 24px -12px rgba(59, 46, 126, .8); }
+.iyp-step.on b { background: rgba(255, 255, 255, .2); color: #fff; border-color: transparent; }
+.iyp-step-line { width: 26px; height: 2px; border-radius: 2px; background: repeating-linear-gradient(90deg, #C9C1EA 0 5px, transparent 5px 9px); }
+.iyp-perks { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+.iyp-perks span {
+	display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 999px; font-size: 13px; font-weight: 600;
+	animation: iyp-pop .5s cubic-bezier(.2, .8, .2, 1) backwards; animation-delay: calc(.8s + var(--i, 0) * 110ms);
+}
+.iyp-perks span:nth-child(1) { background: #FFF7D6; color: #6B5200; }
+.iyp-perks span:nth-child(2) { background: #F3EEFF; color: #4B2A9E; }
+.iyp-perks span:nth-child(3) { background: var(--iyp-mint); color: #0E5A35; }
+
+/* ---------- Sections: numbered soft panels that rise in as you scroll ---------- */
+[data-doctype="Web Form"] .web-form-wrapper { counter-reset: iyp-section; }
+[data-doctype="Web Form"] .web-form-wrapper .form-section {
+	border: 1px solid #EEEAF7 !important; border-radius: 22px; background: #FCFBFE;
+	padding: 18px 24px 8px !important; margin-bottom: 18px;
+	transition: border-color .25s ease, box-shadow .25s ease, background .25s ease, opacity .6s ease, transform .6s cubic-bezier(.2, .8, .2, 1);
+}
+[data-doctype="Web Form"] .web-form-wrapper .form-section:focus-within {
+	background: #fff; border-color: #CFC6F0 !important; box-shadow: 0 20px 40px -26px rgba(59, 46, 126, .45);
+}
+/* Hidden only once my_business.js has set .iyp-js on <html>, so the form never stays invisible */
+.iyp-js .web-form-wrapper .form-section:not(.in) { opacity: 0; transform: translateY(24px); }
+
+[data-doctype="Web Form"] .page-content-wrapper .container .page_content .web-form .web-form-wrapper .form-section .section-head {
+	counter-increment: iyp-section;
+	display: flex; align-items: center; gap: 12px;
+	font-size: 1.2rem; font-weight: 800; letter-spacing: -0.02em; color: var(--iyp-ink) !important;
+	padding-top: 6px;
+}
+[data-doctype="Web Form"] .page-content-wrapper .container .page_content .web-form .web-form-wrapper .form-section .section-head::before {
+	content: counter(iyp-section);
+	width: 34px; height: 34px; border-radius: 12px; flex: none; display: grid; place-items: center;
+	font-size: 15px; font-weight: 800; color: #fff;
+	background: linear-gradient(135deg, var(--iyp-indigo), var(--iyp-violet));
+	box-shadow: 0 10px 20px -10px rgba(59, 46, 126, .8);
+	transition: transform .3s cubic-bezier(.2, .8, .2, 1), background .3s ease;
+}
+[data-doctype="Web Form"] .page-content-wrapper .container .page_content .web-form .web-form-wrapper .form-section:focus-within .section-head::before {
+	background: linear-gradient(135deg, var(--iyp-orange), #F59E4C); transform: rotate(-8deg) scale(1.08);
+}
+
+/* ---------- Buttons ---------- */
+[data-doctype="Web Form"] .btn-primary, [data-doctype="Web Form"] .submit-btn {
+	background: linear-gradient(90deg, var(--iyp-indigo), var(--iyp-violet), var(--iyp-indigo)) !important; background-size: 200% 100% !important;
+	border: 0 !important; color: #fff !important;
+	border-radius: 14px !important; padding: 11px 26px !important; font-weight: 700 !important;
+	box-shadow: 0 12px 26px -12px rgba(59, 46, 126, .8);
+	transition: transform .15s ease, box-shadow .15s ease, background-position .6s ease;
+}
+[data-doctype="Web Form"] .btn-primary:hover, [data-doctype="Web Form"] .submit-btn:hover {
+	background-position: 100% 0 !important; transform: translateY(-2px);
+	box-shadow: 0 16px 30px -12px rgba(59, 46, 126, .85);
+}
+[data-doctype="Web Form"] .btn-default {
+	background: #fff !important; border: 1px solid var(--iyp-border) !important; color: var(--iyp-ink) !important;
+	border-radius: 12px !important; font-weight: 600;
+	transition: border-color .15s ease, color .15s ease, transform .15s ease;
+}
+[data-doctype="Web Form"] .btn-default:hover { border-color: var(--iyp-indigo) !important; color: var(--iyp-indigo) !important; transform: translateY(-1px); }
+
+/* Save bar: stays in view at the bottom of the screen while the form is filled in */
+[data-doctype="Web Form"] .page-content-wrapper .container .page_content .web-form .web-form-footer {
+	position: sticky; bottom: 0; z-index: 5;
+	margin: 8px -2.75rem 0; padding: 16px 2.75rem 18px;
+	background: rgba(255, 255, 255, .9); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
+	border-top: 1px solid var(--iyp-line) !important; border-radius: 0 0 28px 28px;
+}
+[data-doctype="Web Form"] .web-form-footer .submit-btn { padding: 13px 32px !important; font-size: 1rem !important; animation: iyp-glow 2.6s ease-in-out infinite; }
+
+/* ---------- Fields ---------- */
+.web-form-wrapper .control-label,
+.web-form-wrapper .grid-heading-row {
+	color: var(--iyp-ink) !important;
+	font-weight: 600;
+	transition: color .2s ease;
+}
+.web-form-wrapper .frappe-control:focus-within .control-label { color: var(--iyp-indigo) !important; }
+.web-form-wrapper .help-box, .web-form-wrapper .frappe-control .help-box { color: var(--iyp-faint) !important; }
+
+.web-form-wrapper .form-control,
+.web-form-wrapper input.input-with-feedback,
+.web-form-wrapper select,
+.web-form-wrapper textarea {
+	background: #fff !important;
+	border: 1px solid var(--iyp-border) !important;
+	border-radius: 12px !important;
+	color: var(--iyp-ink) !important;
+	box-shadow: none !important;
+	transition: border-color .2s ease, box-shadow .2s ease, transform .2s ease;
+}
+.web-form-wrapper input.form-control,
+.web-form-wrapper select.form-control { min-height: 42px; }
+.web-form-wrapper .form-control:hover { border-color: #8E88A8 !important; }
+.web-form-wrapper .form-control:focus {
+	border-color: var(--iyp-indigo) !important;
+	box-shadow: 0 0 0 4px rgba(107, 85, 214, .16) !important;
+	outline: none;
+}
+
+/* Read-only boxes (like Card Scan Status) stay outlined but slightly tinted */
+.web-form-wrapper .form-control[readonly],
+.web-form-wrapper .form-control:disabled,
+.web-form-wrapper .control-value.like-disabled-input {
+	background: #F6F5FA !important;
+	border: 1px solid var(--iyp-line) !important;
+	border-radius: 12px !important;
+	color: var(--iyp-text) !important;
+	font-weight: 600;
+}
+
+/* Visiting card upload: a big dashed drop area instead of a small "Attach" button */
+.web-form-wrapper .frappe-control[data-fieldname="visiting_card"] .btn-attach,
+.web-form-wrapper .frappe-control[data-fieldname="visiting_card_back"] .btn-attach {
+	display: flex !important; align-items: center; justify-content: center; gap: 10px; width: 100%;
+	padding: 22px 16px !important; border: 2px dashed #B9A9F0 !important; border-radius: 16px !important;
+	background: #FBFAFE !important; color: var(--iyp-indigo) !important; font-weight: 700 !important; font-size: 15px !important;
+	transition: border-color .2s ease, background .2s ease, transform .2s ease;
+}
+.web-form-wrapper .frappe-control[data-fieldname="visiting_card_back"] .btn-attach { padding: 14px 16px !important; font-size: 14px !important; }
+.web-form-wrapper .frappe-control[data-fieldname="visiting_card"] .btn-attach:hover,
+.web-form-wrapper .frappe-control[data-fieldname="visiting_card_back"] .btn-attach:hover {
+	border-color: var(--iyp-orange) !important; background: var(--iyp-peach) !important; transform: translateY(-2px);
+}
+.web-form-wrapper .attached-file {
+	background: var(--iyp-mint) !important; border: 1px solid #A8E2C3 !important; border-radius: 12px !important;
+	color: #0E5A35 !important; animation: iyp-pop .45s cubic-bezier(.2, .8, .2, 1);
+}
+.web-form-wrapper .attached-file a { color: #0E5A35 !important; font-weight: 600; }
+.web-form-wrapper .form-grid { border: 1px solid var(--iyp-border) !important; border-radius: 14px !important; overflow: hidden; }
+
+/* ---------- Phones ---------- */
+@media (max-width: 576px) {
+	body::before, body::after { display: none; }
+	[data-doctype="Web Form"] .page-content-wrapper .container .page_content .web-form-header { padding: 1.8rem 1.25rem 0; border-radius: 22px 22px 0 0; }
+	[data-doctype="Web Form"] .page-content-wrapper .container .page_content .web-form { padding: 1rem 1rem 0; border-radius: 0 0 22px 22px; }
+	[data-doctype="Web Form"] .page-content-wrapper .container .page_content .web-form .web-form-footer { margin: 8px -1rem 0; padding: 12px 1rem 14px; border-radius: 0 0 22px 22px; }
+	[data-doctype="Web Form"] .page-content-wrapper .container .page_content h1 { font-size: 2rem; }
+	[data-doctype="Web Form"] .web-form-wrapper .form-section { padding: 14px 14px 4px !important; border-radius: 18px; }
+	.iyp-step-line { display: none; }
+	.iyp-step { font-size: 13px; }
+	.navbar .navbar-brand img { height: 40px !important; }
+}
+
+/* Visitors who turn motion off get a still page */
+@media (prefers-reduced-motion: reduce) {
+	*, *::before, *::after { animation: none !important; transition: none !important; }
+	.iyp-js .web-form-wrapper .form-section:not(.in) { opacity: 1; transform: none; }
+}

@@ -5,6 +5,7 @@
 {% block head_include %}
 {{ super() }}
 <meta name="description" content="{{ description | e }}">
+<link rel="apple-touch-icon" href="/assets/its_your_profile/images/iyp-favicon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=Instrument+Serif:ital@1&display=swap" rel="stylesheet">
@@ -37,15 +38,16 @@
 <div class="iyp-progress" aria-hidden="true"></div>
 <header class="iyp-nav">
 	<div class="iyp-wrap iyp-nav-row">
+		<!-- Brand logo (2026-11-06): the image already carries the name, so no separate text -->
 		<a class="iyp-brand" href="/">
-			<span class="iyp-logo" aria-hidden="true"><span></span><span></span></span>
-			It's Your Profile
+			<img class="iyp-logo" src="/assets/its_your_profile/images/iyp-logo.png" alt="It's Your Profile" width="1465" height="505">
 		</a>
 		<nav class="iyp-links" aria-label="{{ _('Main') }}">
 			<a href="#how">{{ _("How it works") }}</a>
 			<a href="#why">{{ _("Why AI") }}</a>
 			<a href="#who">{{ _("Who it's for") }}</a>
 			<a href="/directory">{{ _("Directory") }}</a>
+			<a href="#pricing">{{ _("Pricing") }}</a>
 			{% if logged_in %}<a href="/notifications">{{ _("Notifications") }}</a><a href="/app">{{ _("My account") }}</a>{% else %}<a href="/login">{{ _("Log in") }}</a>{% endif %}
 			<!-- Dark theme toggle (2026-11-05): home.js switches the theme and updates aria-pressed -->
 			<button class="iyp-theme" type="button" aria-label="{{ _('Dark theme') }}" aria-pressed="false" title="{{ _('Toggle dark theme') }}">
@@ -70,21 +72,75 @@
 		<span class="iyp-blob iyp-blob-mint" data-parallax="0.45" aria-hidden="true"></span>
 		<div class="iyp-wrap iyp-hero-inner">
 			<span class="iyp-pill"><span class="iyp-dot"></span>{{ _("Free · No login · Ready in a minute") }}</span>
-			<h1>{{ _("Turn your visiting card into a page") }} <em>{{ _("AI recommends") }}</em></h1>
+			<h1>{{ _("Turn your visiting card into a page for") }} <em>{{ _("AI recommenders") }}</em></h1>
 			<p class="iyp-lead">{{ _("Customers now ask ChatGPT, Gemini and Claude who to call. We make sure the answer is you.") }}</p>
 
-			<form class="iyp-start" action="{{ create_url }}" method="get">
-				<a class="iyp-btn iyp-btn-peach" href="{{ create_url }}">
-					<svg class="iyp-i" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13" r="3.5"/></svg>
-					{{ _("Scan visiting card") }}
-				</a>
-				<label class="iyp-sr" for="iyp-website">{{ _("Or paste your website link") }}</label>
-				<input id="iyp-website" name="website_url" type="text" inputmode="url" placeholder="{{ _('or paste your website link') }}">
-				<button class="iyp-btn iyp-btn-primary" type="submit">
-					{{ _("Create my page") }}
-					<svg class="iyp-i" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
-				</button>
-			</form>
+			<!-- Upload card (2026-11-06): drop the visiting card photo right here, or switch to a website
+			     link. home.js keeps the photo in the tab and the form at create_url uploads and reads it. -->
+			<div class="iyp-start iyp-upload" data-create-url="{{ create_url }}">
+				<div class="iyp-tabs" role="tablist" aria-label="{{ _('How to start') }}">
+					<button type="button" role="tab" id="iyp-tab-card" aria-controls="iyp-pane-card" aria-selected="true">
+						<svg class="iyp-i" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13" r="3.5"/></svg>
+						{{ _("Visiting card") }}
+					</button>
+					<button type="button" role="tab" id="iyp-tab-web" aria-controls="iyp-pane-web" aria-selected="false" tabindex="-1">
+						<svg class="iyp-i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg>
+						{{ _("Website link") }}
+					</button>
+				</div>
+
+				<div class="iyp-pane" id="iyp-pane-card" role="tabpanel" aria-labelledby="iyp-tab-card">
+					<label class="iyp-drop" for="iyp-card-file">
+						<span class="iyp-drop-icons" aria-hidden="true">
+							<svg viewBox="0 0 24 24"><rect x="2.5" y="5" width="19" height="14" rx="2.5"/><circle cx="8.5" cy="11" r="2.2"/><path d="M5.5 16c.6-1.6 1.7-2.4 3-2.4s2.4.8 3 2.4M14 10h4.5M14 13.5h3"/></svg>
+							<i></i>
+							<svg viewBox="0 0 24 24"><path d="M12 16V5M7.5 9.5 12 5l4.5 4.5M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></svg>
+						</span>
+						<span class="iyp-drop-text">{{ _("Drag & drop your visiting card photo here") }}</span>
+						<span class="iyp-btn iyp-btn-upload">{{ _("Upload visiting card") }}</span>
+						<span class="iyp-drop-hint">{{ _("or take a photo with your phone camera · JPG, PNG") }}</span>
+						<input id="iyp-card-file" class="iyp-sr" type="file" accept="image/*">
+					</label>
+					<p class="iyp-drop-note" aria-live="polite">{{ _("Front side is enough. You can add the back side on the next step.") }}</p>
+				</div>
+
+				<!-- Crop & rotate window (2026-11-06): opens after a photo is chosen; home.js drives it -->
+				<dialog class="iyp-editor" aria-labelledby="iyp-editor-title">
+					<div class="iyp-editor-head">
+						<h2 id="iyp-editor-title">{{ _("Crop & straighten your card") }}</h2>
+						<button type="button" class="iyp-editor-x" data-editor-cancel aria-label="{{ _('Close') }}">×</button>
+					</div>
+					<p class="iyp-editor-help">{{ _("Drag the corners so only the card is inside the box. Turn it if it's sideways.") }}</p>
+					<div class="iyp-editor-stage"><img alt="{{ _('Your visiting card photo') }}"></div>
+					<div class="iyp-editor-tools">
+						<button type="button" data-rotate="-90">
+							<svg class="iyp-i" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>{{ _("Rotate left") }}
+						</button>
+						<button type="button" data-rotate="90">
+							<svg class="iyp-i" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/></svg>{{ _("Rotate right") }}
+						</button>
+						<button type="button" data-reset>
+							<svg class="iyp-i" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h6M4 4v6M20 20h-6M20 20v-6M4 4l6 6M20 20l-6-6"/></svg>{{ _("Reset") }}
+						</button>
+					</div>
+					<div class="iyp-editor-actions">
+						<button type="button" class="iyp-btn iyp-btn-ghost" data-editor-cancel>{{ _("Choose another photo") }}</button>
+						<button type="button" class="iyp-btn iyp-btn-primary" data-editor-done>
+							{{ _("Use this photo") }}
+							<svg class="iyp-i" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+						</button>
+					</div>
+				</dialog>
+
+				<form class="iyp-pane iyp-web" id="iyp-pane-web" role="tabpanel" aria-labelledby="iyp-tab-web" action="{{ create_url }}" method="get" hidden>
+					<label class="iyp-sr" for="iyp-website">{{ _("Your website link") }}</label>
+					<input id="iyp-website" name="website_url" type="text" inputmode="url" placeholder="{{ _('yourbusiness.com') }}" required>
+					<button class="iyp-btn iyp-btn-primary" type="submit">
+						{{ _("Create my page") }}
+						<svg class="iyp-i" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+					</button>
+				</form>
+			</div>
 
 			<!-- Card becomes a page -->
 			<div class="iyp-story" aria-hidden="true">
@@ -119,8 +175,8 @@
 						</div>
 					</div>
 					<span class="iyp-bubble iyp-b1"><b style="color:#18A058">ChatGPT</b>"Try Rahul Interiors in Pune"</span>
-					<span class="iyp-bubble iyp-b2"><b style="color:#2B3FD6">Gemini</b>"Found 1 match"</span>
-					<span class="iyp-bubble iyp-b3"><b style="color:#C25200">Claude</b>"Recommended for kitchens"</span>
+					<span class="iyp-bubble iyp-b2"><b style="color:#3B2E7E">Gemini</b>"Found 1 match"</span>
+					<span class="iyp-bubble iyp-b3"><b style="color:#B55406">Claude</b>"Recommended for kitchens"</span>
 				</div>
 			</div>
 		</div>
@@ -132,9 +188,9 @@
 			<span class="iyp-badge">{{ _("WITHOUT US") }}</span>
 			<h2>{{ _("Your card sits in a drawer.") }} <em class="iyp-muted-em">{{ _("AI has never heard of you.") }}</em></h2>
 			<ul>
-				<li><svg class="iyp-i" viewBox="0 0 24 24" aria-hidden="true" style="stroke:#9AA0BF"><path d="M6 6l12 12M18 6L6 18"/></svg>{{ _("Customers pick a competitor AI suggested") }}</li>
-				<li><svg class="iyp-i" viewBox="0 0 24 24" aria-hidden="true" style="stroke:#9AA0BF"><path d="M6 6l12 12M18 6L6 18"/></svg>{{ _("No website, or one AI can't read") }}</li>
-				<li><svg class="iyp-i" viewBox="0 0 24 24" aria-hidden="true" style="stroke:#9AA0BF"><path d="M6 6l12 12M18 6L6 18"/></svg>{{ _("Your details are scattered everywhere") }}</li>
+				<li><svg class="iyp-i" viewBox="0 0 24 24" aria-hidden="true" style="stroke:#9C97B8"><path d="M6 6l12 12M18 6L6 18"/></svg>{{ _("Customers pick a competitor AI suggested") }}</li>
+				<li><svg class="iyp-i" viewBox="0 0 24 24" aria-hidden="true" style="stroke:#9C97B8"><path d="M6 6l12 12M18 6L6 18"/></svg>{{ _("No website, or one AI can't read") }}</li>
+				<li><svg class="iyp-i" viewBox="0 0 24 24" aria-hidden="true" style="stroke:#9C97B8"><path d="M6 6l12 12M18 6L6 18"/></svg>{{ _("Your details are scattered everywhere") }}</li>
 			</ul>
 		</div>
 		<div class="iyp-panel iyp-panel-mint iyp-reveal iyp-from-right">
@@ -158,12 +214,12 @@
 			<div class="iyp-grid3 iyp-stagger">
 				<div class="iyp-step">
 					<div class="iyp-art iyp-art-peach"><div class="iyp-art-card"><span></span><span></span><span></span></div></div>
-					<h3><span class="iyp-num" style="background:#FF8A3D">1</span>{{ _("Scan your card") }}</h3>
+					<h3><span class="iyp-num" style="background:#E87012">1</span>{{ _("Scan your card") }}</h3>
 					<p>{{ _("Take a photo of the front and back, or paste your website.") }}</p>
 				</div>
 				<div class="iyp-step">
 					<div class="iyp-art iyp-art-blue"><span style="width:80%"></span><span class="on" style="width:60%"></span><span style="width:70%"></span><span style="width:45%"></span></div>
-					<h3><span class="iyp-num" style="background:#2B3FD6">2</span>{{ _("AI fills everything") }}</h3>
+					<h3><span class="iyp-num" style="background:#3B2E7E">2</span>{{ _("AI fills everything") }}</h3>
 					<p>{{ _("Name, services, address, logo and social links, ready in seconds. You just check.") }}</p>
 				</div>
 				<div class="iyp-step">
@@ -219,6 +275,31 @@
 			<div class="iyp-feature"><span class="iyp-ico iyp-tone-mint"><svg class="iyp-i" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12a8.5 8.5 0 0 1-12.6 7.4L3 21l1.6-5.2A8.5 8.5 0 1 1 21 12z"/></svg></span><h3>{{ _("Call & WhatsApp") }}</h3><p>{{ _("Customers reach you in one tap.") }}</p></div>
 			<div class="iyp-feature"><span class="iyp-ico iyp-tone-peach"><svg class="iyp-i" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3h-3zM17 20h4v-3"/></svg></span><h3>{{ _("QR code") }}</h3><p>{{ _("Print it on cards and counters.") }}</p></div>
 			<div class="iyp-feature"><span class="iyp-ico iyp-tone-lilac"><svg class="iyp-i" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></span><h3>{{ _("No login") }}</h3><p>{{ _("Edit any time from your private email link.") }}</p></div>
+		</div>
+	</section>
+
+	<!-- Pricing (2026-11-06): launch offer, everything free for the first 6 months -->
+	<section id="pricing" class="iyp-wrap iyp-pricing">
+		<div class="iyp-price-card iyp-reveal">
+			<div class="iyp-price-copy">
+				<span class="iyp-price-badge">✨ {{ _("Launch offer") }}</span>
+				<h2>{{ _("Free for your first") }} <em class="iyp-orange-em">{{ _("6 months") }}</em></h2>
+				<p>{{ _("We've only just opened our doors, and we'd love you to grow with us. Create your page today and use every feature free for six whole months. No card, no payment details, no catch.") }}</p>
+				<p class="iyp-price-thanks">{{ _("It's our way of saying thank you for being one of our first businesses.") }} 💜</p>
+			</div>
+			<div class="iyp-price-box">
+				<span class="iyp-price-amount">₹0</span>
+				<span class="iyp-price-period">{{ _("for 6 months") }}</span>
+				<ul>
+					<li>{{ _("Your own business page") }}</li>
+					<li>{{ _("Ready for ChatGPT, Gemini & Claude") }}</li>
+					<li>{{ _("Call & WhatsApp buttons") }}</li>
+					<li>{{ _("QR code for your cards") }}</li>
+					<li>{{ _("Listed in the directory") }}</li>
+				</ul>
+				<a class="iyp-btn iyp-btn-primary" href="{{ create_url }}">{{ _("Start my free 6 months") }}</a>
+				<small>{{ _("We'll let you know well before your free period ends.") }}</small>
+			</div>
 		</div>
 	</section>
 

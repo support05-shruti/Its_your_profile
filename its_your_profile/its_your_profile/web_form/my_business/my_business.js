@@ -2,6 +2,61 @@ frappe.ready(function () {
 	const web_form = frappe.web_form;
 	const POLL_MS = 3000;
 
+	// CHANGE NOTE 2026-11-06: page decoration that goes with my_business.css: a 1-2-3 steps strip
+	// and perks under the introduction, friendlier upload/save labels, and sections that rise in
+	// as they scroll into view. Purely visual; the form works the same without it.
+	const decorate = () => {
+		const head = document.querySelector(".web-form-head");
+		if (head && !head.querySelector(".iyp-steps")) {
+			const step = web_form.is_new ? 0 : 1;
+			const labels = [__("Scan your card"), __("Check the details"), __("Go live & get found")];
+			const steps = document.createElement("div");
+			steps.className = "iyp-steps";
+			labels.forEach((label, i) => {
+				if (i) steps.insertAdjacentHTML("beforeend", '<span class="iyp-step-line" aria-hidden="true"></span>');
+				const el = document.createElement("div");
+				el.className = "iyp-step" + (i === step ? " on" : "");
+				el.style.setProperty("--i", i);
+				el.innerHTML = `<b>${i + 1}</b>`;
+				el.append(label);
+				steps.append(el);
+			});
+			const perks = document.createElement("div");
+			perks.className = "iyp-perks";
+			[__("⚡ Ready in a minute"), __("🤖 AI fills in the details"), __("🎁 Free for 6 months")].forEach((text, i) => {
+				const el = document.createElement("span");
+				el.style.setProperty("--i", i);
+				el.textContent = text;
+				perks.append(el);
+			});
+			head.append(steps, perks);
+		}
+
+		const label_attach = (fieldname, text) => {
+			const field = web_form.fields_dict[fieldname];
+			const button = field && field.$wrapper.find(".btn-attach").get(0);
+			if (button) button.textContent = text;
+		};
+		label_attach("visiting_card", __("📷 Upload your visiting card photo"));
+		label_attach("visiting_card_back", __("＋ Add the back side (optional)"));
+		if (web_form.is_new) $(".web-form-footer .submit-btn").text(__("✨ Create my page"));
+
+		// Sections rise in one after another as they come into view
+		const sections = document.querySelectorAll(".web-form-wrapper .form-section");
+		if (!("IntersectionObserver" in window) || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+		document.documentElement.classList.add("iyp-js");
+		const io = new IntersectionObserver((entries) => {
+			entries.filter((e) => e.isIntersecting).forEach((e, i) => {
+				e.target.style.transitionDelay = `${i * 90}ms`;
+				e.target.classList.add("in");
+				io.unobserve(e.target);
+				setTimeout(() => (e.target.style.transitionDelay = ""), 900 + i * 90);
+			});
+		}, { threshold: 0.05, rootMargin: "0px 0px -30px 0px" });
+		sections.forEach((s) => io.observe(s));
+	};
+	decorate();
+
 	// Read each side as soon as it is attached, so the details are filled in before Save.
 	// The same photo can arrive twice (Take Photo sets the field, which also fires its change).
 	const read_urls = new Set();
@@ -146,6 +201,23 @@ frappe.ready(function () {
 
 		field.$wrapper.append(button, input);
 	});
+
+	// A card photo chosen on the home page (2026-11-06) waits in this tab's sessionStorage, because
+	// the home page cannot upload before login. Upload and read it now, once, on a new form.
+	const PENDING_KEY = "iyp-pending-card";
+	let pending = null;
+	try {
+		pending = sessionStorage.getItem(PENDING_KEY);
+		sessionStorage.removeItem(PENDING_KEY);
+	} catch (e) {
+		/* storage blocked: nothing is waiting */
+	}
+	if (pending && web_form.is_new && !web_form.get_value("visiting_card")) {
+		fetch(pending)
+			.then((r) => r.blob())
+			.then((blob) => upload_photo("visiting_card", blob))
+			.catch(() => frappe.msgprint(__("Please attach your visiting card photo again.")));
+	}
 
 	// Build a Google Maps link from the address while the form is being filled.
 	// A link the user pasted is kept; one we built is rebuilt when the address changes.

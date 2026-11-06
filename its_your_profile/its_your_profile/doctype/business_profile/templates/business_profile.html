@@ -12,6 +12,10 @@
 {#- The same profile as plain Markdown, which AI crawlers read without the page around it -#}
 <link rel="alternate" type="text/markdown" href="{{ markdown_url | e }}" title="{{ company_name | e }} (Markdown)">
 {% if og_image %}<meta property="og:image" content="{{ og_image | e }}">{% endif %}
+{#- Same fonts as the home page (2026-11-06) -#}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=Instrument+Serif:ital@1&display=swap" rel="stylesheet">
 {% endblock %}
 
 {% block page_content %}
@@ -81,9 +85,10 @@
 		--b-soft-2: color-mix(in srgb, var(--b) 14%, #fff);
 		--b-line: color-mix(in srgb, var(--b) 22%, #fff);
 		--b-deep: color-mix(in srgb, var(--b) 55%, #0b1220);
-		--ink: #101828; --ink-2: #344054; --muted: #667085; --line: #eaecf0; --bg: #f8f9fb;
-		--radius: 20px;
-		--shadow: 0 1px 2px rgba(16,24,40,.04), 0 12px 32px -12px rgba(16,24,40,.14);
+		/* Site palette (2026-11-06): the same indigo-tinted text, lines and shadows as the home page */
+		--ink: #1E1838; --ink-2: #3F3A5E; --muted: #5A5578; --line: #E4DFF3; --bg: #F9F7FD;
+		--radius: 24px;
+		--shadow: 0 1px 2px rgba(30,24,56,.04), 0 18px 40px -18px rgba(59,46,126,.24);
 		color: var(--ink);
 		padding: 8px 0 32px;
 	}
@@ -359,6 +364,72 @@
 		.iyp-bar a.wa { background: #25D366; color: #fff !important; }
 		.iyp-bar .iyp-i { width: 20px; height: 20px; }
 	}
+
+	/* ---------- Site theme (2026-11-06): match the home page ----------
+	   Sora font, lavender page with soft pastel circles, rounder cards, our logo in the top bar and
+	   a peach/lavender closing banner. The business's own card colours (--b, --n) are kept. */
+	body { background: linear-gradient(180deg, #F3F0FB 0, #F6F4FC 420px, #fff 1100px) no-repeat, #fff !important; }
+	body, .iyp, .iyp .iyp-btn, .iyp button { font-family: Sora, system-ui, -apple-system, sans-serif; }
+	html, body { overflow-x: clip; } /* the circles below sit partly off-screen; no sideways scroll */
+	.iyp { position: relative; isolation: isolate; }
+	.iyp::before, .iyp::after { content: ""; position: absolute; z-index: -1; border-radius: 50%; pointer-events: none; }
+	.iyp::before { width: 300px; height: 300px; left: -170px; top: 260px; background: #FFE3CF; opacity: .7; }
+	.iyp::after { width: 220px; height: 220px; right: -130px; top: 40px; background: #DDF5E8; opacity: .8; }
+	.iyp em { font-family: "Instrument Serif", Georgia, serif; font-style: italic; font-weight: 400; letter-spacing: 0; }
+
+	/* Top bar: see-through over the lavender, with our logo (hooks.py brand_html) */
+	.navbar { background: transparent !important; border-bottom: 0 !important; box-shadow: none !important; padding-top: 14px; padding-bottom: 14px; }
+	.navbar .navbar-brand img { height: 46px; width: auto; display: block; }
+	.navbar .nav-link { color: #3F3A5E !important; font-weight: 500; }
+	.navbar .nav-link:hover { color: #3B2E7E !important; }
+	.web-footer, .web-footer .footer-info { background: transparent !important; }
+
+	/* Cover and identity card: rounder, with the site's soft indigo shadow */
+	.iyp-cover { height: 210px; border-radius: 32px 32px 0 0; }
+	.iyp-id { border-radius: 0 0 32px 32px; padding: 0 36px 32px; }
+	.iyp-id h1 { letter-spacing: -.04em; font-size: clamp(1.8rem, 4vw, 2.75rem); }
+	.iyp-avatar { box-shadow: 0 18px 40px -14px rgba(59,46,126,.45); }
+	.iyp-chip { padding: 6px 13px; }
+	.iyp-btn { border-radius: 14px; font-weight: 700; padding: 12px 20px; }
+	.iyp-btn-outline { border-color: #D3CCE8; }
+	.iyp-facts { border-radius: 20px; }
+	.iyp-fact-icon { border-radius: 14px; }
+
+	/* Section cards */
+	.iyp-card { border-radius: 28px; padding: 30px; transition: box-shadow .2s ease, transform .2s ease; }
+	.iyp-card:hover { box-shadow: 0 1px 2px rgba(30,24,56,.04), 0 26px 50px -22px rgba(59,46,126,.32); }
+	.iyp-card h2 { font-size: 1.2rem; font-weight: 800; letter-spacing: -.02em; }
+	.iyp-h-icon { width: 38px; height: 38px; border-radius: 12px; }
+	.iyp-services li { border-radius: 16px; }
+	.iyp-faq details { border-radius: 16px; }
+	.iyp-social { border-radius: 16px; }
+	.iyp-map { border-radius: 20px; }
+
+	/* Closing banner: the home page's peach and lavender, with an indigo button */
+	.iyp-cta {
+		margin-top: 40px; border-radius: 32px; padding: 40px 44px;
+		background: linear-gradient(135deg, #F3F0FB 0%, #FFF1E6 100%); border: 1px solid #E4DFF3; color: #5A5578;
+	}
+	.iyp-cta::after { width: 240px; height: 240px; right: -70px; top: -110px; background: #FFD9BF; opacity: .8; filter: none; }
+	.iyp-cta::before { content: ""; position: absolute; width: 160px; height: 160px; left: -60px; bottom: -90px; border-radius: 50%; background: #E4DFF3; }
+	.iyp-cta strong { flex-wrap: wrap; color: #1E1838; font-size: 1.6rem; font-weight: 800; letter-spacing: -.03em; }
+	.iyp-cta strong em { color: #B55406; }
+	.iyp-cta strong .iyp-i { color: #E87012; }
+	.iyp-cta .iyp-btn-white { background: #3B2E7E; color: #fff !important; box-shadow: 0 12px 26px -12px rgba(59,46,126,.7); }
+	.iyp-cta .iyp-btn-white:hover { background: #2E2454; }
+	.iyp-cta a.iyp-link { color: #3B2E7E !important; font-weight: 600; }
+	.iyp-cta a.iyp-link:hover { color: #2E2454 !important; text-decoration: underline !important; }
+	.iyp-toast { background: #1E1838; }
+
+	@media (max-width: 767px) {
+		.iyp::before, .iyp::after { display: none; }
+		.iyp-cover { height: 140px; border-radius: 0; }
+		.iyp-id { border-radius: 0 0 28px 28px; padding: 0 18px 24px; }
+		.iyp-card { border-radius: 22px; padding: 22px; }
+		.iyp-cta { padding: 28px 22px; border-radius: 24px; }
+		.iyp-cta strong { font-size: 1.3rem; }
+		.navbar .navbar-brand img { height: 38px; }
+	}
 </style>
 
 <article class="iyp">
@@ -551,7 +622,7 @@
 
 	<footer class="iyp-cta iyp-reveal">
 		<div>
-			<strong>{{ icon("sparkles") }}{{ _("Is your business easy for AI to find?") }}</strong>
+			<strong>{{ icon("sparkles") }}{{ _("Is your business easy for") }} <em>{{ _("AI to find?") }}</em></strong>
 			{{ _("Get a free profile page like this from your visiting card, in a minute.") }}
 		</div>
 		<div class="iyp-cta-links">
