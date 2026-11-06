@@ -627,7 +627,8 @@
 		</div>
 		<div class="iyp-cta-links">
 			<a class="iyp-btn iyp-btn-white" href="/my-business/new">{{ _("Register your business") }}{{ icon("arrow") }}</a>
-			<a class="iyp-link" href="/directory">{{ _("Browse the directory") }}</a>
+			{#- The directory is backend-only (2026-11-06), so visitors get the home page instead -#}
+			<a class="iyp-link" href="/">{{ _("Learn more") }}</a>
 		</div>
 	</footer>
 

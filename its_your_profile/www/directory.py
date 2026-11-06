@@ -1,19 +1,37 @@
-"""Public directory at /directory: browse and search every published business profile."""
+"""Directory at /directory: browse and search every published business profile.
+
+CHANGE NOTE 2026-11-06: backend only. The live site keeps the directory private, so only System
+Users (staff who use /app) can open it; visitors and business owners (Website Users) are refused.
+Each business's own profile page stays public."""
 
 import re
 
 import frappe
+from frappe import _
 from frappe.utils import strip_html
 
 from its_your_profile.its_your_profile.doctype.business_profile.business_profile import readable_on_white
 
 no_cache = 1
+sitemap = 0  # keep it out of sitemap.xml, so search engines are not pointed at it
+
+
+def is_backend_user() -> bool:
+	"""True for staff who use the desk (/app): logged in, and a System User."""
+	user = frappe.session.user
+	return user != "Guest" and frappe.get_cached_value("User", user, "user_type") == "System User"
 
 NATURES = ("Service", "Manufacturing", "Hybrid/Trading")
 PAGE_SIZE = 60
 
 
 def get_context(context):
+	if not is_backend_user():
+		if frappe.session.user == "Guest":
+			# Staff who are not logged in yet: send them to log in, then back here
+			frappe.redirect("/login?redirect-to=/directory")
+		frappe.throw(_("The directory is only available to the It's Your Profile team."), frappe.PermissionError)
+
 	q = (frappe.form_dict.get("q") or "").strip()[:100]
 	nature = frappe.form_dict.get("nature") or ""
 	city = (frappe.form_dict.get("city") or "").strip()[:60]

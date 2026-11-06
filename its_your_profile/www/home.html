@@ -46,7 +46,7 @@
 			<a href="#how">{{ _("How it works") }}</a>
 			<a href="#why">{{ _("Why AI") }}</a>
 			<a href="#who">{{ _("Who it's for") }}</a>
-			<a href="/directory">{{ _("Directory") }}</a>
+			{% if is_backend_user %}<a href="/directory">{{ _("Directory") }}</a>{% endif %}
 			<a href="#pricing">{{ _("Pricing") }}</a>
 			{% if logged_in %}<a href="/notifications">{{ _("Notifications") }}</a><a href="/app">{{ _("My account") }}</a>{% else %}<a href="/login">{{ _("Log in") }}</a>{% endif %}
 			<!-- Dark theme toggle (2026-11-05): home.js switches the theme and updates aria-pressed -->
@@ -303,7 +303,8 @@
 		</div>
 	</section>
 
-	<!-- Directory search -->
+	<!-- Directory search: backend users only (2026-11-06), as the directory is private on the live site -->
+	{% if is_backend_user %}
 	<section class="iyp-wrap iyp-find iyp-stagger">
 		<h2>{{ _("Find a business") }} <em>{{ _("near you") }}</em></h2>
 		{% if total %}<p>{{ _("{0} businesses listed").format('<b data-count="' ~ total ~ '">' ~ total ~ '</b>') }}</p>{% endif %}
@@ -316,6 +317,7 @@
 		</form>
 		<a class="iyp-more" href="/directory">{{ _("Browse the full directory") }} →</a>
 	</section>
+	{% endif %}
 
 	<!-- Closing call to action -->
 	<section class="iyp-wrap">
@@ -336,7 +338,7 @@
 		<!-- Developer credit (2026-11-06); the same line is on every other page via hooks.py footer_powered -->
 		<span class="iyp-credit">{{ _("Developed by") }} <a href="https://softworld.co.in" target="_blank" rel="noopener">SoftWorld Solutions Pvt. Ltd.</a></span>
 		<nav aria-label="{{ _('Footer') }}">
-			<a href="/directory">{{ _("Directory") }}</a>
+			{% if is_backend_user %}<a href="/directory">{{ _("Directory") }}</a>{% endif %}
 			<a href="#how">{{ _("How it works") }}</a>
 			<a href="/llms.txt">llms.txt</a>
 		</nav>

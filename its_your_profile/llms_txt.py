@@ -121,7 +121,7 @@ def get_llms_txt() -> str:
 		"> A directory of Indian businesses. Each profile page carries Schema.org JSON-LD for the business,"
 		" its contact person and its services.",
 		"",
-		f"Browse and search the directory: {get_url('directory')}",
+		# /directory is backend-only since 2026-11-06, so it is not offered to crawlers
 		f"Full details of every business in one file: {get_url('llms-full.txt')}",
 		"Every profile is also available as Markdown: add .md to its address.",
 		"",

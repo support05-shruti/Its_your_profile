@@ -2,6 +2,8 @@
 
 import frappe
 
+from its_your_profile.www.directory import is_backend_user
+
 # Where "Create my page" goes: the existing sign-up form until the no-login /create page is built
 CREATE_URL = "/my-business/new"
 
@@ -28,5 +30,7 @@ def get_context(context):
 			"create_url": CREATE_URL,
 			"logged_in": frappe.session.user != "Guest",
 			"total": frappe.db.count("Business Profile", {"published": 1, "route": ("is", "set")}),
+			# The directory is backend-only (2026-11-06): its links show only to staff
+			"is_backend_user": is_backend_user(),
 		}
 	)

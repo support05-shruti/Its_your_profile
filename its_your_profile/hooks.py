@@ -59,6 +59,10 @@ website_context = {
 # "Developed by SoftWorld Solutions Pvt. Ltd." badge fixed on every website page (2026-11-06)
 web_include_js = ["/assets/its_your_profile/js/iyp_credit.js"]
 
+# Only staff (System Users) see the Frappe backend; everyone else opening /desk or /app is sent
+# to the home page (2026-11-06). Staff log in at /login.
+before_request = ["its_your_profile.desk_guard.keep_desk_private"]
+
 # include custom scss in every website theme (without file extension ".scss")
 # website_theme_scss = "its_your_profile/public/scss/website"
 
