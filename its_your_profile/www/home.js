@@ -145,6 +145,8 @@
 		var noteText = note ? note.textContent : "";
 
 		function selectTab(tab) {
+			// Website results sit outside both panes; leaving them (2026-11-07) starts the tab fresh
+			if (typeof scanState !== "undefined" && scanState.mode === "web") resetWeb();
 			tabs.forEach(function (t) {
 				var on = t === tab;
 				t.setAttribute("aria-selected", on ? "true" : "false");
@@ -204,8 +206,13 @@
 		var scanFields = scan && scan.querySelector(".iyp-scan-fields");
 		var scanLabels = {};
 		try { scanLabels = JSON.parse(scan.getAttribute("data-labels") || "{}"); } catch (e) { /* defaults below */ }
-		var FIELD_ORDER = ["company_name", "contact_person", "designation", "phone", "email", "website_url", "address_line", "city", "state", "pincode"];
-		var ALWAYS_SHOW = ["company_name", "contact_person", "phone", "email"];
+		// 2026-11-07: segment (industry) and business nature (a dropdown) after the company name
+		var FIELD_ORDER = ["company_name", "segment", "business_nature", "contact_person", "designation", "phone", "email", "website_url", "address_line", "city", "state", "pincode"];
+		var ALWAYS_SHOW = ["company_name", "segment", "business_nature", "contact_person", "phone", "email"];
+		var NATURES = ["Service", "Manufacturing", "Hybrid/Trading"];
+		var CHOOSE = "Choose...";
+		try { NATURES = JSON.parse(scan.getAttribute("data-natures")) || NATURES; } catch (e) { /* default above */ }
+		try { CHOOSE = JSON.parse(scan.getAttribute("data-choose")) || CHOOSE; } catch (e) { /* default above */ }
 		var INPUT_HINTS = {
 			phone: { type: "tel", inputmode: "tel", autocomplete: "tel" },
 			email: { type: "email", inputmode: "email", autocomplete: "email" },
@@ -214,7 +221,8 @@
 			contact_person: { type: "text", autocomplete: "name" },
 			company_name: { type: "text", autocomplete: "organization" }
 		};
-		var scanState = { dataUrl: null, fileUrl: null, read: null };
+		var scanState = { front: null, back: null, read: null, mode: "card" };
+		var editSide = "front"; // which side the crop window is editing
 
 		function csrfToken() {
 			return (window.frappe && frappe.csrf_token) || "";
@@ -247,11 +255,13 @@
 				});
 			});
 		}
-		function uploadPhoto(dataUrl) {
-			if (scanState.fileUrl) return Promise.resolve(scanState.fileUrl); // already uploaded (Try again)
-			return fetch(dataUrl).then(function (r) { return r.blob(); }).then(function (blob) {
+		// side: "front" or "back" (2026-11-07); each photo is uploaded once, even after Try again
+		function uploadPhoto(side) {
+			var s = scanState[side];
+			if (s.fileUrl) return Promise.resolve(s.fileUrl);
+			return fetch(s.dataUrl).then(function (r) { return r.blob(); }).then(function (blob) {
 				var form = new FormData();
-				form.append("file", blob, "visiting-card-" + Date.now() + ".jpg");
+				form.append("file", blob, "visiting-card-" + side + "-" + Date.now() + ".jpg");
 				form.append("is_private", "1");
 				return fetch("/api/method/upload_file", {
 					method: "POST", credentials: "same-origin",
@@ -261,8 +271,8 @@
 			}).then(function (r) {
 				return r.json().catch(function () { return {}; }).then(function (data) {
 					if (!r.ok || !data.message || !data.message.file_url) throw new Error(errorText(data, "The photo could not be uploaded. Please try again."));
-					scanState.fileUrl = data.message.file_url;
-					return scanState.fileUrl;
+					s.fileUrl = data.message.file_url;
+					return s.fileUrl;
 				});
 			});
 		}
@@ -270,18 +280,85 @@
 		function setScan(state) {
 			scan.setAttribute("data-state", state);
 			scan.querySelectorAll("[data-show]").forEach(function (el) { el.hidden = el.getAttribute("data-show") !== state; });
+			// Phones (2026-11-07): bring each new step into view, so nothing happens off-screen
+			if (!scan.hidden && state !== "preview" && window.matchMedia("(max-width: 720px)").matches) {
+				var target = state === "result" ? scan.querySelector('[data-show="result"]') : scan;
+				requestAnimationFrame(function () {
+					target.scrollIntoView({ behavior: "smooth", block: state === "result" ? "start" : "center" });
+				});
+			}
 		}
-		function showScan(dataUrl) {
-			if (!scan) { sendToForm(dataUrl); return; } // older page without the scan panel
-			scanState = { dataUrl: dataUrl, fileUrl: null, read: null };
-			scanImg.src = dataUrl;
+		// Open the scan panel (first photo), keeping whatever side is already there (2026-11-07)
+		// CHANGE NOTE 2026-11-07: the same panel serves the "Website link" tab. In website mode it sits
+		// after the website form (not inside it, so Enter in a details box can't resubmit the site),
+		// hides the photo parts, and shows website wording (.t-web) instead of card wording (.t-card).
+		var cardPane = document.getElementById("iyp-pane-card");
+		function setMode(mode) {
+			scanState.mode = mode;
+			if (!scan) return;
+			scan.setAttribute("data-mode", mode);
+			if (mode === "web") {
+				if (webForm && scan.previousElementSibling !== webForm) webForm.parentNode.insertBefore(scan, webForm.nextSibling);
+			} else if (cardPane && scan.parentNode !== cardPane) {
+				cardPane.insertBefore(scan, cardPane.querySelector(".iyp-drop-note"));
+			}
+		}
+		function resetWeb() {
+			scanState = { front: null, back: null, read: null, mode: "card" };
+			if (scan) scan.hidden = true;
+			setMode("card");
+			if (webForm) webForm.hidden = false;
+		}
+		function readWebsite(url) {
+			if (!scan) { window.location.href = createUrl + "?website_url=" + encodeURIComponent(url); return; }
+			scanState = { front: null, back: null, read: null, mode: "web", web: { url: url, map: null } };
+			setMode("web");
+			if (webForm) webForm.hidden = true;
+			scan.hidden = false;
+			setScan("scanning");
+			call("its_your_profile.api.read_website", { url: url }).then(function (read) {
+				scanState.read = read || {};
+				scanState.web.map = scanState.read.map_url || null;
+				renderFields(scanState.read);
+				setScan("result");
+			}).catch(function (err) {
+				scan.querySelector("[data-error]").textContent = err.message;
+				setScan("error");
+			});
+		}
+
+		function openPanel() {
+			setMode("card");
+			var wasHidden = scan.hidden;
 			if (drop) drop.hidden = true;
 			say("");
 			scan.hidden = false;
 			setScan("preview");
-			scan.scrollIntoView({ behavior: "smooth", block: "center" });
+			renderSides();
+			if (wasHidden) scan.scrollIntoView({ behavior: "smooth", block: "center" });
+		}
+		function showScan(dataUrl) {
+			if (!scan) { sendToForm(dataUrl); return; } // older page without the scan panel
+			scanState.front = { dataUrl: dataUrl, fileUrl: null };
+			scanState.read = null;
+			openPanel();
+		}
+		// Front photo or "add the front" buttons; Scan now only once there is a front side
+		function renderSides() {
+			var hasFront = !!scanState.front;
+			scanImg.hidden = !hasFront;
+			if (hasFront) scanImg.src = scanState.front.dataUrl;
+			scan.querySelector(".iyp-side-tag").hidden = !hasFront;
+			scan.querySelector(".iyp-front-empty").hidden = hasFront;
+			scan.querySelectorAll("[data-ready]").forEach(function (el) { el.hidden = !hasFront; });
+			scan.querySelectorAll("[data-need-front]").forEach(function (el) { el.hidden = hasFront; });
+			var go = scan.querySelector("[data-scan-now]");
+			go.disabled = !hasFront;
+			renderBack();
 		}
 		function resetScan() {
+			if (scanState.mode === "web") { resetWeb(); return; } // "Try another website"
+			scanState = { front: null, back: null, read: null, mode: "card" };
 			scan.hidden = true;
 			if (drop) drop.hidden = false;
 			say(noteText);
@@ -296,9 +373,21 @@
 				wrap.className = "iyp-scan-field" + (fieldname === "address_line" ? " wide" : "");
 				var span = document.createElement("span");
 				span.textContent = scanLabels[fieldname] || fieldname.replace(/_/g, " ");
-				var input = document.createElement("input");
-				var hint = INPUT_HINTS[fieldname] || { type: "text" };
-				Object.keys(hint).forEach(function (k) { input.setAttribute(k, hint[k]); });
+				var input;
+				if (fieldname === "business_nature") {
+					// A dropdown with the profile's own choices (2026-11-07)
+					input = document.createElement("select");
+					[""].concat(NATURES).forEach(function (n) {
+						var opt = document.createElement("option");
+						opt.value = n;
+						opt.textContent = n || CHOOSE;
+						input.appendChild(opt);
+					});
+				} else {
+					input = document.createElement("input");
+					var hint = INPUT_HINTS[fieldname] || { type: "text" };
+					Object.keys(hint).forEach(function (k) { input.setAttribute(k, hint[k]); });
+				}
 				input.name = fieldname;
 				input.value = value;
 				wrap.appendChild(span);
@@ -306,10 +395,47 @@
 				scanFields.appendChild(wrap);
 			});
 		}
+		// Optional back side (2026-11-07): camera or gallery, cropped like the front
+		function renderBack() {
+			if (!scan) return;
+			var hasBack = !!scanState.back;
+			scan.querySelector(".iyp-back-empty").hidden = hasBack;
+			var done = scan.querySelector(".iyp-back-done");
+			done.hidden = !hasBack;
+			if (hasBack) done.querySelector("img").src = scanState.back.dataUrl;
+		}
+		function setBack(dataUrl) {
+			if (!scan) { sendToForm(dataUrl); return; }
+			scanState.back = { dataUrl: dataUrl, fileUrl: null };
+			scanState.read = null; // read again, now with both sides
+			openPanel(); // may be the first photo: then the panel asks for the front
+		}
+		// Front first; the back only fills what the front left empty, and adds its links
+		function mergeSides(front, back) {
+			Object.keys(back || {}).forEach(function (key) {
+				if (key !== "_links" && back[key] && !front[key]) front[key] = back[key];
+			});
+			var seen = {};
+			front._links = (front._links || []).concat((back && back._links) || []).filter(function (l) {
+				var k = (l.url || "").replace(/\/+$/, "").toLowerCase();
+				if (!k || seen[k]) return false;
+				seen[k] = true;
+				return true;
+			});
+			return front;
+		}
+		function readSide(side) {
+			return uploadPhoto(side).then(function (fileUrl) {
+				return call("its_your_profile.api.read_visiting_card", { file_url: fileUrl });
+			});
+		}
 		function scanNow() {
 			setScan("scanning");
-			uploadPhoto(scanState.dataUrl).then(function (fileUrl) {
-				return call("its_your_profile.api.read_visiting_card", { file_url: fileUrl });
+			readSide("front").then(function (front) {
+				front = front || {};
+				if (!scanState.back) return front;
+				// An unreadable back side doesn't stop the page: the front's details are kept
+				return readSide("back").then(function (back) { return mergeSides(front, back); }, function () { return front; });
 			}).then(function (read) {
 				scanState.read = read || {};
 				renderFields(scanState.read);
@@ -323,18 +449,24 @@
 		}
 		function createPage() {
 			var values = {};
-			scanFields.querySelectorAll("input").forEach(function (input) { values[input.name] = input.value.trim(); });
+			scanFields.querySelectorAll("input, select").forEach(function (input) { values[input.name] = input.value.trim(); });
 			if (!values.company_name) {
 				var box = scanFields.querySelector("input[name=company_name]");
 				if (box) { box.focus(); box.classList.add("need"); }
 				return;
 			}
 			setScan("saving");
-			call("its_your_profile.api.create_profile_from_card", {
-				file_url: scanState.fileUrl,
+			var params = {
 				values: JSON.stringify(values),
 				links: JSON.stringify((scanState.read && scanState.read._links) || [])
-			}).then(function (made) {
+			};
+			if (scanState.mode === "web") {
+				params.map_url = (scanState.web && scanState.web.map) || "";
+			} else {
+				params.file_url = scanState.front.fileUrl;
+				params.back_file_url = (scanState.back && scanState.back.fileUrl) || "";
+			}
+			call("its_your_profile.api.create_profile_from_card", params).then(function (made) {
 				scan.querySelector("[data-done-name]").textContent = made.company_name || "";
 				var view = scan.querySelector("[data-done-view]");
 				if (made.page_url) { view.href = made.page_url; view.hidden = false; } else { view.hidden = true; }
@@ -349,12 +481,55 @@
 			scan.querySelectorAll("[data-scan-now], [data-scan-retry]").forEach(function (b) {
 				b.addEventListener("click", function () {
 					// A failed save (card already read) retries the save; otherwise read again
-					if (scanState.read && b.hasAttribute("data-scan-retry")) createPage(); else scanNow();
+					if (scanState.read && b.hasAttribute("data-scan-retry")) createPage();
+					else if (scanState.mode === "web" && scanState.web) readWebsite(scanState.web.url);
+					else scanNow();
 				});
 			});
 			scan.querySelectorAll("[data-scan-change]").forEach(function (b) { b.addEventListener("click", resetScan); });
 			scan.querySelector("[data-scan-create]").addEventListener("click", createPage);
 			scanFields.addEventListener("input", function (e) { e.target.classList.remove("need"); });
+			scan.querySelector("[data-back-camera]").addEventListener("click", function () { pickPhoto("back", true); });
+			scan.querySelector("[data-back-upload]").addEventListener("click", function () { pickPhoto("back", false); });
+			scan.querySelector("[data-back-remove]").addEventListener("click", function () {
+				scanState.back = null;
+				scanState.read = null;
+				if (!scanState.front) { // nothing left: back to the upload area
+					scan.hidden = true;
+					if (drop) drop.hidden = false;
+					say(noteText);
+					return;
+				}
+				renderSides();
+			});
+			// Started with the back side: these add the front (2026-11-07)
+			scan.querySelector("[data-front-camera]").addEventListener("click", function () { pickPhoto("front", true); });
+			scan.querySelector("[data-front-upload]").addEventListener("click", function () { pickPhoto("front", false); });
+		}
+
+		// Open the phone camera (capture) or the gallery for one side of the card (2026-11-07)
+		function pickPhoto(side, camera) {
+			var input = document.createElement("input");
+			input.type = "file";
+			input.accept = "image/*";
+			if (camera) input.setAttribute("capture", "environment"); // the back camera
+			input.style.display = "none";
+			document.body.appendChild(input);
+			input.addEventListener("change", function () {
+				var file = input.files && input.files[0];
+				input.remove();
+				if (file) useFile(file, side);
+			});
+			input.click();
+		}
+		var frontCamera = upload.querySelector("[data-camera=front]");
+		if (frontCamera) {
+			frontCamera.addEventListener("click", function (e) {
+				e.preventDefault();
+				e.stopPropagation(); // don't also open the gallery picker of the drop area
+				if (upload.getAttribute("data-logged-in") !== "1") { askToLogIn(); return; }
+				pickPhoto("front", true);
+			});
 		}
 
 		// CHANGE NOTE 2026-11-06: crop & rotate window. Cropper.js (MIT, same tool Frappe's forms use)
@@ -379,7 +554,7 @@
 			return cropperReady;
 		}
 
-		var editor = upload.querySelector(".iyp-editor:not(.iyp-ask)");
+		var editor = upload.querySelector(".iyp-editor:not(.iyp-ask):not(.iyp-side)");
 		var editorImg = editor && editor.querySelector(".iyp-editor-stage img");
 		var cropper = null;
 		var original = null; // the photo as chosen, for Reset
@@ -419,7 +594,9 @@
 				editor.showModal();
 				startCropper(dataUrl);
 			}, function () {
-				sendToForm(dataUrl); // no cropper available: carry on with the photo as it is
+				// No crop tool (slow or blocked internet): carry on with the photo as it is, on this
+				// page; never send it to the old form (2026-11-07)
+				if (editSide === "back") setBack(dataUrl); else showScan(dataUrl);
 			});
 		}
 
@@ -433,7 +610,9 @@
 			editor.querySelectorAll("[data-editor-cancel]").forEach(function (btn) {
 				btn.addEventListener("click", function () {
 					closeEditor();
-					if (btn.classList.contains("iyp-btn-ghost") && fileInput) fileInput.click();
+					if (!btn.classList.contains("iyp-btn-ghost")) return;
+					if (editSide === "back") pickPhoto("back", false);
+					else if (fileInput) fileInput.click();
 				});
 			});
 			editor.addEventListener("cancel", function () { closeEditor(); }); // Esc key
@@ -442,11 +621,41 @@
 				var canvas = cropper.getCroppedCanvas({ maxWidth: MAX_SIDE, maxHeight: MAX_SIDE, fillColor: "#fff", imageSmoothingQuality: "high" });
 				var dataUrl = canvas ? canvas.toDataURL("image/jpeg", 0.85) : original;
 				closeEditor();
-				showScan(dataUrl); // scan right here on the home page (2026-11-06)
+				// scan right here on the home page (2026-11-06); a back photo joins the front (2026-11-07)
+				if (editSide === "back") setBack(dataUrl); else showScan(dataUrl);
 			});
 		}
 
-		function useFile(file) {
+		// CHANGE NOTE 2026-11-07: "Which side of the card is this?" for every photo picked, taken or
+		// dropped, unless the button already said the side (e.g. "Take back photo").
+		var sideDlg = upload.querySelector(".iyp-side");
+		var sideAnswer = null;
+		function askSide(dataUrl) {
+			if (!sideDlg || !sideDlg.showModal) return Promise.resolve(scanState.front ? "back" : "front");
+			sideDlg.querySelector(".iyp-side-preview img").src = dataUrl;
+			// Suggest the side that is still missing
+			var suggest = scanState.front && !scanState.back ? "back" : "front";
+			sideDlg.querySelectorAll("[data-side]").forEach(function (b) {
+				b.classList.toggle("suggest", b.getAttribute("data-side") === suggest);
+			});
+			return new Promise(function (resolve) {
+				sideAnswer = resolve;
+				sideDlg.showModal();
+			});
+		}
+		function answerSide(side) {
+			if (sideDlg.open) sideDlg.close();
+			if (sideAnswer) { var done = sideAnswer; sideAnswer = null; done(side); }
+		}
+		if (sideDlg) {
+			sideDlg.querySelectorAll("[data-side]").forEach(function (b) {
+				b.addEventListener("click", function () { answerSide(b.getAttribute("data-side")); });
+			});
+			sideDlg.querySelector("[data-side-cancel]").addEventListener("click", function () { answerSide(null); });
+			sideDlg.addEventListener("cancel", function (e) { e.preventDefault(); answerSide(null); }); // Esc key
+		}
+
+		function useFile(file, side) {
 			if (!file) return;
 			if (!/^image\//.test(file.type)) {
 				say("Please choose a photo (JPG or PNG) of your visiting card.", true);
@@ -454,8 +663,13 @@
 			}
 			say("Opening your photo...");
 			shrink(file).then(function (dataUrl) {
-				if (editor && editor.showModal) openEditor(dataUrl);
-				else showScan(dataUrl);
+				return (side ? Promise.resolve(side) : askSide(dataUrl)).then(function (chosen) {
+					if (!chosen) { say(scan && !scan.hidden ? "" : noteText); return; } // cancelled
+					editSide = chosen === "back" ? "back" : "front";
+					if (editor && editor.showModal) openEditor(dataUrl);
+					else if (editSide === "back") setBack(dataUrl);
+					else showScan(dataUrl);
+				});
 			}, function () {
 				say("This photo could not be opened. Please try a JPG or PNG photo.", true);
 			});
@@ -490,10 +704,16 @@
 			if (webForm) {
 				webForm.addEventListener("submit", function (e) {
 					e.preventDefault();
-					var site = (webForm.querySelector("input[name=website_url]") || {}).value || "";
-					askToLogIn(createUrl + (site ? "?website_url=" + encodeURIComponent(site.trim()) : ""));
+					askToLogIn(); // back to the home page after login, where the website is read
 				});
 			}
+		} else if (webForm) {
+			// Logged in (2026-11-07): read the website right here, no redirect to the form
+			webForm.addEventListener("submit", function (e) {
+				e.preventDefault();
+				var site = ((webForm.querySelector("input[name=website_url]") || {}).value || "").trim();
+				if (site) readWebsite(site);
+			});
 		}
 
 		if (fileInput) {

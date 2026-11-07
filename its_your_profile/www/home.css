@@ -588,3 +588,113 @@ section[id] { scroll-margin-top: 84px; }
 .iyp-editor-stage { height: min(420px, 50dvh); }
 /* Taps feel like taps: buttons press in slightly */
 .iyp-btn:active, .iyp-tabs button:active, .iyp-menu-btn:active { transform: scale(.97); }
+
+/* Sign up button (2026-11-07): in the menu on wide screens; on phones a compact button beside ☰ */
+.iyp-signup-m { display: none; }
+@media (max-width: 960px) {
+	.iyp-signup-m { display: inline-flex; margin-left: auto; min-height: 44px !important; padding: 10px 18px !important; font-size: 15px !important; border-radius: 14px; }
+	.iyp-signup-m + .iyp-menu-btn { margin-left: 8px; }
+	.iyp-links .iyp-signup { display: none; } /* already shown beside the menu button */
+}
+@media (max-width: 380px) {
+	.iyp-logo { height: 34px; }
+	.iyp-signup-m { padding: 9px 14px !important; font-size: 14px !important; }
+}
+/* Touch screens: no hover "stuck" after a tap on the drop area */
+@media (hover: none) {
+	.iyp-drop:hover { border-color: #B9A9F0; background: #FBFAFE; }
+	.iyp-drop:active { border-color: var(--iyp-orange); background: var(--iyp-peach); }
+	[data-iyp-theme="dark"] .iyp-drop:hover { background: var(--iyp-band); border-color: #5A4F95; }
+}
+
+/* Take photo + Upload buttons, and the optional back side (2026-11-07) */
+.iyp-drop-btns { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; width: 100%; }
+.iyp-drop-btns .iyp-btn { min-width: 0; }
+.iyp-cam { display: none; } /* computers: just Upload */
+@media (pointer: coarse) {
+	/* Phones: Take photo is the main button, Upload (gallery) the second */
+	.iyp-drop .iyp-cam { display: inline-flex; flex: 1 1 100%; min-height: 54px; font-size: 17px; }
+	.iyp-drop .iyp-gal { flex: 1 1 100%; background: #fff !important; color: var(--iyp-blue) !important; border: 1px solid #CFC6F0; box-shadow: none !important; }
+	[data-iyp-theme="dark"] .iyp-gal { background: var(--iyp-band) !important; color: var(--iyp-ink) !important; border-color: var(--iyp-soft); }
+}
+.iyp-back { width: 100%; margin-top: 10px; padding: 14px; border: 1.5px dashed #CFC6F0; border-radius: 16px; background: #FBFAFE; }
+.iyp-back-empty, .iyp-back-done { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.iyp-back-empty[hidden], .iyp-back-done[hidden] { display: none; }
+.iyp-back-label { font-size: 14px; font-weight: 700; color: var(--iyp-ink); }
+.iyp-back-label small { font-weight: 500; color: var(--iyp-faint); }
+.iyp-back-btns { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; width: 100%; }
+.iyp-b2 { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 44px; padding: 8px 16px; border: 1px solid #CFC6F0; border-radius: 12px; background: #fff; font: inherit; font-size: 14px; font-weight: 600; color: var(--iyp-blue); cursor: pointer; }
+.iyp-b2:active { transform: scale(.97); }
+.iyp-back-done img { width: min(100%, 220px); max-height: 130px; object-fit: contain; border-radius: 10px; box-shadow: 0 12px 24px -14px rgba(30, 24, 56, .5); }
+.iyp-back-done span { font-size: 14px; font-weight: 700; color: var(--iyp-green); }
+@media (max-width: 480px) { .iyp-back-btns .iyp-b2 { flex: 1 1 100%; } }
+[data-iyp-theme="dark"] .iyp-back { background: var(--iyp-band); border-color: #5A4F95; }
+[data-iyp-theme="dark"] .iyp-b2 { background: var(--iyp-surface); border-color: var(--iyp-soft); color: var(--iyp-ink); }
+
+/* "Which side of the card is this?" window, and the front/back labels (2026-11-07) */
+.iyp-side { width: min(460px, calc(100vw - 32px)); text-align: center; }
+.iyp-side-preview { margin: 4px auto 16px; width: min(100%, 300px); border-radius: 14px; overflow: hidden; background: #F6F4FC; box-shadow: 0 16px 32px -18px rgba(30, 24, 56, .5); }
+.iyp-side-preview img { display: block; width: 100%; max-height: 180px; object-fit: contain; }
+.iyp-side-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.iyp-side-btn { display: flex; flex-direction: column; align-items: center; gap: 4px; min-height: 104px; padding: 14px 10px; border: 2px solid var(--iyp-line); border-radius: 18px; background: #fff; font: inherit; color: var(--iyp-ink); cursor: pointer; transition: border-color .15s ease, background .15s ease, transform .15s ease; }
+.iyp-side-btn span { font-size: 26px; line-height: 1; }
+.iyp-side-btn b { font-size: 16px; font-weight: 800; }
+.iyp-side-btn small { font-size: 12px; color: var(--iyp-muted); }
+.iyp-side-btn:hover, .iyp-side-btn:focus-visible { border-color: var(--iyp-blue); outline: none; }
+.iyp-side-btn:active { transform: scale(.97); }
+.iyp-side-btn.suggest { border-color: var(--iyp-orange); background: var(--iyp-peach); }
+.iyp-side-cancel { width: 100%; margin-top: 12px; }
+.iyp-scan-photo img[hidden] { display: none; }
+.iyp-side-tag { position: absolute; left: 10px; top: 10px; padding: 3px 10px; border-radius: 999px; background: rgba(30, 24, 56, .75); color: #fff; font-size: 12px; font-weight: 700; }
+.iyp-side-tag[hidden] { display: none; }
+.iyp-front-empty { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 24px 14px; }
+.iyp-front-empty[hidden] { display: none; }
+.iyp-scan-go:disabled { opacity: .45; cursor: not-allowed; animation: none; }
+[data-iyp-theme="dark"] .iyp-side-btn { background: var(--iyp-band); border-color: var(--iyp-soft); }
+[data-iyp-theme="dark"] .iyp-side-btn.suggest { background: #2A1D16; border-color: #FFA867; }
+[data-iyp-theme="dark"] .iyp-side-preview { background: var(--iyp-band); }
+
+/* ---------- Phone user flow (2026-11-07) ---------- */
+/* Every "start" button scrolls back to the upload card; leave room for the sticky header */
+#start { scroll-margin-top: 90px; }
+@media (max-width: 720px) {
+	/* The upload card comes sooner on phones */
+	.iyp-hero-inner { padding-top: 18px; gap: 16px; }
+	.iyp-lead { font-size: 16px; }
+	/* The next step's buttons stay in reach at the bottom of the screen while scanning */
+	.iyp-scan-step[data-show="preview"] .iyp-scan-actions,
+	.iyp-scan-step[data-show="result"] .iyp-scan-actions {
+		position: sticky; bottom: calc(54px + env(safe-area-inset-bottom, 0px)); z-index: 5;
+		margin: 10px -14px -4px; padding: 12px 14px; width: calc(100% + 28px);
+		background: rgba(255, 255, 255, .94); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
+		border-top: 1px solid var(--iyp-line); border-radius: 0 0 22px 22px;
+	}
+	[data-iyp-theme="dark"] .iyp-scan-step .iyp-scan-actions { background: rgba(27, 23, 54, .94); }
+	/* Bigger, thumb-friendly scan buttons */
+	.iyp-scan-actions .iyp-btn { min-height: 52px; }
+	.iyp-scan-photo img { max-height: 220px; }
+}
+
+/* "Card becomes a page" illustration (2026-11-07): hidden on phones and tablets, where the
+   stacked chat bubbles made it long and messy; computers still show it in one row */
+@media (max-width: 1100px) {
+	.iyp-story { display: none; }
+	.iyp-hero-inner { padding-bottom: 48px; }
+}
+
+/* Website link tab reads the site on the same page (2026-11-07): the scan panel in website mode */
+.iyp-scan .t-web, .iyp-scan[data-mode="web"] .t-card { display: none; }
+.iyp-scan[data-mode="web"] .t-web { display: inline; }
+.iyp-scan[data-mode="web"] .iyp-scan-photo,
+.iyp-scan[data-mode="web"] .iyp-back { display: none; }
+.iyp-scan[data-mode="web"] { padding-top: 4px; }
+.iyp-web[hidden] { display: none !important; }
+
+/* Business nature dropdown in the check-details step (2026-11-07), styled like the text boxes */
+.iyp-start .iyp-scan-field select {
+	width: 100%; min-height: 48px; padding: 12px 40px 12px 14px; border: 1px solid #B9B4CC; border-radius: 12px;
+	font: inherit; font-size: 16px; color: var(--iyp-ink); box-sizing: border-box; -webkit-appearance: none; appearance: none;
+	background: #fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%235A5578' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") right 14px center / 18px no-repeat;
+}
+.iyp-start .iyp-scan-field select:focus { outline: none; border-color: var(--iyp-blue); box-shadow: 0 0 0 3px rgba(107, 85, 214, .18); }
+[data-iyp-theme="dark"] .iyp-start .iyp-scan-field select { background-color: var(--iyp-band); border-color: var(--iyp-soft); }

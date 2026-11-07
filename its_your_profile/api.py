@@ -1,4 +1,6 @@
 import mimetypes
+import re
+from urllib.parse import urlparse
 
 import frappe
 from frappe import _
@@ -43,6 +45,11 @@ def read_visiting_card(file_url: str):
 	}
 	if values.get("phone"):
 		values["phone"] = clean_phone(values["phone"])  # shown clean in the form before Save
+	# Business Nature only as one of the dropdown's values (2026-11-07)
+	from its_your_profile.tasks import clean_nature
+
+	if nature := clean_nature(details.business_nature):
+		values["business_nature"] = nature
 
 	if values.get("email") and not values.get("website_url"):
 		from its_your_profile.tasks import website_from_email
@@ -75,7 +82,13 @@ def read_visiting_card(file_url: str):
 
 
 @frappe.whitelist(methods=["POST"])
-def create_profile_from_card(file_url: str, values=None, links=None):
+def create_profile_from_card(
+	file_url: str | None = None,
+	values=None,
+	links=None,
+	back_file_url: str | None = None,
+	map_url: str | None = None,
+):
 	"""Home page "Scan now" (2026-11-06): save a Business Profile from a card just read by
 	read_visiting_card, without leaving the home page. The read is cached for that file, so the
 	save takes the card's colours and logo and needs no background scan.
@@ -86,9 +99,13 @@ def create_profile_from_card(file_url: str, values=None, links=None):
 	if frappe.session.user == "Guest":
 		frappe.throw(_("Please log in to create your page"), frappe.PermissionError)
 
-	file = frappe.get_doc("File", {"file_url": file_url})
-	if not frappe.has_permission("File", "read", doc=file):
-		frappe.throw(_("Not permitted"), frappe.PermissionError)
+	# Front side, and the optional back side (2026-11-07), both uploaded by this user
+	for url in filter(None, (file_url, back_file_url)):
+		file = frappe.get_doc("File", {"file_url": url})
+		if not frappe.has_permission("File", "read", doc=file):
+			frappe.throw(_("Not permitted"), frappe.PermissionError)
+
+	from its_your_profile.tasks import clean_nature
 
 	values = frappe.parse_json(values) if values else {}
 	allowed = set(CARD_FIELD_MAP.values())
@@ -96,7 +113,18 @@ def create_profile_from_card(file_url: str, values=None, links=None):
 	for fieldname, value in (values or {}).items():
 		if fieldname in allowed and isinstance(value, str) and value.strip():
 			doc.set(fieldname, value.strip()[:500])
-	doc.visiting_card = file_url
+	# Business Nature is a dropdown: only its own values are saved (2026-11-07)
+	if nature := clean_nature((values or {}).get("business_nature")):
+		doc.business_nature = nature
+	# A page from the "Website link" tab (2026-11-07) has no card photo; it needs a company name
+	if not file_url and not doc.company_name:
+		frappe.throw(_("Please enter your company name"))
+	if file_url:
+		doc.visiting_card = file_url
+	if back_file_url:
+		doc.visiting_card_back = back_file_url
+	if map_url and map_url.startswith("https://"):
+		doc.google_maps_url = map_url[:500]
 
 	for link in (frappe.parse_json(links) if links else []) or []:
 		if isinstance(link, dict) and link.get("url") and link.get("platform"):
@@ -113,6 +141,73 @@ def create_profile_from_card(file_url: str, values=None, links=None):
 		"page_url": "/" + doc.route if doc.published and doc.route else None,
 		"edit_url": f"/my-business/{doc.name}/edit",
 	}
+
+
+@frappe.whitelist(methods=["POST"])
+def read_website(url: str):
+	"""Home page "Website link" tab (2026-11-07): read a business's website and return its details
+	(name, contact, phone, email, address), profile links and map, so the page can be created right
+	there without the form. Saving it then queues the usual website summary (scrape_website)."""
+	from bs4 import BeautifulSoup
+
+	from its_your_profile import ai
+	from its_your_profile.its_your_profile.doctype.business_profile.business_profile import (
+		clean_phone,
+		clean_url,
+	)
+	from its_your_profile.tasks import (
+		MAX_TEXT_CHARS,
+		fetch_page,
+		find_contact_page,
+		find_map_url,
+		page_text,
+		social_links,
+	)
+
+	if frappe.session.user == "Guest":
+		frappe.throw(_("Please log in"), frappe.PermissionError)
+
+	url = clean_url(url, _("Website URL"))
+	try:
+		pages = [fetch_page(url)]
+		if contact_url := find_contact_page(pages[0], url):
+			try:
+				pages.append(fetch_page(contact_url))
+			except Exception:
+				pass  # the homepage alone is still useful
+	except Exception:
+		frappe.throw(_("Could not open {0}. Please check the website address.").format(url))
+
+	soups = [BeautifulSoup(html, "html.parser") for html in pages]
+	text = "\n\n".join(page_text(s) for s in soups)[:MAX_TEXT_CHARS]
+	details = ai.extract_website_contact(text, url) if text.strip() else ai.WebsiteContact()
+
+	values = {
+		field: value.strip()
+		for field, value in details.model_dump().items()
+		if isinstance(value, str) and value.strip()
+	}
+	if values.get("phone"):
+		values["phone"] = clean_phone(values["phone"])
+	if not values.get("company_name"):
+		# No name in the text: the page title ("Acme Tools | Home"), else the domain
+		title = soups[0].title.get_text(" ", strip=True) if soups[0].title else ""
+		name = re.split(r"\s[|\-–—:]\s", title)[0].strip() if title else ""
+		if not name:
+			host = (urlparse(url).hostname or "").removeprefix("www.")
+			name = host.split(".")[0].replace("-", " ").title()
+		if name:
+			values["company_name"] = name[:140]
+	values["website_url"] = url
+	# Business Nature only as one of the dropdown's values (2026-11-07)
+	from its_your_profile.tasks import clean_nature
+
+	nature = clean_nature(values.pop("business_nature", None))
+	if nature:
+		values["business_nature"] = nature
+
+	links = [{"platform": p, "label": label, "url": link} for p, label, link in social_links(soups)]
+	return {**values, "_links": links, "map_url": find_map_url(soups)}
 
 
 @frappe.whitelist(methods=["POST"])

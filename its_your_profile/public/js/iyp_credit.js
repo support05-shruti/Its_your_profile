@@ -19,7 +19,9 @@
 		"[data-iyp-theme=dark] .iyp-credit-badge{background:rgba(27,23,54,.92);border-color:#332C5A;color:#A9A4C8 !important}" +
 		"[data-iyp-theme=dark] .iyp-credit-badge b{color:#D3CBFF}" +
 		"@media (max-width:767px){.iyp-credit-badge{left:0;right:0;width:max-content;margin:0 auto;bottom:10px;font-size:11.5px;padding:6px 12px;white-space:nowrap}" +
-		".iyp-credit-raised .iyp-credit-badge{bottom:92px}}" +
+		".iyp-credit-raised .iyp-credit-badge{bottom:calc(96px + env(safe-area-inset-bottom,0px));margin-bottom:0}" +
+		/* Business pages on phones: the credit sits inside the bottom dock instead (2026-11-07) */
+		".iyp-credit-in-bar .iyp-credit-badge{display:none}}" +
 		"@media (prefers-reduced-motion:reduce){.iyp-credit-badge{animation:none;transition:none}}";
 
 	function add() {
@@ -48,6 +50,45 @@
 		if (document.querySelector(".iyp-bar, .web-form-footer")) {
 			document.documentElement.classList.add("iyp-credit-raised");
 		}
+		// Business page quick-action bar (2026-11-07): put the credit inside it as a small line, so
+		// on phones it never overlaps the Call/WhatsApp buttons (the dashboard's dock is left alone)
+		var bar = document.querySelector(".iyp-bar:not(.iyp-dock)");
+		if (bar && !bar.querySelector(".iyp-bar-credit")) {
+			var line = document.createElement("a");
+			line.className = "iyp-bar-credit";
+			line.href = "https://softworld.co.in";
+			line.target = "_blank";
+			line.rel = "noopener";
+			line.innerHTML = "Developed by <b>SoftWorld Solutions Pvt. Ltd.</b>";
+			bar.appendChild(line);
+			document.documentElement.classList.add("iyp-credit-in-bar");
+		}
+
+		fixSignupButton();
+	}
+
+	// CHANGE NOTE 2026-11-07: Frappe enables "Create Account" only on the boxes' "input" event.
+	// Android autofill (Chrome, Gboard) fills the name/email without that event, so the button
+	// stayed disabled on phones. Check on every kind of change, and a few times a second while
+	// the sign-up form is open (autofill can fire no event at all).
+	function fixSignupButton() {
+		var form = document.querySelector(".form-signup");
+		if (!form) return;
+		var name = document.getElementById("signup_fullname");
+		var email = document.getElementById("signup_email");
+		var button = form.querySelector(".btn-signup, button[type=submit]");
+		if (!name || !email || !button) return;
+		function check() {
+			var ready = !!(name.value.trim() && email.value.trim());
+			if (button.disabled === ready) button.disabled = !ready;
+		}
+		["input", "change", "keyup", "blur", "paste", "focus"].forEach(function (type) {
+			name.addEventListener(type, function () { setTimeout(check, 0); });
+			email.addEventListener(type, function () { setTimeout(check, 0); });
+		});
+		setInterval(function () {
+			if (form.offsetParent !== null) check(); // only while the sign-up form is showing
+		}, 400);
 	}
 
 	if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", add);

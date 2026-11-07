@@ -430,6 +430,36 @@
 		.iyp-cta strong { font-size: 1.3rem; }
 		.navbar .navbar-brand img { height: 38px; }
 	}
+
+	/* ---------- Phone bottom dock (2026-11-07) ----------
+	   The quick-action bar becomes a floating rounded dock: four equal buttons, and the
+	   "Developed by" line inside it (iyp_credit.js moves it there), so nothing overlaps. Frappe's
+	   footer is hidden on phones here, as the dock already carries the credit. */
+	@media (max-width: 767px) {
+		.iyp { padding-bottom: 150px; }
+		.web-footer { display: none !important; }
+		.iyp-bar {
+			left: 10px; right: 10px; bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+			display: flex; flex-wrap: wrap;
+			gap: 6px; padding: 8px 8px 6px; border: 1px solid #E4DFF3; border-radius: 24px;
+			background: rgba(255, 255, 255, .96); box-shadow: 0 20px 44px -18px rgba(30, 24, 56, .5);
+		}
+		.iyp-bar a {
+			flex: 1 1 0; min-width: 0;
+			flex-direction: column; justify-content: center; gap: 4px; min-height: 58px; padding: 6px 2px; border-radius: 16px;
+			font-size: .72rem; font-weight: 700; background: var(--b-soft); color: var(--b) !important; border: 1px solid var(--b-line);
+		}
+		.iyp-bar a.call { background: var(--b); border-color: transparent; color: #fff !important; box-shadow: 0 10px 20px -12px var(--b); }
+		.iyp-bar a.wa { background: #25D366; border-color: transparent; color: #fff !important; box-shadow: 0 10px 20px -12px rgba(37, 211, 102, .8); }
+		.iyp-bar a:active { transform: scale(.95); }
+		.iyp-bar .iyp-i { width: 21px; height: 21px; }
+		/* The credit line inside the dock, spanning all columns */
+		.iyp-bar .iyp-bar-credit {
+			flex: 1 1 100%; display: block; padding: 4px 0 0; text-align: center;
+			font-size: 10.5px; font-weight: 500; color: #7D7898 !important; background: none; border: 0; min-height: 0; box-shadow: none;
+		}
+		.iyp-bar .iyp-bar-credit b { color: #3B2E7E; font-weight: 700; }
+	}
 </style>
 
 <article class="iyp">
@@ -445,6 +475,8 @@
 			<div class="iyp-id-name">
 				<h1>{{ company_name | e }}</h1>
 				<div class="iyp-chips">
+					{#- Segment: the industry, e.g. "HVAC contractor" (2026-11-07) -#}
+					{% if segment %}<span class="iyp-chip">{{ icon("sparkles") }}{{ segment | e }}</span>{% endif %}
 					{% if business_nature %}<span class="iyp-chip">{{ icon("briefcase") }}{{ _(business_nature) }}</span>{% endif %}
 					{% if city %}<span class="iyp-chip">{{ icon("pin") }}{{ city | e }}{% if state %}, {{ state | e }}{% endif %}</span>{% endif %}
 					{% if established_year %}<span class="iyp-chip">{{ icon("calendar") }}{{ _("Since {0}").format(established_year) }}</span>{% endif %}
@@ -620,17 +652,8 @@
 		</aside>
 	</div>
 
-	<footer class="iyp-cta iyp-reveal">
-		<div>
-			<strong>{{ icon("sparkles") }}{{ _("Is your business easy for") }} <em>{{ _("AI to find?") }}</em></strong>
-			{{ _("Get a free profile page like this from your visiting card, in a minute.") }}
-		</div>
-		<div class="iyp-cta-links">
-			<a class="iyp-btn iyp-btn-white" href="/my-business/new">{{ _("Register your business") }}{{ icon("arrow") }}</a>
-			{#- The directory is backend-only (2026-11-06), so visitors get the home page instead -#}
-			<a class="iyp-link" href="/">{{ _("Learn more") }}</a>
-		</div>
-	</footer>
+	{#- 2026-11-07: the "Is your business easy for AI to find?" banner was removed from business
+	    pages (it now sits on the My Business Profile form, see my_business.js) -#}
 
 	<nav class="iyp-bar" aria-label="{{ _('Quick actions') }}">
 		{% if phone_numbers %}<a class="call" href="tel:{{ phone_numbers[0] | e }}">{{ icon("phone") }}{{ _("Call") }}</a>{% endif %}

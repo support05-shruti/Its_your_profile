@@ -11,6 +11,7 @@ from frappe import _
 from frappe.utils import strip_html
 
 from its_your_profile.its_your_profile.doctype.business_profile.business_profile import readable_on_white
+from its_your_profile.portal import redirect
 
 no_cache = 1
 sitemap = 0  # keep it out of sitemap.xml, so search engines are not pointed at it
@@ -29,7 +30,7 @@ def get_context(context):
 	if not is_backend_user():
 		if frappe.session.user == "Guest":
 			# Staff who are not logged in yet: send them to log in, then back here
-			frappe.redirect("/login?redirect-to=/directory")
+			redirect("/login?redirect-to=/directory")  # temporary (302), see portal.redirect
 		frappe.throw(_("The directory is only available to the It's Your Profile team."), frappe.PermissionError)
 
 	q = (frappe.form_dict.get("q") or "").strip()[:100]

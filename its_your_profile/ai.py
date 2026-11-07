@@ -20,8 +20,18 @@ DEFAULT_OPENAI_MODEL = "gpt-5-mini"
 DEFAULT_OPENAI_BASE_URL = "https://api.openai.com/v1"
 
 
+SEGMENT_HELP = (
+	"The industry or line of business in two to four words, e.g. 'HVAC contractor', 'Interior design', "
+	"'Chartered accountant', 'Industrial automation'. Null if it is not clear."
+)
+NATURE_HELP = "Exactly one of: Service, Manufacturing, Hybrid/Trading. Null if it is not clear."
+
+
 class CardDetails(BaseModel):
 	company_name: str | None = Field(None, description="Company or business name")
+	# 2026-11-07: segment (industry) and business nature, shown when the card is read on the home page
+	segment: str | None = Field(None, description=SEGMENT_HELP)
+	business_nature: str | None = Field(None, description=NATURE_HELP)
 	contact_person: str | None = Field(None, description="Full name of the person on the card")
 	designation: str | None = Field(None, description="Job title of the person")
 	phone: str | None = Field(None, description="Primary phone number, with country code if printed")
@@ -49,6 +59,22 @@ class CardDetails(BaseModel):
 		"[ymin, xmin, ymax, xmax], each 0-1000 of the image "
 		"height or width. Empty if the card has no logo.",
 	)
+
+
+class WebsiteContact(BaseModel):
+	"""The business's own contact details as written on its website (home page "Website link", 2026-11-07)."""
+
+	company_name: str | None = Field(None, description="The business's own name")
+	segment: str | None = Field(None, description=SEGMENT_HELP)
+	business_nature: str | None = Field(None, description=NATURE_HELP)
+	contact_person: str | None = Field(None, description="Owner, founder or named contact for enquiries")
+	designation: str | None = Field(None, description="That person's job title")
+	phone: str | None = Field(None, description="Main phone number, with country code if shown")
+	email: str | None = Field(None, description="Main enquiry email address")
+	address_line: str | None = Field(None, description="Street address, without city, state or pincode")
+	city: str | None = None
+	state: str | None = None
+	pincode: str | None = None
 
 
 class WebsiteInsights(BaseModel):
@@ -81,6 +107,9 @@ class LinkedInMatch(BaseModel):
 CARD_PROMPT = """You are reading a business visiting card.
 Extract the details printed on the card. Use null for anything that is not clearly printed.
 Do not guess or invent values.
+Give segment: the industry or line of business in two to four words (e.g. "HVAC contractor",
+"Interior design", "Chartered accountant"), judged from what the card says the business does.
+Give business_nature: Service, Manufacturing or Hybrid/Trading, only if the card makes it clear.
 Also give the colours as hex codes: the colour of the company name text, and the main brand or
 logo colour. Use null for a colour if the card is black and white.
 List in social_links every social media or online profile address printed on the card (LinkedIn,
@@ -107,6 +136,22 @@ WEBSITE_PROMPT = """Below is text scraped from the website of {company}.
 4. Return the year the company was established if stated, otherwise null.
 5. List the main products and services it clearly offers (at most 10), each a short noun phrase
    such as "GST filing" or "HDPE pipes". Use an empty list if unclear.
+
+Website text:
+{text}"""
+
+# Contact details become the business page, so only what the site states; never a guess
+WEBSITE_CONTACT_PROMPT = """Below is text from the website {url} of a business.
+Extract the business's OWN contact details exactly as written on the site. Use null for anything
+that is not clearly stated; never guess or make anything up.
+- company_name: the business's name (not the website builder, a client or a partner).
+- segment: the industry or line of business in two to four words, e.g. "HVAC contractor",
+  "Interior design", "Chartered accountant", "Industrial automation".
+- business_nature: Service, Manufacturing or Hybrid/Trading, only if the site makes it clear.
+- contact_person and designation: an owner, founder or person named for enquiries, if any.
+- phone: the main phone number, with country code if shown.
+- email: the main enquiry email address.
+- address_line: the street address without city, state or pincode; then city, state and pincode.
 
 Website text:
 {text}"""
@@ -265,6 +310,13 @@ def extract_card_details(image: bytes, mime_type: str) -> CardDetails:
 	from google.genai import types
 
 	return _generate([types.Part.from_bytes(data=image, mime_type=mime_type), CARD_PROMPT], CardDetails)
+
+
+def extract_website_contact(text: str, url: str) -> WebsiteContact:
+	prompt = WEBSITE_CONTACT_PROMPT.format(text=text, url=url)
+	if _use_openai():
+		return _openai_generate(prompt, WebsiteContact)
+	return _generate(prompt, WebsiteContact)
 
 
 def analyse_website(text: str, company: str | None = None) -> WebsiteInsights:

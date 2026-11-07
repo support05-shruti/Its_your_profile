@@ -1,5 +1,10 @@
+from its_your_profile.portal import redirect
+
+
 def get_context(context):
-	# Frappe titles the blank form "New My Business Profile"; keep just the form's own title.
-	# (Runs after Frappe sets that title, so this replaces it.) Changed 2026-11-06.
+	# CHANGE NOTE 2026-11-07: new pages are made on the home page (scan the card or paste the
+	# website, the details fill in right there), so the blank form is never shown: /my-business/new
+	# goes to the upload card. Editing an existing page (/my-business/<name>/edit) still uses the form.
+	# Temporary (302) redirect, so browsers don't remember it.
 	if context.get("is_new"):
-		context.title = context.web_form_doc.get("title") or context.title
+		redirect("/#start")

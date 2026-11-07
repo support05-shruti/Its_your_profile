@@ -25,7 +25,7 @@ def get_context(context):
 	context.update(
 		{
 			"title": "It's Your Profile · Get found by AI",
-			"description": "Turn your visiting card into a business page that ChatGPT, Gemini and Claude can find and recommend. Free, no login.",
+			"description": "Turn your visiting card into a business page that ChatGPT, Gemini and Claude can find and recommend. Free, ready in a minute.",
 			"audiences": AUDIENCES,
 			"create_url": CREATE_URL,
 			"logged_in": frappe.session.user != "Guest",

@@ -23,6 +23,7 @@ USER_AGENT = "Mozilla/5.0 (compatible; ItsYourProfileBot/1.0)"
 
 CARD_FIELD_MAP = {
 	"company_name": "company_name",
+	"segment": "segment",  # industry, free text (2026-11-07)
 	"contact_person": "contact_person",
 	"designation": "designation",
 	"phone": "phone",
@@ -33,6 +34,26 @@ CARD_FIELD_MAP = {
 	"state": "state",
 	"pincode": "pincode",
 }
+
+# Business Nature is a fixed dropdown: AI answers are matched to one of these, anything else dropped
+BUSINESS_NATURES = ("Service", "Manufacturing", "Hybrid/Trading")
+
+
+def clean_nature(value: str | None) -> str | None:
+	"""'manufacturer' → 'Manufacturing', 'trading' → 'Hybrid/Trading'; None if it doesn't match."""
+	text = (value or "").strip().lower()
+	if not text:
+		return None
+	for nature in BUSINESS_NATURES:
+		if text == nature.lower():
+			return nature
+	if "manufactur" in text:
+		return "Manufacturing"
+	if "trad" in text or "hybrid" in text:
+		return "Hybrid/Trading"
+	if "service" in text:
+		return "Service"
+	return None
 
 
 def scan_visiting_card(profile: str):
@@ -67,6 +88,8 @@ def scan_visiting_card(profile: str):
 				value = getattr(details, key)
 				if value and not doc.get(fieldname):
 					doc.set(fieldname, value.strip())
+			if not doc.business_nature and (nature := clean_nature(getattr(details, "business_nature", None))):
+				doc.business_nature = nature
 			for fieldname, value in card_colours(details).items():
 				if value and not doc.get(fieldname):
 					doc.set(fieldname, value)

@@ -121,3 +121,35 @@ body[data-path="login"] .sign-up-message { color: #5A5578 !important; }
 /* Android-friendly (2026-11-06): no grey flash on tap, no double-tap delay, buttons press in */
 a, button, label, .btn, summary { -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
 .btn:active, .es-button:active { transform: scale(.97); }
+
+/* Sign-up page (2026-11-07): a disabled button looks disabled, so people know to fill both boxes */
+body[data-path="login"] .es-button:disabled,
+body[data-path="login"] .es-button[disabled] { opacity: .5 !important; cursor: not-allowed; transform: none !important; box-shadow: none !important; }
+body[data-path="login"] .form-signup .page-card-actions::before {
+	content: "Enter your name and email, then tap Create Account."; display: block; margin-bottom: 4px;
+	font-size: 13px; color: #7D7898; text-align: center;
+}
+
+/* Frappe top bar on phones (2026-11-07): no ☰ button and no big empty menu box. The few items
+   (profile picture, or Login) sit in the top-right corner; the profile picture opens a small
+   dropdown (My Dashboard, Log out). Replaces the panel style above. */
+@media (max-width: 991.98px) {
+	.navbar .container { flex-wrap: nowrap; }
+	.navbar .navbar-toggler { display: none !important; }
+	.navbar .navbar-collapse {
+		display: flex !important; flex-basis: auto; flex-grow: 0; margin: 0 0 0 auto !important; padding: 0 !important;
+		background: transparent !important; border: 0 !important; border-radius: 0 !important; box-shadow: none !important;
+	}
+	.navbar .navbar-nav { flex-direction: row; align-items: center; gap: 4px; }
+	.navbar .navbar-nav .nav-link { padding: 8px 10px !important; }
+	.navbar .navbar-nav .dropdown-menu {
+		position: absolute; right: 0; left: auto; top: calc(100% + 8px); min-width: 210px; padding: 8px;
+		border: 1px solid #E4DFF3; border-radius: 18px; box-shadow: 0 24px 50px -20px rgba(30, 24, 56, .45);
+	}
+	.navbar .navbar-nav .dropdown-item { min-height: 46px; display: flex; align-items: center; padding: 0 14px; border-radius: 12px; font-size: 15px; font-weight: 600; color: #1E1838; }
+	.navbar .navbar-nav .dropdown-item:active, .navbar .navbar-nav .dropdown-item:hover { background: #F3F0FB; color: #3B2E7E; }
+	.navbar #language-switcher { display: none !important; }
+}
+/* Profile picture in the corner: a neat round button */
+.navbar .nav-avatar .avatar, .navbar .user-image-wrapper .avatar { width: 40px !important; height: 40px !important; }
+.navbar .nav-avatar .avatar-frame, .navbar .nav-avatar .standard-image { border: 2px solid #E4DFF3; font-weight: 700; }

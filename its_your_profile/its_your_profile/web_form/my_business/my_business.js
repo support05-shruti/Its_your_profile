@@ -30,6 +30,14 @@ frappe.ready(function () {
 				perks.append(el);
 			});
 			head.append(steps, perks);
+
+			// 2026-11-07: the "easy for AI to find?" banner moved here from the business pages
+			const banner = document.createElement("div");
+			banner.className = "iyp-ai-banner";
+			banner.innerHTML = `<strong><span aria-hidden="true">✦</span> ${__("Is your business easy for")} <em>${__("AI to find?")}</em></strong>
+				<p>${__("Get a free profile page from your visiting card, in a minute.")}</p>
+				<a href="/">${__("Learn more")} →</a>`;
+			head.append(banner);
 		}
 
 		const label_attach = (fieldname, text) => {

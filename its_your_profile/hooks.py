@@ -32,7 +32,8 @@ app_license = "mit"
 
 # Owners' menu after they log in (the web form's account pages)
 standard_portal_menu_items = [
-	{"title": "My Dashboard", "route": "/notifications"},
+	{"title": "Dashboard", "route": "/notifications"},
+	{"title": "My information", "route": "/account"},  # opens their own business details (2026-11-07)
 ]
 
 # Browser tab icon (2026-11-06): our magnifier logo on every website page instead of Frappe's.

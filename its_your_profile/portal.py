@@ -5,6 +5,16 @@ import frappe
 OWNER_DASHBOARD = "notifications"
 
 
+def redirect(url: str):
+	"""Send the browser to url with a TEMPORARY (302) redirect (2026-11-07).
+
+	frappe.redirect() sends 301 "moved permanently", which browsers remember forever: a page once
+	visited while logged out (/account → login) then always jumped to the login page, even after
+	logging in. These pages redirect depending on who is logged in, so they must be 302."""
+	frappe.local.flags.redirect_location = url
+	raise frappe.Redirect(302)
+
+
 def send_owner_to_dashboard(login_manager):
 	"""on_login hook: business owners (Website Users) go to their dashboard at /notifications.
 

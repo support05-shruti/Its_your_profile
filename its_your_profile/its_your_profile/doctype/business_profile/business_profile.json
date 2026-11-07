@@ -11,6 +11,7 @@
   "company_section",
   "company_name",
   "business_nature",
+  "segment",
   "about_business",
   "services",
   "column_break_main",
@@ -168,6 +169,13 @@
    "in_standard_filter": 1,
    "label": "Business Nature",
    "options": "\nService\nManufacturing\nHybrid/Trading"
+  },
+  {
+   "description": "Your industry or line of business, e.g. HVAC contractor, Interior design, Chartered accountant. Read from the card or website.",
+   "fieldname": "segment",
+   "fieldtype": "Data",
+   "in_standard_filter": 1,
+   "label": "Segment"
   },
   {
    "fieldname": "employee_range",
@@ -356,7 +364,7 @@
  "index_web_pages_for_search": 1,
  "is_published_field": "published",
  "links": [],
- "modified": "2026-11-04 14:00:00.000000",
+ "modified": "2026-11-07 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Its Your Profile",
  "name": "Business Profile",

@@ -1,150 +1,493 @@
-{% extends "templates/web.html" %}
+{% extends "templates/base.html" %}
+{#- CHANGE NOTE 2026-11-07: the dashboard is its own full page now (like the home page), not inside
+    Frappe's standard page frame: our header with the logo and an account menu, a lavender page,
+    a hero card, stat tiles, a 7-day views chart, a "page strength" ring with tips, the business
+    card(s), the activity feed with filters, and an app-like bottom bar on phones.
+    Data comes from notifications.py. -#}
 
-{% block title %}{{ _("It's Your Profile · My Dashboard") }}{% endblock %}
+{% block title %}{{ _("My Dashboard · It's Your Profile") }}{% endblock %}
 
-{% block page_content %}
+{% block head_include %}
+{{ super() }}
+<meta name="theme-color" content="#F3F0FB">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="manifest" href="/assets/its_your_profile/manifest.json">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=Instrument+Serif:ital@1&display=swap" rel="stylesheet">
 <style>
-	.iyp-nt { --ink: #1E1838; --text: #3F3A5E; --muted: #5A5578; --line: #E4DFF3; --blue: #3B2E7E; --sky: #F3F0FB; --peach: #FFF1E6; --orange: #B55406; --mint: #E9FBF1; --green: #0E7A45; --lilac: #F3EEFF; --purple: #5B3CC4;
-		max-width: 760px; margin: 0 auto; padding: 8px 0 40px; color: var(--ink); }
-	.iyp-nt h1 { font-size: clamp(1.6rem, 4vw, 2.1rem); font-weight: 800; letter-spacing: -.02em; margin: 8px 0 4px; }
-	.iyp-nt-sub { color: var(--muted); margin: 0 0 20px; }
+	:root {
+		--ink: #1E1838; --text: #3F3A5E; --muted: #5A5578; --faint: #7D7898; --line: #E4DFF3;
+		--blue: #3B2E7E; --blue-dark: #2E2454; --violet: #6B55D6; --sky: #F3F0FB; --peach: #FFF1E6;
+		--orange: #E87012; --orange-dark: #B55406; --mint: #E9FBF1; --green: #0E7A45; --lilac: #F3EEFF; --purple: #5B3CC4;
+	}
+	html { overflow-x: clip; }
+	body {
+		margin: 0; font-family: Sora, system-ui, -apple-system, sans-serif; color: var(--ink);
+		background: linear-gradient(180deg, #F3F0FB 0, #F7F5FC 520px, #FBFAFE 100%) fixed !important;
+	}
+	.d-page *, .d-head * { box-sizing: border-box; }
+	.d-page a, .d-page button, .d-head a, .d-head button { -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
+	.d-blob { position: fixed; z-index: -1; border-radius: 50%; pointer-events: none; }
+	.d-blob.b1 { width: 380px; height: 380px; left: -170px; top: 140px; background: #FFE3CF; opacity: .7; animation: d-float 13s ease-in-out infinite alternate; }
+	.d-blob.b2 { width: 300px; height: 300px; right: -120px; top: 60px; background: #DDF5E8; opacity: .8; animation: d-float 15s ease-in-out infinite alternate-reverse; }
+	@keyframes d-float { to { transform: translate3d(30px, 40px, 0) scale(1.08); } }
+	@keyframes d-up { from { opacity: 0; transform: translateY(16px); } }
+	@keyframes d-grow { from { transform: scaleY(0); } }
+	@keyframes d-live { 70% { box-shadow: 0 0 0 7px rgba(24, 160, 88, 0); } 100% { box-shadow: 0 0 0 0 rgba(24, 160, 88, 0); } }
 
-	.iyp-week { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 28px; }
-	.iyp-stat { border-radius: 18px; padding: 16px; animation: iyp-nt-up .5s ease backwards; }
-	.iyp-stat:nth-child(2) { animation-delay: .08s; }
-	.iyp-stat:nth-child(3) { animation-delay: .16s; }
-	.iyp-stat b { display: block; font-size: 1.8rem; font-weight: 800; line-height: 1.1; }
-	.iyp-stat span { font-size: .85rem; color: var(--text); }
-	.iyp-stat.view { background: var(--sky); } .iyp-stat.view b { color: var(--blue); }
-	.iyp-stat.lead { background: var(--peach); } .iyp-stat.lead b { color: var(--orange); }
-	.iyp-stat.ai { background: var(--lilac); } .iyp-stat.ai b { color: var(--purple); }
+	/* Header */
+	.d-head { position: sticky; top: 0; z-index: 1040; background: rgba(243, 240, 251, .82); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); border-bottom: 1px solid rgba(228, 223, 243, .7); }
+	.d-head-row { max-width: 1120px; margin: 0 auto; padding: 10px 20px; display: flex; align-items: center; gap: 14px; }
+	.d-head-row .d-logo img { display: block; height: 46px; width: auto; }
+	.d-head-links { margin-left: auto; display: flex; align-items: center; gap: 6px; }
+	.d-head-links > a { padding: 9px 14px; border-radius: 12px; font-size: 15px; font-weight: 600; color: var(--text); text-decoration: none; }
+	.d-head-links > a:hover, .d-head-links > a.on { background: #fff; color: var(--blue); }
+	.d-me { position: relative; }
+	.d-me-btn { display: flex; align-items: center; gap: 8px; padding: 4px 10px 4px 4px; border: 1px solid var(--line); border-radius: 999px; background: #fff; cursor: pointer; font: inherit; font-weight: 700; font-size: 14px; color: var(--ink); }
+	.d-me-btn span { width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; color: #fff; background: linear-gradient(135deg, var(--blue), var(--violet)); }
+	.d-menu { position: absolute; right: 0; top: calc(100% + 8px); min-width: 220px; padding: 8px; background: #fff; border: 1px solid var(--line); border-radius: 18px; box-shadow: 0 26px 50px -20px rgba(30, 24, 56, .45); display: none; }
+	.d-menu.open { display: block; animation: d-up .2s ease; }
+	.d-menu a { display: flex; align-items: center; gap: 10px; min-height: 46px; padding: 0 14px; border-radius: 12px; font-size: 15px; font-weight: 600; color: var(--ink); text-decoration: none; }
+	.d-menu a:hover { background: var(--sky); color: var(--blue); }
+	.d-menu hr { margin: 6px 4px; border: 0; border-top: 1px solid var(--line); }
 
-	.iyp-day { font-size: .8rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 22px 0 8px; }
-	.iyp-list { list-style: none; margin: 0; padding: 0; border: 1px solid var(--line); border-radius: 18px; overflow: hidden; background: #fff; }
-	.iyp-alert { display: flex; gap: 12px; align-items: flex-start; padding: 14px 16px; border-top: 1px solid var(--line); animation: iyp-nt-up .4s ease backwards; animation-delay: calc(var(--i, 0) * 40ms); }
-	.iyp-alert:first-child { border-top: 0; }
-	.iyp-alert.new { background: #FBFAFE; }
-	.iyp-dot { width: 10px; height: 10px; border-radius: 50%; margin-top: 7px; flex: none; }
-	.iyp-alert.view .iyp-dot { background: var(--blue); }
-	.iyp-alert.lead .iyp-dot { background: #E87012; }
-	.iyp-alert.ai .iyp-dot { background: var(--purple); }
-	.iyp-alert:not(.new) .iyp-dot { opacity: .3; }
-	.iyp-alert p { margin: 0; line-height: 1.5; color: var(--ink); }
-	.iyp-alert.new p { font-weight: 600; }
-	.iyp-alert small { color: var(--muted); font-size: .8rem; }
-	.iyp-alert a { color: var(--blue) !important; }
-	.iyp-new-tag { display: inline-block; margin-left: 6px; padding: 1px 8px; border-radius: 999px; background: var(--blue); color: #fff; font-size: .7rem; font-weight: 700; vertical-align: middle; }
+	/* Layout: main column + side column on wide screens */
+	.d-page { max-width: 1120px; margin: 0 auto; padding: 24px 20px 64px; display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 22px; align-items: start; }
+	.d-main, .d-side { display: grid; gap: 22px; min-width: 0; }
+	.d-side { position: sticky; top: 88px; }
+	.d-card { background: #fff; border: 1px solid var(--line); border-radius: 26px; padding: 22px; box-shadow: 0 26px 50px -34px rgba(59, 46, 126, .55); animation: d-up .55s cubic-bezier(.2, .8, .2, 1) backwards; }
+	.d-card h2 { display: flex; align-items: center; gap: 10px; margin: 0 0 14px; font-size: 1.08rem; font-weight: 800; letter-spacing: -.02em; }
+	.d-card h2::before { content: ""; width: 16px; height: 4px; border-radius: 4px; background: var(--orange); }
+	.d-card h2 small { margin-left: auto; font-size: .75rem; font-weight: 600; color: var(--faint); letter-spacing: 0; }
 
-	.iyp-empty { text-align: center; padding: 40px 20px; border: 1px dashed var(--line); border-radius: 18px; color: var(--muted); background: var(--sky); }
-	.iyp-empty b { display: block; color: var(--ink); font-size: 1.1rem; margin-bottom: 6px; }
-	.iyp-empty a { display: inline-block; margin-top: 14px; padding: 10px 20px; border-radius: 14px; background: var(--blue); color: #fff !important; font-weight: 700; text-decoration: none !important; }
+	/* Hero */
+	.d-hero { position: relative; overflow: hidden; isolation: isolate; padding: 28px; border-radius: 30px; color: #fff; background: linear-gradient(135deg, #2E2454 0%, #3B2E7E 48%, #6B55D6 100%); box-shadow: 0 34px 60px -30px rgba(59, 46, 126, .85); animation: d-up .55s cubic-bezier(.2, .8, .2, 1) backwards; }
+	.d-hero::before { content: ""; position: absolute; z-index: -1; width: 300px; height: 300px; right: -80px; top: -130px; border-radius: 50%; background: radial-gradient(circle, rgba(232, 112, 18, .75), rgba(232, 112, 18, 0) 70%); animation: d-float 10s ease-in-out infinite alternate; }
+	.d-hero::after { content: ""; position: absolute; z-index: -1; inset: 0; opacity: .14; background-image: radial-gradient(rgba(255, 255, 255, .9) 1px, transparent 1.4px); background-size: 22px 22px; -webkit-mask-image: linear-gradient(90deg, transparent, #000 70%); mask-image: linear-gradient(90deg, transparent, #000 70%); }
+	.d-date { margin: 0 0 6px; font-size: .8rem; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: rgba(255, 255, 255, .7); }
+	.d-hero h1 { margin: 0; font-size: clamp(1.6rem, 4.6vw, 2.4rem); font-weight: 800; letter-spacing: -.045em; line-height: 1.1; color: #fff; }
+	.d-hero h1 em { font-family: "Instrument Serif", Georgia, serif; font-style: italic; font-weight: 400; letter-spacing: 0; color: #FFD3B0; }
+	.d-hero-line { margin: 14px 0 0; max-width: 560px; font-size: .95rem; line-height: 1.6; color: rgba(255, 255, 255, .88); }
+	.d-hero-line b { color: #FFD3B0; }
+	.d-hero-btns { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 18px; }
+	.d-hbtn { display: inline-flex; align-items: center; gap: 8px; min-height: 46px; padding: 10px 18px; border-radius: 14px; border: 0; font: inherit; font-size: .9rem; font-weight: 700; text-decoration: none !important; cursor: pointer; transition: transform .15s ease; }
+	.d-hbtn:active { transform: scale(.96); }
+	.d-hbtn.white { background: #fff; color: var(--blue) !important; }
+	.d-hbtn.glass { background: rgba(255, 255, 255, .14); color: #fff !important; border: 1px solid rgba(255, 255, 255, .3); }
 
-	/* Dashboard (2026-11-06): greeting, the owner's details and business page cards */
-	.iyp-nt { max-width: 860px; font-family: Sora, system-ui, -apple-system, sans-serif; }
-	.iyp-hello { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; margin: 8px 0 22px; animation: iyp-nt-up .5s ease backwards; }
-	.iyp-hello-avatar { width: 58px; height: 58px; border-radius: 18px; display: grid; place-items: center; flex: none; color: #fff; font-size: 1.4rem; font-weight: 800; background: linear-gradient(135deg, #3B2E7E, #6B55D6); box-shadow: 0 14px 28px -14px rgba(59, 46, 126, .8); }
-	.iyp-nt .iyp-hello h1 { margin: 0; font-size: clamp(1.7rem, 4vw, 2.4rem); letter-spacing: -.04em; }
-	.iyp-hello p { margin: 2px 0 0; color: var(--muted); font-size: .92rem; }
-	.iyp-sec { display: flex; align-items: center; gap: 10px; font-size: 1.15rem; font-weight: 800; letter-spacing: -.02em; margin: 30px 0 12px; color: var(--ink); }
-	.iyp-sec::before { content: ""; width: 18px; height: 4px; border-radius: 4px; background: #E87012; }
-	.iyp-sec .iyp-count { margin-left: 4px; padding: 2px 10px; border-radius: 999px; background: #3B2E7E; color: #fff; font-size: .75rem; }
+	/* Stat tiles */
+	.d-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+	.d-tile { position: relative; overflow: hidden; padding: 18px; border-radius: 22px; background: #fff; border: 1px solid var(--line); box-shadow: 0 20px 40px -30px rgba(59, 46, 126, .6); animation: d-up .5s cubic-bezier(.2, .8, .2, 1) backwards; }
+	.d-tile:nth-child(2) { animation-delay: .07s; } .d-tile:nth-child(3) { animation-delay: .14s; }
+	.d-tile::after { content: ""; position: absolute; right: -26px; bottom: -26px; width: 86px; height: 86px; border-radius: 50%; opacity: .55; }
+	.d-tile.view::after { background: var(--sky); } .d-tile.lead::after { background: var(--peach); } .d-tile.ai::after { background: var(--lilac); }
+	.d-tile-ico { position: relative; z-index: 1; width: 42px; height: 42px; border-radius: 14px; display: grid; place-items: center; font-size: 19px; color: #fff; margin-bottom: 12px; }
+	.d-tile.view .d-tile-ico { background: linear-gradient(135deg, #3B2E7E, #6B55D6); }
+	.d-tile.lead .d-tile-ico { background: linear-gradient(135deg, #E87012, #F59E4C); }
+	.d-tile.ai .d-tile-ico { background: linear-gradient(135deg, #5B3CC4, #9B7BFF); }
+	.d-tile b { position: relative; z-index: 1; display: block; font-size: 2rem; font-weight: 800; letter-spacing: -.04em; line-height: 1; }
+	.d-tile span { position: relative; z-index: 1; display: block; margin-top: 6px; font-size: .8rem; color: var(--muted); }
 
-	.iyp-biz { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; padding: 20px 22px; margin-bottom: 12px; background: #fff; border: 1px solid var(--line); border-radius: 24px; box-shadow: 0 24px 50px -30px rgba(59, 46, 126, .45); animation: iyp-nt-up .5s .1s ease backwards; transition: transform .2s ease, box-shadow .2s ease; }
-	.iyp-biz:hover { transform: translateY(-2px); box-shadow: 0 30px 60px -30px rgba(59, 46, 126, .55); }
-	.iyp-biz-logo { width: 72px; height: 72px; border-radius: 18px; flex: none; display: grid; place-items: center; background: linear-gradient(160deg, var(--sky), #fff 70%); border: 1px solid var(--line); color: var(--blue); font-size: 1.5rem; font-weight: 800; overflow: hidden; }
-	.iyp-biz-logo img { max-width: 62px; max-height: 62px; object-fit: contain; }
-	.iyp-biz-text { flex: 1; min-width: 200px; }
-	.iyp-biz-text b { display: block; font-size: 1.15rem; font-weight: 800; letter-spacing: -.02em; color: var(--ink); }
-	.iyp-biz-text small { color: var(--muted); font-size: .85rem; }
-	.iyp-status { display: inline-block; margin-top: 6px; padding: 3px 10px; border-radius: 999px; font-size: .75rem; font-weight: 700; }
-	.iyp-status.live { background: var(--mint); color: var(--green); }
-	.iyp-status.draft { background: var(--peach); color: var(--orange); }
-	.iyp-biz-actions { display: flex; flex-wrap: wrap; gap: 8px; }
-	.iyp-b { display: inline-flex; align-items: center; gap: 6px; padding: 9px 16px; border-radius: 12px; font-size: .88rem; font-weight: 700; text-decoration: none !important; border: 1px solid var(--line); background: #fff; color: var(--ink) !important; cursor: pointer; font-family: inherit; transition: transform .15s ease, border-color .15s ease, color .15s ease; }
-	.iyp-b:hover { transform: translateY(-1px); border-color: var(--blue); color: var(--blue) !important; }
-	.iyp-b.main { border: 0; color: #fff !important; background: linear-gradient(90deg, #3B2E7E, #6B55D6); box-shadow: 0 10px 22px -10px rgba(59, 46, 126, .8); }
-	.iyp-b.main:hover { color: #fff !important; }
-	.iyp-add { display: inline-flex; margin-top: 4px; font-weight: 700; color: var(--blue) !important; text-decoration: none !important; }
-	.iyp-week { margin-top: 4px; }
-	.iyp-stat { border: 1px solid rgba(255, 255, 255, .6); box-shadow: 0 16px 34px -24px rgba(59, 46, 126, .5); }
+	/* 7-day chart */
+	.d-chart { display: flex; align-items: flex-end; gap: 10px; height: 160px; padding-top: 10px; }
+	.d-bar { flex: 1; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 6px; min-width: 0; }
+	.d-bar i { display: block; width: 100%; max-width: 42px; height: var(--h); border-radius: 10px 10px 6px 6px; background: linear-gradient(180deg, #6B55D6, #3B2E7E); transform-origin: bottom; animation: d-grow .8s cubic-bezier(.2, .8, .2, 1) backwards; animation-delay: calc(var(--i) * 70ms + .2s); }
+	.d-bar.today i { background: linear-gradient(180deg, #F59E4C, #E87012); }
+	.d-bar.zero i { background: #ECE8F7; }
+	.d-bar b { font-size: .78rem; font-weight: 800; color: var(--ink); }
+	.d-bar small { font-size: .7rem; font-weight: 600; color: var(--faint); white-space: nowrap; }
+	.d-bar.today small { color: var(--orange-dark); }
 
-	@keyframes iyp-nt-up { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
-	@media (prefers-reduced-motion: reduce) { .iyp-stat, .iyp-alert { animation: none; } }
-	@media (max-width: 520px) { .iyp-week { gap: 8px; } .iyp-stat { padding: 12px; } .iyp-stat b { font-size: 1.4rem; } }
+	/* Business card */
+	.d-biz { overflow: hidden; padding: 0; }
+	.d-biz + .d-biz { margin-top: 0; }
+	.d-cover { position: relative; height: 92px; background: linear-gradient(120deg, var(--c), color-mix(in srgb, var(--c) 55%, #0b1220)); background-color: var(--c); }
+	.d-cover::after { content: ""; position: absolute; inset: 0; opacity: .2; background-image: radial-gradient(rgba(255, 255, 255, .9) 1px, transparent 1.4px); background-size: 18px 18px; }
+	.d-biz-body { padding: 0 20px 20px; }
+	.d-biz-top { display: flex; align-items: flex-end; justify-content: space-between; gap: 10px; margin-top: -38px; position: relative; }
+	.d-logo-box { width: 78px; height: 78px; border-radius: 22px; display: grid; place-items: center; overflow: hidden; background: #fff; border: 4px solid #fff; box-shadow: 0 14px 28px -12px rgba(30, 24, 56, .5); color: var(--blue); font-size: 1.5rem; font-weight: 800; }
+	.d-logo-box img { max-width: 66px; max-height: 66px; object-fit: contain; }
+	.d-status { display: inline-flex; align-items: center; gap: 6px; margin-bottom: 6px; padding: 5px 12px; border-radius: 999px; font-size: .75rem; font-weight: 700; }
+	.d-status.live { background: var(--mint); color: var(--green); }
+	.d-status.live i { width: 8px; height: 8px; border-radius: 50%; background: #18A058; animation: d-live 2s infinite; }
+	.d-status.draft { background: var(--peach); color: var(--orange-dark); }
+	.d-biz h3 { margin: 12px 0 2px; font-size: 1.2rem; font-weight: 800; letter-spacing: -.025em; }
+	.d-biz p { margin: 0; font-size: .85rem; color: var(--muted); }
+	.d-info { list-style: none; margin: 12px 0 0; padding: 0; display: grid; gap: 7px; font-size: .86rem; }
+	.d-info li { display: flex; align-items: center; gap: 8px; min-width: 0; overflow-wrap: anywhere; }
+	.d-info li span { flex: none; width: 1.2em; text-align: center; }
+	.d-info a { color: inherit; text-decoration: none; }
+	.d-info a:hover { text-decoration: underline; }
+	.d-info-empty { color: var(--muted); }
+	.d-info-empty a { color: #6B55D6; font-weight: 600; }
+	.d-acts { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-top: 16px; }
+	/* Other businesses: full-width grid under the dashboard */
+	.d-more { grid-column: 1 / -1; min-width: 0; }
+	.d-more-title { display: flex; align-items: center; gap: 10px; margin: 6px 4px 14px; font-size: 1.15rem; font-weight: 800; letter-spacing: -.02em; }
+	.d-more-title::before { content: ""; width: 16px; height: 4px; border-radius: 4px; background: var(--orange); }
+	.d-more-title small { padding: 2px 10px; border-radius: 999px; background: var(--lilac, #EEEAF7); font-size: .78rem; font-weight: 700; color: var(--blue); }
+	.d-more-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 22px; align-items: start; }
+	.d-act { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 50px; padding: 8px; border-radius: 15px; border: 1px solid var(--line); background: #FBFAFE; font: inherit; font-size: .86rem; font-weight: 700; color: var(--ink) !important; text-decoration: none !important; cursor: pointer; transition: transform .15s ease, border-color .15s ease, background .15s ease; }
+	.d-act:hover { border-color: var(--blue); background: #fff; }
+	.d-act:active { transform: scale(.96); }
+	.d-act.main { border: 0; color: #fff !important; background: linear-gradient(135deg, #3B2E7E, #6B55D6); box-shadow: 0 14px 26px -14px rgba(59, 46, 126, .9); }
+
+	/* Page strength ring */
+	.d-strength { display: flex; align-items: center; gap: 18px; }
+	.d-ring { position: relative; width: 104px; height: 104px; flex: none; }
+	.d-ring svg { width: 104px; height: 104px; transform: rotate(-90deg); }
+	.d-ring circle { fill: none; stroke-width: 10; }
+	.d-ring .bg { stroke: #EEEAF7; }
+	.d-ring .fg { stroke: url(#d-ring-grad); stroke-linecap: round; stroke-dasharray: 289; stroke-dashoffset: 289; transition: stroke-dashoffset 1.2s cubic-bezier(.2, .8, .2, 1) .3s; }
+	.d-ring b { position: absolute; inset: 0; display: grid; place-items: center; font-size: 1.4rem; font-weight: 800; letter-spacing: -.03em; }
+	.d-strength-text strong { display: block; font-size: .98rem; font-weight: 800; }
+	.d-strength-text p { margin: 4px 0 0; font-size: .82rem; color: var(--muted); line-height: 1.5; }
+	.d-tips { list-style: none; margin: 16px 0 0; padding: 0; display: grid; gap: 8px; }
+	.d-tips a { display: flex; align-items: center; gap: 10px; min-height: 46px; padding: 8px 12px; border-radius: 14px; background: #FBFAFE; border: 1px solid var(--line); font-size: .85rem; font-weight: 600; color: var(--ink) !important; text-decoration: none !important; }
+	.d-tips a::before { content: "+"; width: 24px; height: 24px; flex: none; border-radius: 8px; display: grid; place-items: center; font-weight: 800; color: #fff; background: var(--orange); }
+	.d-tips a:hover { border-color: var(--orange); }
+	.d-tips a::after { content: "→"; margin-left: auto; color: var(--faint); }
+
+	/* Activity */
+	.d-chips { display: flex; gap: 8px; overflow-x: auto; padding: 2px 2px 12px; scrollbar-width: none; }
+	.d-chips::-webkit-scrollbar { display: none; }
+	.d-chip { flex: none; min-height: 40px; padding: 8px 16px; border-radius: 999px; border: 1px solid var(--line); background: #fff; font: inherit; font-size: .84rem; font-weight: 600; color: var(--text); cursor: pointer; }
+	.d-chip[aria-pressed="true"] { background: var(--blue); border-color: var(--blue); color: #fff; }
+	.d-day { margin: 14px 4px 8px; font-size: .72rem; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: var(--faint); }
+	.d-list { list-style: none; margin: 0; padding: 0; border: 1px solid #EFECF8; border-radius: 20px; overflow: hidden; }
+	.d-alert { display: flex; align-items: center; gap: 12px; padding: 13px 14px; border-top: 1px solid #F1EEF9; background: #fff; animation: d-up .4s ease backwards; animation-delay: calc(var(--i, 0) * 35ms); }
+	.d-alert:first-child { border-top: 0; }
+	.d-alert.new { background: #FBFAFE; }
+	.d-a-ico { width: 40px; height: 40px; border-radius: 13px; flex: none; display: grid; place-items: center; font-size: 18px; }
+	.d-alert.view .d-a-ico { background: var(--sky); } .d-alert.lead .d-a-ico { background: var(--peach); } .d-alert.ai .d-a-ico { background: var(--lilac); }
+	.d-a-text { flex: 1; min-width: 0; }
+	.d-a-text p { margin: 0; font-size: .9rem; line-height: 1.45; overflow-wrap: anywhere; }
+	.d-alert.new .d-a-text p { font-weight: 700; }
+	.d-a-text small { font-size: .75rem; color: var(--faint); }
+	.d-a-text a { color: var(--blue) !important; font-weight: 600; }
+	.d-new { width: 9px; height: 9px; border-radius: 50%; flex: none; background: var(--orange); }
+	.d-hide { display: none !important; }
+	.d-empty { text-align: center; padding: 30px 18px; border: 1.5px dashed #CFC6F0; border-radius: 20px; background: linear-gradient(135deg, #F3F0FB, #FFF1E6); }
+	.d-empty div { font-size: 34px; }
+	.d-empty b { display: block; margin: 8px 0 6px; font-size: 1.05rem; }
+	.d-empty p { margin: 0 auto; max-width: 420px; font-size: .88rem; color: var(--muted); line-height: 1.55; }
+	.d-empty-btns { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-top: 16px; }
+	.d-empty-btns .d-act { flex: 0 1 auto; padding: 8px 18px; }
+	.d-empty-btns .wa { border: 0; background: #25D366; color: #fff !important; }
+
+	/* Footer + phone dock */
+	.d-foot { max-width: 1120px; margin: 0 auto; padding: 0 20px 40px; text-align: center; font-size: .82rem; color: var(--faint); }
+	.d-foot a { color: var(--blue); font-weight: 700; text-decoration: none; }
+	.d-dock { display: none; }
+	.d-toast { position: fixed; left: 50%; bottom: 110px; transform: translate(-50%, 20px); opacity: 0; pointer-events: none; z-index: 1060; padding: 10px 18px; border-radius: 999px; background: #1E1838; color: #fff; font-size: .88rem; transition: all .25s ease; }
+	.d-toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+	@media (max-width: 960px) {
+		.d-page { grid-template-columns: minmax(0, 1fr); }
+		.d-side { position: static; }
+		/* On one column, the business card and strength come right after the stats */
+		.d-page { display: flex; flex-direction: column; }
+		.d-main, .d-side { display: contents; }
+		.d-hero { order: 1; } .d-stats { order: 2; } .d-biz { order: 3; } .d-str-card { order: 4; } .d-chart-card { order: 5; } .d-act-card { order: 6; } .d-more { order: 7; }
+		.d-more-grid .d-biz { order: 0; }
+	}
+	@media (max-width: 640px) { .d-more-grid { grid-template-columns: minmax(0, 1fr); gap: 14px; } }
+	@media (max-width: 640px) {
+		.d-head-row { padding: 8px 14px; }
+		.d-head-row .d-logo img { height: 38px; }
+		.d-head-links > a { display: none; }
+		.d-me-btn em { display: none; }
+		.d-page { padding: 14px 12px 130px; gap: 14px; }
+		.d-hero { padding: 22px 18px; border-radius: 24px; }
+		.d-hero-btns .d-hbtn { flex: 1 1 auto; justify-content: center; }
+		.d-stats { gap: 8px; }
+		.d-tile { padding: 12px 10px; border-radius: 18px; }
+		.d-tile-ico { width: 34px; height: 34px; border-radius: 11px; font-size: 16px; margin-bottom: 8px; }
+		.d-tile b { font-size: 1.5rem; }
+		.d-tile span { font-size: .7rem; }
+		.d-card { padding: 16px; border-radius: 22px; }
+		.d-biz { padding: 0; }
+		.d-chart { height: 130px; gap: 6px; }
+		.d-ring, .d-ring svg { width: 88px; height: 88px; }
+		.d-foot { padding-bottom: 120px; }
+		.d-dock {
+			display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 4px;
+			position: fixed; left: 10px; right: 10px; bottom: calc(10px + env(safe-area-inset-bottom, 0px)); z-index: 1045;
+			padding: 6px; border-radius: 22px; background: rgba(255, 255, 255, .96); border: 1px solid var(--line);
+			-webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); box-shadow: 0 18px 40px -16px rgba(30, 24, 56, .45);
+		}
+		.d-dock a, .d-dock button { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; min-height: 54px; border: 0; border-radius: 16px; background: transparent; font: inherit; font-size: .66rem; font-weight: 700; color: var(--muted) !important; text-decoration: none !important; cursor: pointer; }
+		.d-dock span { font-size: 20px; line-height: 1; }
+		.d-dock .on { background: var(--sky); color: var(--blue) !important; }
+		.d-dock a:active, .d-dock button:active { transform: scale(.94); }
+	}
+	@media (prefers-reduced-motion: reduce) {
+		*, *::before, *::after { animation: none !important; transition: none !important; }
+	}
 </style>
+{% endblock %}
 
-<div class="iyp-nt">
-	<!-- Greeting and the owner's details (2026-11-06) -->
-	<div class="iyp-hello">
-		<span class="iyp-hello-avatar" aria-hidden="true">{{ (full_name or user_email or "?")[0] | upper }}</span>
-		<div>
-			<h1>{{ _("Hi, {0}").format((full_name or "").split(" ")[0] or _("there")) }} 👋</h1>
-			<p>{{ user_email }}</p>
-		</div>
-	</div>
-
-	{% if profiles %}
-	<div class="iyp-sec">{{ _("My business page") if profiles | length == 1 else _("My business pages") }}</div>
-	{% for p in profiles %}
-	<div class="iyp-biz">
-		<div class="iyp-biz-logo">{% if p.logo %}<img src="{{ p.logo | e }}" alt="">{% else %}{{ p.initials }}{% endif %}</div>
-		<div class="iyp-biz-text">
-			<b>{{ p.company_name or _("Untitled business") }}</b>
-			<small>{{ [p.business_nature, p.city, p.state] | select | join(" · ") }}</small><br>
-			{% if p.page_url %}<span class="iyp-status live">● {{ _("Live") }}</span>{% else %}<span class="iyp-status draft">● {{ _("Not published yet") }}</span>{% endif %}
-		</div>
-		<div class="iyp-biz-actions">
-			{% if p.page_url %}<a class="iyp-b main" href="{{ p.page_url }}" target="_blank" rel="noopener">{{ _("View my page") }} ↗</a>{% endif %}
-			<a class="iyp-b" href="{{ p.edit_url }}">✏️ {{ _("Edit details") }}</a>
-			{% if p.page_url %}<button class="iyp-b" type="button" data-share="{{ p.page_url }}" data-title="{{ p.company_name | e }}">🔗 {{ _("Share") }}</button>{% endif %}
-		</div>
-	</div>
-	{% endfor %}
-	{% endif %}
-
-	<div class="iyp-sec">{{ _("Who visited your page") }}{% if unread %}<span class="iyp-count">{{ _("{0} new").format(unread) }}</span>{% endif %}</div>
-	<p class="iyp-nt-sub">{{ _("Who viewed your page, who tapped to contact you, and which AI read it.") }}</p>
-
-	{% if has_profile %}
-	<div class="iyp-week" aria-label="{{ _('Last 7 days') }}">
-		<div class="iyp-stat view"><b>{{ week.views }}</b><span>{{ _("Views this week") }}</span></div>
-		<div class="iyp-stat lead"><b>{{ week.leads }}</b><span>{{ _("Calls, WhatsApps & more") }}</span></div>
-		<div class="iyp-stat ai"><b>{{ week.ai }}</b><span>{{ _("AI visits") }}</span></div>
-	</div>
-	{% endif %}
-
-	{% if days %}
-		{% for day in days %}
-		<div class="iyp-day">{{ day.label }}</div>
-		<ul class="iyp-list">
-			{% for alert in day.alerts %}
-			<li class="iyp-alert {{ alert.kind }}{% if not alert.read %} new{% endif %}" style="--i: {{ loop.index0 }}">
-				<span class="iyp-dot" aria-hidden="true"></span>
-				<div>
-					<p>{{ alert.subject }}{% if not alert.read %}<span class="iyp-new-tag">{{ _("New") }}</span>{% endif %}</p>
-					<small>{{ alert.when }}{% if alert.url %} · <a href="{{ alert.url }}">{{ _("Open page") }}</a>{% endif %}</small>
+{% block navbar %}
+{#- Set inside each block: Jinja blocks don't see sets made outside them in a child template -#}
+{%- set first_name = (full_name or "").split(" ")[0] -%}
+<header class="d-head">
+	<div class="d-head-row">
+		<a class="d-logo" href="/"><img src="/assets/its_your_profile/images/iyp-logo.png" alt="It's Your Profile"></a>
+		<nav class="d-head-links" aria-label="{{ _('Main') }}">
+			<a href="/">{{ _("Home") }}</a>
+			<a href="/notifications" class="on">{{ _("Dashboard") }}</a>
+			<a href="/account">{{ _("My information") }}</a>
+			<div class="d-me">
+				<button type="button" class="d-me-btn" aria-haspopup="true" aria-expanded="false"><span aria-hidden="true">{{ (full_name or user_email or "?")[0] | upper }}</span><em>{{ first_name or _("Account") }}</em></button>
+				<div class="d-menu" role="menu">
+					<a href="/notifications" role="menuitem">📊 {{ _("Dashboard") }}</a>
+					<a href="/account" role="menuitem">🪪 {{ _("My information") }}</a>
+					<a href="/" role="menuitem">🏠 {{ _("Home") }}</a>
+					<hr>
+					<a href="/?cmd=web_logout" role="menuitem">🚪 {{ _("Log out") }}</a>
 				</div>
-			</li>
-			{% endfor %}
-		</ul>
-		{% endfor %}
-	{% elif has_profile %}
-		<div class="iyp-empty">
-			<b>{{ _("No visits yet") }}</b>
-			{{ _("Share your page on WhatsApp and LinkedIn. You'll see here when people view it or tap to call you.") }}
-		</div>
-	{% else %}
-		<div class="iyp-empty">
-			<b>{{ _("You don't have a business page yet") }}</b>
-			{{ _("Create one and we'll tell you here who views it.") }}<br>
-			<a href="/my-business/new">{{ _("Create free page") }}</a>
-		</div>
-	{% endif %}
-</div>
+			</div>
+		</nav>
+	</div>
+</header>
+{% endblock %}
 
+{% block content %}
+{%- set first_name = (full_name or "").split(" ")[0] -%}
+{%- set main = profiles[0] if profiles else None -%}
+<main class="d-page">
+	<div class="d-main">
+		<!-- Hero -->
+		<section class="d-hero">
+			<p class="d-date">{{ today }}</p>
+			<h1><span data-greet>{{ _("Hello") }}</span>, <em>{{ first_name or _("there") }}</em> 👋</h1>
+			<p class="d-hero-line">
+				{% if has_profile and (week.views or week.leads) %}
+				{{ _("This week your page was viewed {0} times and {1} people tapped to contact you.").format("<b>" ~ week.views ~ "</b>", "<b>" ~ week.leads ~ "</b>") }}
+				{% elif has_profile %}
+				{{ _("Your page is live. Share it on WhatsApp to get your first visitors this week.") }}
+				{% else %}
+				{{ _("Scan your visiting card and your business page is ready in a minute.") }}
+				{% endif %}
+			</p>
+			<div class="d-hero-btns">
+				{% if main and main.page_url %}
+				<a class="d-hbtn white" href="{{ main.page_url }}" target="_blank" rel="noopener">👁️ {{ _("View my page") }}</a>
+				<button type="button" class="d-hbtn glass" data-share="{{ main.page_url }}" data-title="{{ main.company_name | e }}">📤 {{ _("Share") }}</button>
+				{% elif not main %}
+				<a class="d-hbtn white" href="/#start">📷 {{ _("Scan my visiting card") }}</a>
+				{% endif %}
+			</div>
+		</section>
+
+		{% if has_profile %}
+		<!-- Stat tiles -->
+		<div class="d-stats" aria-label="{{ _('Last 7 days') }}">
+			<div class="d-tile view"><div class="d-tile-ico" aria-hidden="true">👀</div><b data-count="{{ week.views }}">{{ week.views }}</b><span>{{ _("Page views") }}</span></div>
+			<div class="d-tile lead"><div class="d-tile-ico" aria-hidden="true">📞</div><b data-count="{{ week.leads }}">{{ week.leads }}</b><span>{{ _("Calls & chats") }}</span></div>
+			<div class="d-tile ai"><div class="d-tile-ico" aria-hidden="true">🤖</div><b data-count="{{ week.ai }}">{{ week.ai }}</b><span>{{ _("AI visits") }}</span></div>
+		</div>
+
+		<!-- 7-day views chart -->
+		<section class="d-card d-chart-card">
+			<h2>{{ _("Views this week") }}<small>{{ _("Last 7 days") }}</small></h2>
+			<div class="d-chart" role="img" aria-label="{{ _('Page views on each of the last 7 days') }}">
+				{% for d in chart %}
+				<div class="d-bar{% if d.today %} today{% endif %}{% if not d.views %} zero{% endif %}" style="--h: {{ d.height }}%; --i: {{ loop.index0 }}">
+					<b>{{ d.views }}</b><i></i><small>{{ d.label }}</small>
+				</div>
+				{% endfor %}
+			</div>
+		</section>
+		{% endif %}
+
+		<!-- Activity -->
+		<section class="d-card d-act-card" id="activity">
+			<h2>{{ _("Who visited your page") }}{% if unread %}<small>{{ _("{0} new").format(unread) }}</small>{% endif %}</h2>
+			{% if days %}
+			<div class="d-chips" role="group" aria-label="{{ _('Filter') }}">
+				<button type="button" class="d-chip" data-filter="all" aria-pressed="true">{{ _("All") }}</button>
+				<button type="button" class="d-chip" data-filter="lead" aria-pressed="false">📞 {{ _("Calls & chats") }}</button>
+				<button type="button" class="d-chip" data-filter="ai" aria-pressed="false">🤖 {{ _("AI") }}</button>
+				<button type="button" class="d-chip" data-filter="view" aria-pressed="false">👀 {{ _("Views") }}</button>
+			</div>
+			{% for day in days %}
+			<div class="d-day-group">
+				<div class="d-day">{{ day.label }}</div>
+				<ul class="d-list">
+					{% for alert in day.alerts %}
+					<li class="d-alert {{ alert.kind }}{% if not alert.read %} new{% endif %}" data-kind="{{ alert.kind }}" style="--i: {{ loop.index0 }}">
+						<span class="d-a-ico" aria-hidden="true">{{ alert.icon }}</span>
+						<div class="d-a-text">
+							<p>{{ alert.subject }}</p>
+							<small>{{ alert.when }}{% if alert.url %} · <a href="{{ alert.url }}">{{ _("Open page") }}</a>{% endif %}</small>
+						</div>
+						{% if not alert.read %}<span class="d-new" title="{{ _('New') }}"></span>{% endif %}
+					</li>
+					{% endfor %}
+				</ul>
+			</div>
+			{% endfor %}
+			{% elif has_profile %}
+			<div class="d-empty">
+				<div aria-hidden="true">🚀</div>
+				<b>{{ _("No visits yet") }}</b>
+				<p>{{ _("Share your page on WhatsApp and LinkedIn. You'll see here when people view it or tap to call you.") }}</p>
+				{% if main and main.page_url %}
+				<div class="d-empty-btns">
+					<button type="button" class="d-act wa" data-wa="{{ main.page_url }}" data-title="{{ main.company_name | e }}">💬 {{ _("Share on WhatsApp") }}</button>
+					<button type="button" class="d-act" data-copy="{{ main.page_url }}">🔗 {{ _("Copy link") }}</button>
+				</div>
+				{% endif %}
+			</div>
+			{% else %}
+			<div class="d-empty">
+				<div aria-hidden="true">🪪</div>
+				<b>{{ _("You don't have a business page yet") }}</b>
+				<p>{{ _("Scan your visiting card and your page is ready in a minute. We'll show you here who visits it.") }}</p>
+				<div class="d-empty-btns"><a class="d-act main" href="/#start">📷 {{ _("Scan my visiting card") }}</a></div>
+			</div>
+			{% endif %}
+		</section>
+	</div>
+
+	{#- 2026-11-07: one card macro; the side column shows only the main business and the rest go in
+	    a full-width grid below, so many businesses no longer make one long narrow column -#}
+	{% macro biz_card(p) %}
+		<article class="d-card d-biz" style="--c: {{ p.cover }}">
+			<div class="d-cover" aria-hidden="true"></div>
+			<div class="d-biz-body">
+				<div class="d-biz-top">
+					<div class="d-logo-box">{% if p.logo %}<img src="{{ p.logo | e }}" alt="">{% else %}{{ p.initials }}{% endif %}</div>
+					{% if p.page_url %}<span class="d-status live"><i aria-hidden="true"></i>{{ _("Live") }}</span>{% else %}<span class="d-status draft">● {{ _("Not published") }}</span>{% endif %}
+				</div>
+				<h3>{{ p.company_name or _("Untitled business") }}</h3>
+				{% set tags = [p.segment, p.business_nature] | select | list %}
+				{% if tags %}<p>{{ tags | join(" · ") }}</p>{% endif %}
+				<ul class="d-info">
+					{% if p.person %}<li><span aria-hidden="true">👤</span>{{ p.person }}</li>{% endif %}
+					{% if p.phone %}<li><span aria-hidden="true">📞</span><a href="tel:{{ p.phone | e }}">{{ p.phone }}</a></li>{% endif %}
+					{% if p.email %}<li><span aria-hidden="true">✉️</span><a href="mailto:{{ p.email | e }}">{{ p.email }}</a></li>{% endif %}
+					{% if p.site_href %}<li><span aria-hidden="true">🌐</span><a href="{{ p.site_href | e }}" target="_blank" rel="noopener">{{ p.site_text }}</a></li>{% endif %}
+					{% if p.place %}<li><span aria-hidden="true">📍</span>{{ p.place }}</li>{% endif %}
+					{% if not (p.person or p.phone or p.email or p.site_href or p.place) %}<li class="d-info-empty">{{ _("No details yet.") }} <a href="{{ p.edit_url }}">{{ _("Add them") }}</a></li>{% endif %}
+				</ul>
+				<div class="d-acts">
+					{% if p.page_url %}<a class="d-act main" href="{{ p.page_url }}" target="_blank" rel="noopener">👁️ {{ _("View") }}</a>{% endif %}
+					<a class="d-act" href="{{ p.edit_url }}">✏️ {{ _("Edit") }}</a>
+					{% if p.page_url %}
+					<button class="d-act" type="button" data-share="{{ p.page_url }}" data-title="{{ p.company_name | e }}">📤 {{ _("Share") }}</button>
+					<button class="d-act" type="button" data-copy="{{ p.page_url }}">🔗 {{ _("Copy link") }}</button>
+					{% endif %}
+				</div>
+			</div>
+		</article>
+	{% endmacro %}
+
+	<aside class="d-side">
+		{% if main %}{{ biz_card(main) }}{% endif %}
+
+		{% if strength %}
+		<!-- Page strength -->
+		<section class="d-card d-str-card">
+			<h2>{{ _("Page strength") }}</h2>
+			<div class="d-strength">
+				<div class="d-ring">
+					<svg viewBox="0 0 104 104" aria-hidden="true">
+						<defs><linearGradient id="d-ring-grad" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#6B55D6"/><stop offset="1" stop-color="#E87012"/></linearGradient></defs>
+						<circle class="bg" cx="52" cy="52" r="46"/>
+						<circle class="fg" cx="52" cy="52" r="46" data-percent="{{ strength.percent }}"/>
+					</svg>
+					<b>{{ strength.percent }}%</b>
+				</div>
+				<div class="d-strength-text">
+					<strong>{% if strength.percent >= 100 %}{{ _("Excellent! 🎉") }}{% elif strength.percent >= 70 %}{{ _("Looking good") }}{% else %}{{ _("Let's make it stronger") }}{% endif %}</strong>
+					<p>{{ _("Complete pages get more calls and are easier for AI to recommend.") }}</p>
+				</div>
+			</div>
+			{% if strength.tips %}
+			<ul class="d-tips">
+				{% for tip in strength.tips %}<li><a href="{{ main.edit_url }}">{{ tip }}</a></li>{% endfor %}
+			</ul>
+			{% endif %}
+		</section>
+		{% endif %}
+	</aside>
+
+	{% if profiles | length > 1 %}
+	<!-- All other businesses, full width -->
+	<section class="d-more">
+		<h2 class="d-more-title">{{ _("My other businesses") }}<small>{{ profiles | length - 1 }}</small></h2>
+		<div class="d-more-grid">
+			{% for p in profiles[1:] %}{{ biz_card(p) }}{% endfor %}
+		</div>
+	</section>
+	{% endif %}
+</main>
+
+<!-- Phone bottom bar -->
+<nav class="d-dock iyp-bar iyp-dock" aria-label="{{ _('Quick actions') }}">
+	<a href="/"><span aria-hidden="true">🏠</span>{{ _("Home") }}</a>
+	<a href="/notifications" class="on"><span aria-hidden="true">📊</span>{{ _("Dashboard") }}</a>
+	{% if main and main.page_url %}<a href="{{ main.page_url }}" target="_blank" rel="noopener"><span aria-hidden="true">👁️</span>{{ _("My page") }}</a>{% endif %}
+	<a href="/account"><span aria-hidden="true">🪪</span>{{ _("My info") }}</a>
+	{% if main and main.page_url %}<button type="button" data-share="{{ main.page_url }}" data-title="{{ main.company_name | e }}"><span aria-hidden="true">📤</span>{{ _("Share") }}</button>{% endif %}
+</nav>
+<div class="d-toast" id="d-toast" role="status" aria-live="polite"></div>
+{% endblock %}
+
+{% block footer %}
+{#- The "Developed by" credit floats on every page (iyp_credit.js), so no footer line here -#}
+<footer class="d-foot" aria-hidden="true"></footer>
 <script>
-	// Share button: the phone's share sheet, or WhatsApp on computers (2026-11-06)
-	document.querySelectorAll(".iyp-nt [data-share]").forEach(function (btn) {
+(function () {
+	// Greeting by the visitor's own clock
+	var h = new Date().getHours();
+	var greet = document.querySelector("[data-greet]");
+	if (greet) greet.textContent = h < 12 ? {{ _("Good morning") | tojson }} : h < 17 ? {{ _("Good afternoon") | tojson }} : {{ _("Good evening") | tojson }};
+
+	// Account menu
+	var meBtn = document.querySelector(".d-me-btn"), menu = document.querySelector(".d-menu");
+	if (meBtn && menu) {
+		meBtn.addEventListener("click", function (e) {
+			e.stopPropagation();
+			var open = !menu.classList.contains("open");
+			menu.classList.toggle("open", open);
+			meBtn.setAttribute("aria-expanded", open ? "true" : "false");
+		});
+		document.addEventListener("click", function () { menu.classList.remove("open"); meBtn.setAttribute("aria-expanded", "false"); });
+	}
+
+	function toast(text) {
+		var t = document.getElementById("d-toast");
+		t.textContent = text;
+		t.classList.add("show");
+		clearTimeout(t._timer);
+		t._timer = setTimeout(function () { t.classList.remove("show"); }, 1800);
+	}
+	var still = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+	// Numbers count up; the strength ring fills
+	if (!still) {
+		document.querySelectorAll("[data-count]").forEach(function (el) {
+			var end = +el.getAttribute("data-count"), start = performance.now();
+			if (!end) return;
+			(function step(now) {
+				var p = Math.min((now - start) / 900, 1);
+				el.textContent = Math.round(end * (1 - Math.pow(1 - p, 3)));
+				if (p < 1) requestAnimationFrame(step);
+			})(start);
+		});
+	}
+	var ring = document.querySelector(".d-ring .fg");
+	if (ring) {
+		var pct = Math.max(0, Math.min(100, +ring.getAttribute("data-percent") || 0));
+		requestAnimationFrame(function () { ring.style.strokeDashoffset = String(289 - 289 * pct / 100); });
+	}
+
+	// Share: Android/iPhone share sheet, else WhatsApp; copy link
+	document.querySelectorAll("[data-share]").forEach(function (btn) {
 		btn.addEventListener("click", function () {
 			var url = location.origin + btn.getAttribute("data-share");
 			var title = btn.getAttribute("data-title") || "";
@@ -152,5 +495,38 @@
 			else window.open("https://wa.me/?text=" + encodeURIComponent(title + " - " + url), "_blank", "noopener");
 		});
 	});
+	document.querySelectorAll("[data-wa]").forEach(function (btn) {
+		btn.addEventListener("click", function () {
+			var url = location.origin + btn.getAttribute("data-wa");
+			window.open("https://wa.me/?text=" + encodeURIComponent((btn.getAttribute("data-title") || "") + " - " + url), "_blank", "noopener");
+		});
+	});
+	document.querySelectorAll("[data-copy]").forEach(function (btn) {
+		btn.addEventListener("click", function () {
+			var url = location.origin + btn.getAttribute("data-copy");
+			var done = function () { toast({{ _("Link copied!") | tojson }}); };
+			if (navigator.clipboard) navigator.clipboard.writeText(url).then(done, function () { prompt("", url); });
+			else prompt("", url);
+		});
+	});
+
+	// Activity filter chips
+	var chips = document.querySelectorAll("[data-filter]");
+	chips.forEach(function (chip) {
+		chip.addEventListener("click", function () {
+			var f = chip.getAttribute("data-filter");
+			chips.forEach(function (c) { c.setAttribute("aria-pressed", c === chip ? "true" : "false"); });
+			document.querySelectorAll(".d-day-group").forEach(function (group) {
+				var shown = 0;
+				group.querySelectorAll(".d-alert").forEach(function (a) {
+					var show = f === "all" || a.getAttribute("data-kind") === f;
+					a.classList.toggle("d-hide", !show);
+					if (show) shown++;
+				});
+				group.classList.toggle("d-hide", !shown);
+			});
+		});
+	});
+})();
 </script>
 {% endblock %}
