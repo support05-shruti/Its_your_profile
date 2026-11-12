@@ -12,3 +12,4 @@ its_your_profile.patches.add_card_logos
 its_your_profile.patches.clean_card_logos
 its_your_profile.patches.add_profile_faqs
 its_your_profile.patches.enable_signup
+its_your_profile.patches.brand_emails_and_welcome

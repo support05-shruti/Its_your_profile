@@ -27,9 +27,13 @@ def get_context(context):
 
 	# CHANGE NOTE 2026-11-06: this page is now the owner's dashboard (where they land after login),
 	# so it also shows who they are and their business page(s) with View / Edit / Share.
+	# CHANGE NOTE 2026-11-12: staff (System Users) land here too now, and their own account owns no
+	# pages, so they saw "You don't have a business page yet". Staff see every business instead
+	# (an overview: all cards, all visits, totals); owners still see only their own.
+	is_staff = frappe.get_cached_value("User", user, "user_type") == "System User"
 	profiles = frappe.get_all(
 		"Business Profile",
-		filters={"owner": user},
+		filters={} if is_staff else {"owner": user},
 		fields=[
 			"name", "route", "company_name", "city", "state", "business_nature", "segment", "company_logo",
 			"published", "brand_color", "contact_person", "designation", "phone", "hide_phone", "email", "website_url",
@@ -99,6 +103,7 @@ def get_context(context):
 	context.update(
 		{
 			"title": _("My Dashboard"),
+			"is_staff": is_staff,
 			"days": days,
 			"unread": unread,
 			"has_profile": bool(profiles),
@@ -108,7 +113,8 @@ def get_context(context):
 			"week": week_counts([p.name for p in profiles]),
 			# 2026-11-07: views per day for the bar chart, and how complete the main page is
 			"chart": daily_views([p.name for p in profiles]),
-			"strength": page_strength(profiles[0].name) if profiles else None,
+			# Page completeness is advice for an owner about their own page, not for the staff overview
+			"strength": page_strength(profiles[0].name) if profiles and not is_staff else None,
 			"today": format_date(getdate(), "EEEE, d MMMM"),
 		}
 	)

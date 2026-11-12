@@ -391,6 +391,9 @@ class BusinessProfile(WebsiteGenerator):
 				"details": self.get_details_for_email(),
 				"page_url": frappe.utils.get_url(self.route),
 				"edit_url": frappe.utils.get_url(f"/my-business/{self.name}/edit"),
+				# For the redesigned email (2026-11-12): logo at the top, link to the dashboard
+				"dashboard_url": frappe.utils.get_url("/notifications"),
+				"logo_url": frappe.utils.get_url("/assets/its_your_profile/images/iyp-logo.png"),
 				"has_card": bool(attachments),
 			},
 			reference_doctype=self.doctype,

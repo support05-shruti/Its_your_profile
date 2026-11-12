@@ -98,6 +98,8 @@
 	:root[data-iyp-theme="dark"] .d-hello h1 em { color: var(--accent); }
 	.d-hello-line { margin: 8px 0 0; max-width: 540px; font-size: .95rem; line-height: 1.55; color: var(--muted); }
 	.d-hello-line b { color: var(--ink); font-weight: 600; }
+	/* "Staff view" label on the overview for staff accounts (2026-11-12) */
+	.d-staff { display: inline-block; margin-right: 6px; padding: 2px 10px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); font-size: .78rem; font-weight: 700; vertical-align: 1px; }
 	.d-btns { display: flex; flex-wrap: wrap; gap: 8px; }
 
 	/* Buttons */
@@ -307,7 +309,11 @@
 				<p class="d-date">{{ today }}</p>
 				<h1><span data-greet>{{ _("Hello") }}</span>, <em>{{ first_name or _("there") }}</em></h1>
 				<p class="d-hello-line">
-					{% if has_profile and (week.views or week.leads) %}
+					{#- Staff overview (2026-11-12): every business, not one owner's -#}
+					{% if is_staff %}
+					<span class="d-staff">{{ _("Staff view") }}</span>
+					{{ _("All {0} businesses on It's Your Profile. This week they were viewed {1} times and {2} people tapped to contact them.").format("<b>" ~ (profiles | length) ~ "</b>", "<b>" ~ week.views ~ "</b>", "<b>" ~ week.leads ~ "</b>") }}
+					{% elif has_profile and (week.views or week.leads) %}
 					{{ _("This week your page was viewed {0} times and {1} people tapped to contact you.").format("<b>" ~ week.views ~ "</b>", "<b>" ~ week.leads ~ "</b>") }}
 					{% elif has_profile %}
 					{{ _("Your page is live. Share it on WhatsApp to get your first visitors this week.") }}
@@ -317,7 +323,9 @@
 				</p>
 			</div>
 			<div class="d-btns">
-				{% if main and main.page_url %}
+				{% if is_staff %}
+				<a class="d-btn primary" href="/#start"><svg class="i"><use href="#i-camera"/></svg>{{ _("Scan a visiting card") }}</a>
+				{% elif main and main.page_url %}
 				<a class="d-btn primary" href="{{ main.page_url }}" target="_blank" rel="noopener"><svg class="i"><use href="#i-eye"/></svg>{{ _("View my page") }}</a>
 				<button type="button" class="d-btn" data-share="{{ main.page_url }}" data-title="{{ main.company_name | e }}"><svg class="i"><use href="#i-share"/></svg>{{ _("Share") }}</button>
 				{% elif not main %}
@@ -457,7 +465,7 @@
 	{% if profiles | length > 1 %}
 	<!-- Other businesses, full width -->
 	<section class="d-more">
-		<h2 class="d-more-title">{{ _("Your other businesses") }}<small>{{ profiles | length - 1 }}</small></h2>
+		<h2 class="d-more-title">{% if is_staff %}{{ _("All businesses") }}{% else %}{{ _("Your other businesses") }}{% endif %}<small>{{ profiles | length - 1 }}</small></h2>
 		<div class="d-more-grid">
 			{% for p in profiles[1:] %}{{ biz_card(p) }}{% endfor %}
 		</div>
@@ -469,9 +477,9 @@
 <nav class="d-dock iyp-bar iyp-dock" aria-label="{{ _('Quick actions') }}">
 	<a href="/"><svg class="i" aria-hidden="true"><use href="#i-home"/></svg>{{ _("Home") }}</a>
 	<a href="/notifications" class="on"><svg class="i" aria-hidden="true"><use href="#i-grid"/></svg>{{ _("Dashboard") }}</a>
-	{% if main and main.page_url %}<a href="{{ main.page_url }}" target="_blank" rel="noopener"><svg class="i" aria-hidden="true"><use href="#i-eye"/></svg>{{ _("My page") }}</a>{% endif %}
+	{% if main and main.page_url and not is_staff %}<a href="{{ main.page_url }}" target="_blank" rel="noopener"><svg class="i" aria-hidden="true"><use href="#i-eye"/></svg>{{ _("My page") }}</a>{% endif %}
 	<a href="/account"><svg class="i" aria-hidden="true"><use href="#i-id"/></svg>{{ _("My info") }}</a>
-	{% if main and main.page_url %}<button type="button" data-share="{{ main.page_url }}" data-title="{{ main.company_name | e }}"><svg class="i" aria-hidden="true"><use href="#i-share"/></svg>{{ _("Share") }}</button>{% endif %}
+	{% if main and main.page_url and not is_staff %}<button type="button" data-share="{{ main.page_url }}" data-title="{{ main.company_name | e }}"><svg class="i" aria-hidden="true"><use href="#i-share"/></svg>{{ _("Share") }}</button>{% endif %}
 </nav>
 <div class="d-toast" id="d-toast" role="status" aria-live="polite"></div>
 {% endblock %}

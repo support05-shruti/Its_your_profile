@@ -1047,3 +1047,29 @@ def ensure_logo_for_all():
 			deduplicate=True,
 		)
 	return f"Reading the logo again for {len(names)} of {len(rows)} pages"
+
+
+def send_pending_welcome_emails():
+	"""Send the "Your business is live" email to every published page that never got one (2026-11-12).
+	These are real business owners, so it is never run automatically. Run it on purpose with:
+	bench --site <site> execute its_your_profile.tasks.send_pending_welcome_emails"""
+	names = frappe.get_all(
+		"Business Profile",
+		filters={"published": 1, "welcome_email_sent": 0, "email": ("is", "set")},
+		pluck="name",
+	)
+	sent, skipped = [], []
+	for name in names:
+		doc = frappe.get_doc("Business Profile", name)
+		if not doc.ready_for_welcome():
+			skipped.append(name)
+			continue
+		try:
+			doc.send_welcome_email()
+			frappe.db.commit()
+			sent.append(f"{doc.company_name} <{doc.email}>")
+		except Exception:
+			frappe.db.rollback()
+			frappe.log_error(f"Welcome email failed for {name}")
+			skipped.append(name)
+	return {"sent": sent, "skipped": skipped}

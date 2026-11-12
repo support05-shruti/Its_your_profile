@@ -1,29 +1,107 @@
-<p>{{ _("Hello") }}{% if doc.contact_person %} {{ doc.contact_person | e }}{% endif %},</p>
-
-<p>{{ _("Welcome! We have created a page for {0} from your visiting card.").format(doc.company_name | e) }}</p>
-
-<p style="margin: 24px 0;">
-	<a href="{{ page_url }}" style="background: #1f5f8b; color: #ffffff; padding: 10px 18px; border-radius: 6px; text-decoration: none; font-weight: bold;">
-		{{ _("View your business page") }}
-	</a>
-</p>
-
-<p>{{ _("These are the details we read from your card:") }}</p>
-<table style="border-collapse: collapse; margin-bottom: 16px;">
-	{% for label, value in details %}
+{#- Welcome email to a business owner (redesigned 2026-11-12): the site's look (logo, indigo, Sora-like
+    font stack), readable on phones. Email apps ignore page styles, so everything is in tables with
+    inline styles. Args from BusinessProfile.send_welcome_email: doc, details, page_url, edit_url,
+    dashboard_url, logo_url, has_card. -#}
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#F3F0FB;padding:24px 12px;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
 	<tr>
-		<td style="padding: 4px 16px 4px 0; color: #566572;">{{ label }}</td>
-		<td style="padding: 4px 0;">{{ value | e }}</td>
+		<td align="center">
+			<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:560px;background:#ffffff;border:1px solid #E4DFF3;border-radius:20px;overflow:hidden;">
+				<!-- Brand stripe -->
+				<tr><td style="height:6px;background:#3B2E7E;background-image:linear-gradient(90deg,#3B2E7E,#6B55D6,#E87012);font-size:0;line-height:0;">&nbsp;</td></tr>
+
+				<!-- Logo -->
+				<tr>
+					<td align="center" style="padding:28px 24px 8px;">
+						<img src="{{ logo_url }}" alt="It's Your Profile" width="170" style="display:block;width:170px;max-width:60%;height:auto;border:0;">
+					</td>
+				</tr>
+
+				<!-- Greeting -->
+				<tr>
+					<td style="padding:16px 32px 0;">
+						<p style="margin:0 0 6px;font-size:13px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#E87012;">{{ _("Your page is live") }}</p>
+						<h1 style="margin:0 0 14px;font-size:24px;line-height:1.25;font-weight:800;color:#1E1838;">
+							{{ _("Hello") }}{% if doc.contact_person %} {{ doc.contact_person | e }}{% endif %},
+						</h1>
+						<p style="margin:0 0 22px;font-size:15px;line-height:1.65;color:#3F3A5E;">
+							{{ _("Welcome! We have created a business page for {0} from your visiting card. Customers, Google and AI assistants like ChatGPT can now find it.").format("<b style=\"color:#1E1838;\">" ~ (doc.company_name | e) ~ "</b>") }}
+						</p>
+					</td>
+				</tr>
+
+				<!-- Main button -->
+				<tr>
+					<td align="center" style="padding:0 32px 26px;">
+						<table role="presentation" cellpadding="0" cellspacing="0" border="0">
+							<tr>
+								<td align="center" style="border-radius:12px;background:#3B2E7E;">
+									<a href="{{ page_url }}" style="display:inline-block;padding:14px 28px;font-size:16px;font-weight:700;color:#ffffff;text-decoration:none;border-radius:12px;">{{ _("View my business page") }} &rarr;</a>
+								</td>
+							</tr>
+						</table>
+					</td>
+				</tr>
+
+				<!-- Details card -->
+				<tr>
+					<td style="padding:0 32px;">
+						<p style="margin:0 0 10px;font-size:14px;font-weight:700;color:#1E1838;">{{ _("The details on your page") }}</p>
+						<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#F9F7FD;border:1px solid #E4DFF3;border-radius:14px;">
+							{% for label, value in details %}
+							<tr>
+								<td style="padding:10px 16px;{% if not loop.last %}border-bottom:1px solid #EEEAF7;{% endif %}font-size:14px;line-height:1.45;">
+									<span style="display:block;font-size:12px;color:#7D7898;">{{ label }}</span>
+									<span style="display:block;color:#1E1838;font-weight:600;word-break:break-word;">{{ value | e }}</span>
+								</td>
+							</tr>
+							{% endfor %}
+						</table>
+						{% if has_card %}
+						<p style="margin:12px 0 0;font-size:13px;line-height:1.6;color:#5A5578;">{{ _("We have attached your visiting card, so you can compare it with these details.") }}</p>
+						{% endif %}
+					</td>
+				</tr>
+
+				<!-- Edit -->
+				<tr>
+					<td style="padding:24px 32px 8px;">
+						<p style="margin:0 0 12px;font-size:15px;line-height:1.6;color:#3F3A5E;">{{ _("Something wrong or missing? You can change it any time, and add your logo, services and links.") }}</p>
+						<table role="presentation" cellpadding="0" cellspacing="0" border="0">
+							<tr>
+								<td style="border-radius:12px;border:1.5px solid #CFC6F0;background:#ffffff;">
+									<a href="{{ edit_url }}" style="display:inline-block;padding:11px 16px;font-size:14px;font-weight:700;color:#3B2E7E;text-decoration:none;border-radius:12px;white-space:nowrap;">{{ _("Edit my details") }}</a>
+								</td>
+								<td width="10" style="font-size:0;">&nbsp;</td>
+								<td style="border-radius:12px;border:1.5px solid #CFC6F0;background:#ffffff;">
+									<a href="{{ dashboard_url }}" style="display:inline-block;padding:11px 16px;font-size:14px;font-weight:700;color:#3B2E7E;text-decoration:none;border-radius:12px;white-space:nowrap;">{{ _("My dashboard") }}</a>
+								</td>
+							</tr>
+						</table>
+					</td>
+				</tr>
+
+				<!-- Tip -->
+				<tr>
+					<td style="padding:20px 32px 28px;">
+						<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#FFF1E6;border-radius:14px;">
+							<tr>
+								<td style="padding:14px 16px;font-size:14px;line-height:1.6;color:#5A3A1E;">
+									<b style="color:#B55406;">{{ _("Tip:") }}</b>
+									{{ _("Share your page on WhatsApp and add the link to your email signature. More visits help customers and AI find you.") }}
+								</td>
+							</tr>
+						</table>
+					</td>
+				</tr>
+
+				<!-- Footer -->
+				<tr>
+					<td align="center" style="padding:18px 24px 22px;border-top:1px solid #EEEAF7;font-size:12px;line-height:1.6;color:#7D7898;">
+						{{ _("Your page") }}: <a href="{{ page_url }}" style="color:#3B2E7E;word-break:break-all;">{{ page_url }}</a><br>
+						{{ _("It's Your Profile · Developed by") }} <a href="https://softworld.co.in" style="color:#3B2E7E;text-decoration:none;font-weight:600;">SoftWorld Solutions Pvt. Ltd.</a>
+					</td>
+				</tr>
+			</table>
+		</td>
 	</tr>
-	{% endfor %}
 </table>
-
-{% if has_card %}
-<p>{{ _("We have attached the visiting card you shared, so you can compare it with the details above.") }}</p>
-{% endif %}
-
-<p>{{ _("If anything is wrong, you can correct it here:") }} <a href="{{ edit_url }}">{{ edit_url }}</a></p>
-
-<p>{{ _("Your page link:") }} <a href="{{ page_url }}">{{ page_url }}</a></p>
-
-<p>{{ _("Thank you") }}</p>
