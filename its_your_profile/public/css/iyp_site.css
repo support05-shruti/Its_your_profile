@@ -227,3 +227,37 @@ body[data-path="login"] .form-signup .page-card-actions::before {
 [data-iyp-theme="dark"] .modal-title { color: #F0EEFA; }
 [data-iyp-theme="dark"] .modal .btn-modal-close, [data-iyp-theme="dark"] .modal .close { color: #E9E6F2; }
 [data-iyp-theme="dark"] .alert-container .desk-alert, [data-iyp-theme="dark"] .desk-alert { background: #1B1736; color: #E9E6F2; border-color: #332C5A; }
+
+/* ---------- "Page not found" and error pages (2026-11-12): the site's look ---------- */
+body[data-path="404"], body[data-path="error"] {
+	background: linear-gradient(180deg, #F3F0FB 0, #F6F4FC 380px, #fff 900px) no-repeat, #fff !important;
+	font-family: Sora, system-ui, -apple-system, sans-serif; color: #1E1838;
+}
+body[data-path="404"] .error-page, body[data-path="error"] .error-page {
+	min-height: 70vh; display: flex; align-items: center; justify-content: center; text-align: center; padding: 24px 16px;
+}
+body[data-path="404"] .error-page > div, body[data-path="error"] .error-page > div {
+	width: 100%; max-width: 420px; padding: 40px 28px 32px; border-radius: 28px;
+	background: #fff; border: 1px solid #E4DFF3; box-shadow: 0 40px 80px -40px rgba(59, 46, 126, .45);
+}
+body[data-path="404"] .error-page > div::before, body[data-path="error"] .error-page > div::before {
+	content: ""; display: block; height: 56px; margin: 0 auto 20px;
+	background: url("/assets/its_your_profile/images/iyp-logo.png") center / contain no-repeat;
+}
+body[data-path="404"] .error-page h4, body[data-path="error"] .error-page h4 {
+	margin: 0 0 8px; font-size: 1.5rem; font-weight: 800; letter-spacing: -.03em; color: #1E1838;
+}
+body[data-path="404"] .error-page .details::before {
+	content: "The page you're looking for isn't here. It may have moved, or the link may be wrong.";
+	display: block; margin: 0 0 20px; font-size: .95rem; line-height: 1.6; color: #5A5578;
+}
+body[data-path="404"] .error-page .details a, body[data-path="error"] .error-page .details a {
+	display: inline-flex; align-items: center; justify-content: center; min-height: 46px; padding: 10px 24px;
+	border-radius: 14px; background: #3B2E7E; color: #fff !important; font-weight: 700; text-decoration: none !important;
+}
+[data-iyp-theme="dark"] body[data-path="404"], [data-iyp-theme="dark"] body[data-path="error"] { background: #100D22 !important; color: #F0EEFA; }
+[data-iyp-theme="dark"] body[data-path="404"] .error-page > div, [data-iyp-theme="dark"] body[data-path="error"] .error-page > div { background: #1B1736; border-color: #332C5A; box-shadow: 0 40px 80px -40px rgba(0, 0, 0, .7); }
+[data-iyp-theme="dark"] body[data-path="404"] .error-page > div::before, [data-iyp-theme="dark"] body[data-path="error"] .error-page > div::before { background-image: url("/assets/its_your_profile/images/iyp-logo-dark.png"); }
+[data-iyp-theme="dark"] body[data-path="404"] .error-page h4, [data-iyp-theme="dark"] body[data-path="error"] .error-page h4 { color: #F0EEFA; }
+[data-iyp-theme="dark"] body[data-path="404"] .error-page .details::before { color: #A9A4C8; }
+[data-iyp-theme="dark"] body[data-path="404"] .error-page .details a, [data-iyp-theme="dark"] body[data-path="error"] .error-page .details a { background: #AFA2F5; color: #100D22 !important; }
