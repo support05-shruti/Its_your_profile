@@ -1,0 +1,241 @@
+{% extends "templates/base.html" %}
+{#- Terms and Conditions (2026-11-07). Same calm style as the dashboard. Text in [square brackets
+    with a yellow mark] must be filled in before going live. Have a lawyer review before publishing. -#}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block head_include %}
+{{ super() }}
+{#- The description is printed by Frappe from terms.py (2026-11-12: not repeated here) -#}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=Instrument+Serif:ital@1&display=swap" rel="stylesheet">
+<style>
+	:root { --paper: #F6F4FC; --ink: #1E1838; --text: #3F3A5E; --muted: #5A5578; --line: #E4DFF3; --brand: #3B2E7E; }
+	body { margin: 0; font-family: Sora, system-ui, -apple-system, "Segoe UI", sans-serif; color: var(--text); background: var(--paper) !important; -webkit-font-smoothing: antialiased; }
+	.t-head { position: sticky; top: 0; z-index: 10; background: var(--paper); border-bottom: 1px solid var(--line); }
+	.t-head-row { max-width: 1040px; margin: 0 auto; padding: 10px 20px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+	.t-head img { display: block; height: 40px; width: auto; }
+	.t-head a.t-back { font-size: 15px; font-weight: 500; color: var(--muted); text-decoration: none; }
+	.t-head a.t-back:hover { color: var(--ink); }
+	.t-page { max-width: 1040px; margin: 0 auto; padding: 36px 20px 72px; display: grid; grid-template-columns: 230px minmax(0, 1fr); gap: 48px; align-items: start; }
+	.t-toc { position: sticky; top: 84px; font-size: .86rem; }
+	.t-toc b { display: block; margin-bottom: 10px; font-weight: 600; color: var(--ink); }
+	.t-toc ol { margin: 0; padding-left: 18px; display: grid; gap: 6px; color: var(--muted); }
+	.t-toc a { color: var(--muted); text-decoration: none; }
+	.t-toc a:hover { color: var(--brand); }
+	.t-doc { max-width: 720px; }
+	.t-doc h1 { margin: 0; font-family: Sora, system-ui, sans-serif; font-weight: 800; letter-spacing: -.035em; font-size: clamp(1.9rem, 4.5vw, 2.5rem); line-height: 1.15; color: var(--ink); }
+	.t-meta { margin: 10px 0 0; font-size: .88rem; color: var(--muted); }
+	.t-intro { margin: 24px 0 0; padding: 16px 18px; border: 1px solid var(--line); border-radius: 10px; background: #fff; font-size: .95rem; line-height: 1.65; }
+	.t-doc h2 { margin: 40px 0 10px; padding-top: 8px; font-size: 1.12rem; font-weight: 600; color: var(--ink); scroll-margin-top: 80px; }
+	.t-doc p, .t-doc li { font-size: .96rem; line-height: 1.7; }
+	.t-doc p { margin: 0 0 12px; }
+	.t-doc ul, .t-doc ol.t-list { margin: 0 0 12px; padding-left: 22px; }
+	.t-doc li { margin-bottom: 6px; }
+	.t-doc strong { color: var(--ink); font-weight: 600; }
+	.t-doc a { color: var(--brand); }
+	.t-fill { background: #FFF3BF; padding: 0 3px; border-radius: 3px; }
+	.t-contact { margin-top: 12px; padding: 16px 18px; border-left: 3px solid var(--brand); background: #fff; border-radius: 0 10px 10px 0; }
+	.t-contact p { margin: 0 0 4px; }
+	.t-foot { margin-top: 48px; padding-top: 18px; border-top: 1px solid var(--line); font-size: .86rem; color: var(--muted); }
+	@media (max-width: 860px) {
+		.t-page { grid-template-columns: minmax(0, 1fr); gap: 24px; padding-top: 24px; }
+		.t-toc { position: static; padding: 14px 16px; border: 1px solid var(--line); border-radius: 10px; background: #fff; }
+	}
+	/* Dark mode (2026-11-12): follows the visitor's light/dark choice */
+	:root[data-iyp-theme="dark"] { --paper: #100D22; --ink: #F0EEFA; --text: #C9C4E2; --muted: #A9A4C8; --line: #332C5A; --brand: #AFA2F5; }
+	:root[data-iyp-theme="dark"] .t-intro, :root[data-iyp-theme="dark"] .t-contact { background: #1B1736; }
+	:root[data-iyp-theme="dark"] .t-fill { background: #4A3F12; color: #FFE7A0; }
+	:root[data-iyp-theme="dark"] .t-head img { content: url("/assets/its_your_profile/images/iyp-logo-dark.png"); }
+	@media (max-width: 860px) { :root[data-iyp-theme="dark"] .t-toc { background: #1B1736; } }
+	@media print {
+		.t-head, .t-toc { display: none; }
+		.t-page { display: block; padding: 0; }
+		body { background: #fff !important; }
+	}
+</style>
+{% endblock %}
+
+{% block navbar %}
+<header class="t-head">
+	<div class="t-head-row">
+		<a href="/"><img src="/assets/its_your_profile/images/iyp-logo.png" alt="It's Your Profile"></a>
+		<a class="t-back" href="/">← Back to home</a>
+	</div>
+</header>
+{% endblock %}
+
+{% block content %}
+<main class="t-page">
+	<nav class="t-toc" aria-label="Contents">
+		<b>Contents</b>
+		<ol>
+			<li><a href="#about">About these terms</a></li>
+			<li><a href="#service">The service</a></li>
+			<li><a href="#account">Your account</a></li>
+			<li><a href="#content">Your page and content</a></li>
+			<li><a href="#cards">Visiting cards and other people's details</a></li>
+			<li><a href="#ai">AI reading and AI search</a></li>
+			<li><a href="#publishing">Publishing rules</a></li>
+			<li><a href="#visitors">Visitor statistics</a></li>
+			<li><a href="#pricing">Free period and fees</a></li>
+			<li><a href="#ours">Our rights</a></li>
+			<li><a href="#removal">Suspension and removal</a></li>
+			<li><a href="#closing">Closing your account</a></li>
+			<li><a href="#disclaimer">Disclaimer</a></li>
+			<li><a href="#liability">Limit of liability</a></li>
+			<li><a href="#indemnity">Indemnity</a></li>
+			<li><a href="#privacy">Privacy</a></li>
+			<li><a href="#changes">Changes to these terms</a></li>
+			<li><a href="#law">Governing law</a></li>
+			<li><a href="#grievance">Grievance officer and contact</a></li>
+		</ol>
+	</nav>
+
+	<article class="t-doc">
+		<h1>Terms and Conditions</h1>
+		<p class="t-meta">Last updated: {{ last_updated }}</p>
+
+		<div class="t-intro">
+			<strong>In short:</strong> you own your business details, you are responsible for what your page says, and you must only publish information you are allowed to share. We host your page, help AI assistants find it, and show you who visits. The first 6 months are free. You can close your account at any time.
+			The full terms below are what apply.
+		</div>
+
+		<h2 id="about">1. About these terms</h2>
+		<p>It's Your Profile (the <strong>"Service"</strong>) is owned and run by <strong>SoftWorld Solutions Pvt. Ltd.</strong>, a company registered in India, with its registered office at <span class="t-fill">[registered office address]</span> (<strong>"we"</strong>, <strong>"us"</strong>, <strong>"our"</strong>).</p>
+		<p>These terms are an agreement between us and you, the person or business creating an account or a page (<strong>"you"</strong>). By signing up, creating a page, or using the Service, you agree to these terms and to our <a href="#privacy">Privacy section</a>. If you are signing up for a business, you confirm you are authorised to accept these terms on its behalf.</p>
+		<p>These terms are an electronic record under the Information Technology Act, 2000 and the rules made under it, and do not need a physical or digital signature.</p>
+
+		<h2 id="service">2. The service</h2>
+		<p>The Service lets you create a public business page from your visiting card, your website or details you type in. We:</p>
+		<ul>
+			<li>read your visiting card and website with automated (AI) tools to fill in your details for you;</li>
+			<li>publish your business page at a web address on our site;</li>
+			<li>present the page in formats that search engines and AI assistants can read;</li>
+			<li>show you a dashboard of visits, taps (call, WhatsApp, email, directions) and AI or search crawler visits.</li>
+		</ul>
+		<p>We may add, change or remove features over time. We will tell you in advance of any change that takes away a main feature you are using.</p>
+
+		<h2 id="account">3. Your account</h2>
+		<ul>
+			<li>You must be at least 18 years old and able to enter into a binding contract under Indian law.</li>
+			<li>Give a real name and a working email address, and keep them up to date.</li>
+			<li>Keep your login safe. You are responsible for everything done from your account. Tell us at once if you think someone else has used it.</li>
+			<li>One person or business may hold more than one page, but each page must be for a real business you own, work for, or are authorised to represent.</li>
+		</ul>
+
+		<h2 id="content">4. Your page and content</h2>
+		<p><strong>You own your content.</strong> Your business name, logo, photos, text, contact details and links (<strong>"Your Content"</strong>) stay yours.</p>
+		<p><strong>Permission you give us.</strong> So that we can run the Service, you give us a non-exclusive, royalty-free, worldwide permission to store, copy, format, display and publish Your Content on your page, in our listings, and in formats read by search engines and AI assistants, for as long as your page is published. This permission ends when you delete the content or close your account, except for copies already made by third parties (see section 6) and backups kept for a limited time.</p>
+		<p><strong>You are responsible for Your Content.</strong> You confirm that:</p>
+		<ul>
+			<li>it is true, accurate and not misleading, and you will keep it up to date;</li>
+			<li>you own it or have permission to use it, including logos, trademarks and photos;</li>
+			<li>it does not break any law or anyone else's rights.</li>
+		</ul>
+		<p><strong>Check what the AI fills in.</strong> Details read automatically from cards and websites can contain mistakes. You must check every field before you publish and after each scan. You are responsible for what is published once you save it.</p>
+
+		<h2 id="cards">5. Visiting cards and other people's details</h2>
+		<p>A visiting card often carries a person's name, phone number and email. You may only upload a card, or publish a person's details, if:</p>
+		<ul>
+			<li>it is <strong>your own card</strong> or your business's card; or</li>
+			<li>the person named on it has <strong>agreed</strong> to their details being published on your page.</li>
+		</ul>
+		<p>Do not upload cards you have collected from other people to create pages for them without their consent. Under the Digital Personal Data Protection Act, 2023, you are responsible for having a lawful basis for the personal data you give us to publish.</p>
+
+		<h2 id="ai">6. AI reading and AI search</h2>
+		<ul>
+			<li><strong>How cards are read.</strong> Your card images and website text are sent to a trusted AI service provider to extract business details. The provider processes them only to return the details to us.</li>
+			<li><strong>Public means public.</strong> A published page can be read, copied and stored by anyone, including search engines (such as Google) and AI assistants (such as ChatGPT, Gemini, Claude, Perplexity). Once they have copied it, we cannot make them delete or update their copy. Unpublishing your page stops new visits; it does not remove copies others already hold.</li>
+			<li><strong>No guarantee of results.</strong> We work to make your page easy for AI assistants and search engines to read. We do not control them and <strong>do not guarantee</strong> that any assistant or search engine will show, rank or recommend your business, or that your page will bring you calls or sales.</li>
+		</ul>
+
+		<h2 id="publishing">7. Publishing rules</h2>
+		<p>You must not use the Service to publish, or link to, anything that:</p>
+		<ol class="t-list">
+			<li>is false, misleading or impersonates another person or business;</li>
+			<li>infringes a copyright, trademark or other right;</li>
+			<li>is unlawful, defamatory, obscene, hateful, or harms children;</li>
+			<li>promotes illegal goods or services, gambling, or financial schemes that are not lawfully permitted;</li>
+			<li>contains viruses, malware, phishing or spam;</li>
+			<li>threatens the unity, integrity, security or sovereignty of India, or public order;</li>
+			<li>is otherwise listed as prohibited under Rule 3 of the Information Technology (Intermediary Guidelines and Digital Media Ethics Code) Rules, 2021.</li>
+		</ol>
+		<p>You must also not:</p>
+		<ul>
+			<li>create pages in bulk, fake visits or taps, or try to inflate statistics;</li>
+			<li>copy or scrape other businesses' pages from the Service;</li>
+			<li>try to break, overload or get around the security of the Service, or reach the admin area without permission;</li>
+			<li>resell or rent out the Service without our written agreement.</li>
+		</ul>
+
+		<h2 id="visitors">8. Visitor statistics</h2>
+		<p>Your dashboard shows visits and taps on your page and where visitors came from (for example WhatsApp, Google or an AI assistant). The figures are estimates for your information. They may miss visits or count some twice, and they are not a basis for any payment or claim. We do not show you the names or contact details of anonymous visitors.</p>
+
+		<h2 id="pricing">9. Free period and fees</h2>
+		<ul>
+			<li><strong>Launch offer:</strong> every feature is free for the first <strong>6 months</strong> from the date you create your account. No card or payment details are needed.</li>
+			<li><strong>After the free period:</strong> we will tell you the price and the plans by email at least <strong>30 days</strong> before the free period ends. Nothing is charged unless you choose a paid plan.</li>
+			<li><strong>If you do not choose a plan:</strong> your page may be unpublished after the free period. Your details stay in your account for at least <strong>90 days</strong>, so you can come back, choose a plan, or download them.</li>
+			<li><strong>Paid plans:</strong> prices will include or state applicable GST. Fees already paid are not refundable for a period already started, except where the law requires a refund or we end the Service without cause (in which case we refund the unused part).</li>
+		</ul>
+
+		<h2 id="ours">10. Our rights</h2>
+		<p>The Service, its design, software, logo, the name "It's Your Profile" and all content we create belong to SoftWorld Solutions Pvt. Ltd. These terms do not give you any right to them, other than to use the Service as described here. If you send us suggestions or feedback, we may use them without any obligation to you.</p>
+
+		<h2 id="removal">11. Suspension and removal</h2>
+		<p>We may edit the display of, hide, or remove any page or content, or suspend or close an account, if we reasonably believe that:</p>
+		<ul>
+			<li>it breaks these terms or the law;</li>
+			<li>we have received a valid complaint or a lawful order from a court or government authority;</li>
+			<li>it puts other users, visitors or the Service at risk.</li>
+		</ul>
+		<p>Where possible, we will tell you why and give you a chance to fix the problem first. For content prohibited by law, we act within the time required under the IT Rules, 2021 once we receive actual knowledge or a lawful order.</p>
+		<p><strong>Complaints about a page.</strong> If a page uses your details, name, logo or work without permission, or is otherwise unlawful, write to our Grievance Officer (section 19) with the page address and your reasons.</p>
+
+		<h2 id="closing">12. Closing your account</h2>
+		<p>You can unpublish a page or close your account at any time by writing to us at the contact below<span class="t-fill"> [or from your account settings]</span>. We will unpublish your pages straight away and delete your account data within <strong>30 days</strong>, except what we must keep by law (for example invoices) and backups, which are overwritten in the normal course.</p>
+
+		<h2 id="disclaimer">13. Disclaimer</h2>
+		<p>The Service is provided <strong>"as is" and "as available"</strong>. We do our best to keep it running, accurate and secure, but we do not promise that it will always be available, error-free, or that automated readings will be correct. We do not check or endorse the businesses listed, and we are not part of any deal between a business and its customers. Visitors should make their own enquiries before dealing with any business.</p>
+
+		<h2 id="liability">14. Limit of liability</h2>
+		<p>To the fullest extent the law allows:</p>
+		<ul>
+			<li>we are not liable for any indirect or consequential loss, such as loss of profit, business, goodwill or data;</li>
+			<li>we are not liable for what search engines, AI assistants or other third parties do with a published page;</li>
+			<li>our total liability to you for any claim about the Service is limited to the amount you paid us in the <strong>12 months</strong> before the claim, or <strong>₹1,000</strong> if you have paid nothing.</li>
+		</ul>
+		<p>Nothing in these terms limits liability that cannot be limited under Indian law.</p>
+
+		<h2 id="indemnity">15. Indemnity</h2>
+		<p>You agree to compensate us for any loss, cost or claim (including reasonable legal fees) that arises because Your Content or your use of the Service broke these terms, the law, or someone else's rights.</p>
+
+		<h2 id="privacy">16. Privacy</h2>
+		<p>We collect your account details, the content you add, and visit statistics for your pages, and use them only to provide and improve the Service, to contact you about your account, and as the law requires. We do not sell your personal data. We use trusted service providers (such as hosting and AI providers) who process data only on our instructions. You may ask us to access, correct or erase your personal data by writing to the Grievance Officer.
+		<span class="t-fill">[Link your full Privacy Policy here when it is published.]</span></p>
+
+		<h2 id="changes">17. Changes to these terms</h2>
+		<p>We may update these terms from time to time. The date at the top shows the latest version. For important changes, we will email you at least <strong>15 days</strong> before they take effect. If you keep using the Service after that, you accept the new terms; if you do not agree, you can close your account before then.</p>
+
+		<h2 id="law">18. Governing law and disputes</h2>
+		<p>These terms are governed by the laws of India. We will first try to settle any dispute with you in good faith within 30 days of being told about it. If that fails, the courts at <span class="t-fill">[city, e.g. Pune], [state]</span> will have exclusive jurisdiction.</p>
+		<p>If any part of these terms is found invalid, the rest still applies. If we do not enforce a right straight away, we have not given it up.</p>
+
+		<h2 id="grievance">19. Grievance officer and contact</h2>
+		<p>In line with the Information Technology Act, 2000 and the rules under it, our Grievance Officer is:</p>
+		<div class="t-contact">
+			<p><strong><span class="t-fill">[Name of Grievance Officer]</span></strong></p>
+			<p>SoftWorld Solutions Pvt. Ltd., <span class="t-fill">[registered office address]</span></p>
+			<p>Email: <span class="t-fill">[grievance@softworld.co.in]</span></p>
+			<p>Website: <a href="https://softworld.co.in" target="_blank" rel="noopener">softworld.co.in</a></p>
+		</div>
+		<p>We acknowledge complaints within <strong>24 hours</strong> and resolve them within <strong>15 days</strong>.</p>
+
+		<p class="t-foot">© {{ year }} SoftWorld Solutions Pvt. Ltd. All rights reserved.</p>
+	</article>
+</main>
+{% endblock %}
+
+{% block footer %}{% endblock %}

@@ -247,6 +247,53 @@ def cut_out_logo(image, box):
 				group_box = union_box(group_box, shape["box"])
 				added = True
 
+	# CHANGE 2026-11-12: drop stray pieces. Small marks that are not part of a word (no letter next to
+	# them on the same line) and much smaller than the symbol are bits of the card's other print,
+	# e.g. the descenders "g g" of a faint line under the 2M logo. Letters of the logo's name and
+	# tagline always have neighbours, so they stay.
+	def has_neighbour(shape):
+		height = shape["box"][3] - shape["box"][1]
+		for other in group:
+			if other is shape:
+				continue
+			gap = box_gap(shape["box"], other["box"])
+			same_line = min(shape["box"][3], other["box"][3]) - max(shape["box"][1], other["box"][1]) > 0
+			# A letter beside it on the same line, or something right next to it in any direction
+			# (the dot of an "i", an accent, a part of the symbol)
+			if (same_line and gap <= max(3, height * 1.2)) or gap <= max(2, height * 0.6):
+				return True
+		return False
+
+	group = [
+		s for s in group
+		if s is seed or s["size"] >= seed["size"] * 0.05 or has_neighbour(s)
+	]
+	group_box = seed["box"]
+	for shape in group:
+		group_box = union_box(group_box, shape["box"])
+
+	# CHANGE 2026-11-12: a block of text is not a logo. Cards without a designed logo made the AI
+	# mark the name plus the lines under it ("Distributor for...", product lists), which showed as
+	# a paragraph in the logo box. Count the lines of print; a logo is a mark, a name and at most a
+	# short tagline, so more than 3 lines means plain text: no logo (the website's logo or the
+	# generated initials are used instead).
+	if count_lines(group) > 3:
+		return None
+
+	# CHANGE 2026-11-12: photo noise is not a logo. Shadows, table edges and paper texture come out as
+	# thin, scratchy streaks (seen on a VSC HVAC card): every piece is a long hairline, and the ink
+	# covers very little of the area. A real logo has at least one solid shape (a symbol or letters
+	# of a readable height) and reasonable ink coverage.
+	def is_streak(shape):
+		sw, sh = shape["box"][2] - shape["box"][0], shape["box"][3] - shape["box"][1]
+		return sh < max(4, h * 0.035) or sw > sh * 8
+
+	if all(is_streak(s) for s in group):
+		return None
+	box_area = max(1, (group_box[2] - group_box[0]) * (group_box[3] - group_box[1]))
+	if sum(s["size"] for s in group) / box_area < 0.04:
+		return None
+
 	# Too small to be read on the page
 	if group_box[2] - group_box[0] < w * 0.08 or group_box[3] - group_box[1] < h * 0.06:
 		return None
@@ -333,6 +380,20 @@ def find_shapes(mask, width, height):
 	return labels, shapes
 
 
+def count_lines(shapes):
+	"""How many lines of print the shapes make: their vertical spans merged where they overlap.
+	A symbol taller than the text counts as one line with the text beside it."""
+	spans = sorted((s["box"][1], s["box"][3]) for s in shapes)
+	lines, end = 0, None
+	for top, bottom in spans:
+		if end is None or top >= end:
+			lines += 1
+			end = bottom
+		else:
+			end = max(end, bottom)
+	return lines
+
+
 def touches_edge(box, width, height):
 	return box[0] <= 0 or box[1] <= 0 or box[2] >= width or box[3] >= height
 
@@ -365,7 +426,7 @@ def scrape_website(profile: str):
 		soups = [BeautifulSoup(html, "html.parser") for html in pages]
 		text = "\n\n".join(page_text(s) for s in soups)[:MAX_TEXT_CHARS]
 		insights = ai.analyse_website(text, doc.company_name)
-		if not insights.ai_summary and ai._setting("gemini_api_key"):
+		if not insights.ai_summary and ai.can_search():
 			# Sites built in the browser (Hostinger Horizons, Wix...) give almost no text; look the company up instead
 			researched = ai.research_company(doc.company_name, doc.website_url, doc.city)
 			for field in (
@@ -441,30 +502,81 @@ LINKEDIN_PERSON = re.compile(r"^https?://([a-z]{2,3}\.)?linkedin\.com/in/[^/?#\s
 LINKEDIN_COMPANY = re.compile(r"^https?://([a-z]{2,3}\.)?linkedin\.com/company/[^/?#\s]+", re.I)
 
 
+def has_linkedin(doc) -> bool:
+	"""The page already shows a LinkedIn link (company page or a profile)."""
+	return any(row.platform == "LinkedIn" and row.url for row in doc.profile_links)
+
+
+def name_in_slug(name: str | None, url: str) -> bool:
+	"""linkedin.com/in/darshan-shinde-12ab matches "Mr. Darshan Shinde" (first and last name)."""
+	words = [w for w in re.findall(r"[a-z]+", (name or "").lower()) if len(w) > 2 and w not in ("mr", "mrs", "ms", "dr")]
+	slug = urlparse(url).path.lower()
+	return bool(words) and all(w in slug for w in (words[0], words[-1]))
+
+
+def linkedin_from_website(url: str) -> list[str]:
+	"""LinkedIn links on the company's own website: home page, then its contact and about pages."""
+	try:
+		home = fetch_page(url)
+	except Exception:
+		return []
+	pages = [home]
+	for word in ("contact", "about"):
+		if (page_url := find_contact_page(home, url, word)) and page_url.rstrip("/") != url.rstrip("/"):
+			try:
+				pages.append(fetch_page(page_url))
+			except Exception:
+				pass  # the other pages are still useful
+	found = []
+	for html in pages:
+		for a in BeautifulSoup(html, "html.parser").find_all("a", href=True):
+			href = a["href"].strip()
+			if link_kind(href) == ("LinkedIn", None) and href not in found:
+				found.append(href)
+	return found
+
+
 def find_linkedin(profile: str):
-	# The search runs on Gemini only; without its key there is nothing to search with
-	if not ai._setting("gemini_api_key"):
-		return
+	"""CHANGE NOTE 2026-11-07: every page must show a LinkedIn link. When the card gave none:
+	1. look on the company's own website (home, contact and about pages) for its LinkedIn links;
+	2. if still none, search the web with AI (Gemini, or OpenAI web search when Gemini isn't set up).
+	The contact person's own profile (linkedin.com/in/...) is filled in too when it clearly matches."""
 	doc = frappe.get_doc("Business Profile", profile)
-	if not doc.contact_person:
+	need_person = bool(doc.contact_person) and not doc.contact_linkedin_url
+	if has_linkedin(doc) and not need_person:
 		return
 
 	doc.db_set("linkedin_status", "Searching", commit=True)
 
 	try:
-		match = ai.find_linkedin(
-			doc.contact_person, doc.designation, doc.company_name, doc.city, doc.website_url
-		)
-		person_url = clean_linkedin_url(match.person_url, LINKEDIN_PERSON)
-		company_url = clean_linkedin_url(match.company_url, LINKEDIN_COMPANY)
+		person_url = company_url = other_url = None
+
+		# 1. The company's own website
+		if doc.website_url:
+			for href in linkedin_from_website(doc.website_url):
+				company_url = company_url or clean_linkedin_url(href, LINKEDIN_COMPANY)
+				if found := clean_linkedin_url(href, LINKEDIN_PERSON):
+					if need_person and not person_url and name_in_slug(doc.contact_person, found):
+						person_url = found
+					other_url = other_url or found
+
+		# 2. A web search, for what the website didn't give
+		if ai.can_search() and ((not company_url and not has_linkedin(doc)) or (need_person and not person_url)):
+			match = ai.find_linkedin(
+				doc.contact_person, doc.designation, doc.company_name, doc.city, doc.website_url
+			)
+			company_url = company_url or clean_linkedin_url(match.company_url, LINKEDIN_COMPANY)
+			if need_person and not person_url:
+				person_url = clean_linkedin_url(match.person_url, LINKEDIN_PERSON)
 
 		# The AI call is slow; reload so edits saved meanwhile aren't overwritten (TimestampMismatchError)
 		doc = frappe.get_doc("Business Profile", profile)
 		if person_url and not doc.contact_linkedin_url:
 			doc.contact_linkedin_url = person_url
-		if company_url:
-			add_profile_links(doc, [("LinkedIn", None, company_url)])
-		doc.linkedin_status = "Found" if doc.contact_linkedin_url else "Not Found"
+		# The page's LinkedIn link: the company page, else a profile found on the website or the person's
+		if not has_linkedin(doc) and (page_url := company_url or other_url or doc.contact_linkedin_url):
+			add_profile_links(doc, [("LinkedIn", None, page_url)])
+		doc.linkedin_status = "Found" if has_linkedin(doc) else "Not Found"
 
 		doc.save(ignore_permissions=True)
 		frappe.db.commit()
@@ -474,6 +586,26 @@ def find_linkedin(profile: str):
 		logger.exception(f"LinkedIn search failed for {profile}")
 		frappe.db.set_value("Business Profile", profile, "linkedin_status", "Failed")
 		frappe.db.commit()
+
+
+def find_linkedin_for_all():
+	"""One-time fill for pages made before LinkedIn was compulsory (2026-11-07). Run with:
+	bench --site <site> execute its_your_profile.tasks.find_linkedin_for_all"""
+	names = frappe.get_all("Business Profile", filters={"company_name": ("is", "set")}, pluck="name")
+	queued = 0
+	for name in names:
+		doc = frappe.get_doc("Business Profile", name)
+		if has_linkedin(doc):
+			continue
+		frappe.enqueue(
+			"its_your_profile.tasks.find_linkedin",
+			queue="long",
+			profile=name,
+			job_id=f"find_linkedin::{name}",
+			deduplicate=True,
+		)
+		queued += 1
+	return f"Queued a LinkedIn search for {queued} of {len(names)} pages"
 
 
 def clean_linkedin_url(url: str | None, pattern: re.Pattern) -> str | None:
@@ -575,11 +707,12 @@ def ensure_public_url(url: str):
 			raise ValueError(f"Refusing to fetch non-public address {ip} for {url}")
 
 
-def find_contact_page(html: str, base_url: str) -> str | None:
+def find_contact_page(html: str, base_url: str, word: str = "contact") -> str | None:
+	"""The site's own page whose link mentions `word` ("contact", or "about" for LinkedIn search)."""
 	base_host = urlparse(base_url).hostname
 	for a in BeautifulSoup(html, "html.parser").find_all("a", href=True):
 		label = (a.get_text() + " " + a["href"]).lower()
-		if "contact" in label:
+		if word in label:
 			url = urljoin(base_url, a["href"])
 			if urlparse(url).hostname == base_host:
 				return url
@@ -701,3 +834,216 @@ def add_profile_links(doc, links):
 			continue
 		doc.append("profile_links", {"platform": platform, "label": label, "url": url})
 		have.add((platform, label))
+
+
+# ---------------------------------------------------------------------------------------------
+# Automatic logo (2026-11-12). Every page gets a logo without the owner uploading one:
+# 1. the logo cut from the visiting card (save_card_logo, during the scan), else
+# 2. the logo from the company's website, else
+# 3. a generated logo: the company's initials on its brand colour.
+# Logos made here are named logo-web-*.png / logo-auto-*.png. A generated one is replaced when a
+# website logo is found later. A logo uploaded by the owner, or cut from the card, is never touched.
+
+GENERATED_LOGO_NAME = re.compile(r"^/files/logo-auto-[0-9a-f]{8}\.png$")
+LOGO_MIN_SIDE = 48  # px; smaller website icons look blurry on the page
+LOGO_MAX_SIDE = 512
+
+
+def ensure_logo(profile: str):
+	"""Give the profile the best logo we can find automatically.
+
+	CHANGE 2026-11-12: the company's own logo file from its website is the cleanest, so it now also
+	replaces a logo cut out of the card photo (a photo cut-out is never as sharp). Order:
+	website logo > logo cut from the card > generated initials. A logo the owner uploaded is never
+	replaced."""
+	doc = frappe.get_doc("Business Profile", profile)
+	current = doc.company_logo or ""
+	replaceable = GENERATED_LOGO_NAME.match(current) or AUTO_LOGO_NAME.match(current)
+	if current and not replaceable:
+		return
+	if doc.card_scan_status in ("Pending", "Processing"):
+		return  # the card scan may still cut the real logo; it saves again when done
+
+	logo_url = None
+	try:
+		if doc.website_url:
+			# A card cut-out is only replaced by a proper logo image, not a tiny favicon
+			min_side = 120 if AUTO_LOGO_NAME.match(current) else LOGO_MIN_SIDE
+			logo_url = logo_from_website(doc.website_url, profile, min_side)
+	except Exception:
+		logger.exception(f"Website logo failed for {profile}")
+
+	if not logo_url and not current:
+		try:
+			logo_url = generated_logo(doc, profile)
+		except Exception:
+			logger.exception(f"Generated logo failed for {profile}")
+
+	if not logo_url:
+		return
+	# Reload: the profile may have been saved meanwhile (a logo uploaded by hand wins)
+	latest = frappe.db.get_value("Business Profile", profile, "company_logo") or ""
+	if latest and not (GENERATED_LOGO_NAME.match(latest) or AUTO_LOGO_NAME.match(latest)):
+		return
+	frappe.db.set_value("Business Profile", profile, "company_logo", logo_url, update_modified=False)
+	if latest and latest != logo_url:
+		for name in frappe.get_all("File", filters={"file_url": latest}, pluck="name"):
+			frappe.delete_doc("File", name, ignore_permissions=True)
+	frappe.db.commit()
+
+
+def logo_candidates(html: str, base_url: str) -> list[str]:
+	"""Possible logo images on a website, best first: the logo the site declares for search engines,
+	a header image named "logo", its app icon, then its favicon."""
+	soup = BeautifulSoup(html, "html.parser")
+	found = []
+
+	def add(url):
+		url = (url or "").strip()
+		if url and not url.startswith("data:"):
+			url = urljoin(base_url, url)
+			if url not in found:
+				found.append(url)
+
+	# Schema.org "logo" in JSON-LD
+	for script in soup.find_all("script", type="application/ld+json"):
+		for match in re.finditer(r'"logo"\s*:\s*(?:\{[^{}]*?"url"\s*:\s*)?"([^"]+)"', script.string or ""):
+			add(match.group(1))
+	for attrs in ({"property": "og:logo"}, {"itemprop": "logo"}):
+		if tag := soup.find("meta", attrs=attrs):
+			add(tag.get("content"))
+	# <img> that calls itself a logo, in page order (the header comes first)
+	for img in soup.find_all("img"):
+		label = " ".join(str(img.get(a) or "") for a in ("class", "id", "alt", "src", "data-src")).lower()
+		if "logo" in label and not any(w in label for w in ("partner", "client", "payment", "award")):
+			add(img.get("src") or img.get("data-src"))
+	for link in soup.find_all("link", href=True):
+		rels = [r.lower() for r in (link.get("rel") or [])]
+		if "apple-touch-icon" in rels or "apple-touch-icon-precomposed" in rels:
+			add(link["href"])
+	for link in soup.find_all("link", href=True):
+		if "icon" in [r.lower() for r in (link.get("rel") or [])]:
+			add(link["href"])
+	return found
+
+
+def fetch_image(url: str):
+	"""A website image as a Pillow image (RGBA), or None if it isn't a usable picture."""
+	import io
+
+	from PIL import Image
+
+	ensure_public_url(url)
+	response = requests.get(url, headers={"User-Agent": USER_AGENT}, timeout=20, allow_redirects=True)
+	ensure_public_url(response.url)
+	if not response.ok or len(response.content) > 5_000_000:
+		return None
+	try:
+		image = Image.open(io.BytesIO(response.content))
+		image.load()
+	except Exception:
+		return None  # SVG and other formats Pillow can't draw
+	return image.convert("RGBA")
+
+
+def logo_from_website(website_url: str, profile: str, min_side: int = LOGO_MIN_SIDE) -> str | None:
+	"""Save the company's own logo from its website as the profile logo; None if none is usable."""
+	try:
+		html = fetch_page(website_url)
+	except Exception:
+		return None
+	for url in logo_candidates(html, website_url)[:8]:
+		try:
+			image = fetch_image(url)
+		except Exception:
+			continue
+		# Header logos are often wide and short (e.g. 300 x 60): judge by the long side
+		if not image or max(image.size) < min_side or min(image.size) < 24:
+			continue
+		width, height = image.size
+		if width / height > 6 or height / width > 3:
+			continue  # a banner or a strip, not a logo
+		if bbox := image.getbbox():  # trim empty transparent edges
+			image = image.crop(bbox)
+		image.thumbnail((LOGO_MAX_SIDE, LOGO_MAX_SIDE))
+		return save_logo_file(image, "web", profile)
+	return None
+
+
+def generated_logo(doc, profile: str) -> str | None:
+	"""A square logo with the company's initials, white on the card's brand colour."""
+	from PIL import Image, ImageDraw, ImageFont
+
+	name = doc.company_name or doc.contact_person
+	if not name:
+		return None
+	skip = ("pvt", "ltd", "llp", "the", "and", "of", "co", "inc", "m/s")
+	words = [w for w in re.findall(r"[A-Za-z0-9]+", name) if w.lower() not in skip]
+	initials = "".join(w[0] for w in words[:2]).upper() or name[:1].upper()
+
+	colour = doc.brand_color if re.fullmatch(r"#[0-9A-Fa-f]{6}", doc.brand_color or "") else "#3B2E7E"
+	rgb = tuple(int(colour[i : i + 2], 16) for i in (1, 3, 5))
+	if sum(rgb) / 3 > 170:  # a very light brand colour would hide white letters: darken it
+		rgb = tuple(int(c * 0.55) for c in rgb)
+
+	size = 512
+	image = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+	draw = ImageDraw.Draw(image)
+	draw.rounded_rectangle((0, 0, size - 1, size - 1), radius=96, fill=(*rgb, 255))
+	font = ImageFont.load_default(size=230 if len(initials) == 1 else 200)
+	left, top, right, bottom = draw.textbbox((0, 0), initials, font=font)
+	position = ((size - (right - left)) / 2 - left, (size - (bottom - top)) / 2 - top)
+	draw.text(position, initials, font=font, fill=(255, 255, 255, 255))
+	return save_logo_file(image, "auto", profile)
+
+
+def save_logo_file(image, kind: str, profile: str) -> str:
+	import io
+
+	buffer = io.BytesIO()
+	image.save(buffer, format="PNG")
+	file = frappe.get_doc(
+		{
+			"doctype": "File",
+			"file_name": f"logo-{kind}-{frappe.generate_hash(length=8)}.png",
+			"attached_to_doctype": "Business Profile",
+			"attached_to_name": profile,
+			"attached_to_field": "company_logo",
+			"is_private": 0,
+			"content": buffer.getvalue(),
+		}
+	).insert(ignore_permissions=True)
+	return file.file_url
+
+
+def refresh_logo(profile: str):
+	"""Read one page's logo again (2026-11-12): cut it from the card once more with the cleaner method
+	(no stray marks), then take the website's own logo instead if it has a good one. Logos the owner
+	uploaded are left alone."""
+	current = frappe.db.get_value("Business Profile", profile, "company_logo") or ""
+	if AUTO_LOGO_NAME.match(current):
+		add_logo_from_card(profile, redo=True)
+	ensure_logo(profile)
+
+
+def ensure_logo_for_all():
+	"""Read the logo again for every page whose logo was made automatically (cut from the card or
+	generated), and fill pages that have none. Logos uploaded by owners are not touched. Run with:
+	bench --site <site> execute its_your_profile.tasks.ensure_logo_for_all"""
+	rows = frappe.get_all(
+		"Business Profile", filters={"company_name": ("is", "set")}, fields=["name", "company_logo"]
+	)
+	names = [
+		r.name
+		for r in rows
+		if not r.company_logo or AUTO_LOGO_NAME.match(r.company_logo) or GENERATED_LOGO_NAME.match(r.company_logo)
+	]
+	for name in names:
+		frappe.enqueue(
+			"its_your_profile.tasks.refresh_logo",
+			queue="long",
+			profile=name,
+			job_id=f"refresh_logo::{name}",
+			deduplicate=True,
+		)
+	return f"Reading the logo again for {len(names)} of {len(rows)} pages"

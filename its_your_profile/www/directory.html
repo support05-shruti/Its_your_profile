@@ -58,6 +58,16 @@
 	.iyp-view { color: var(--muted); margin-left: auto; }
 
 	.iyp-empty { text-align: center; padding: 48px 16px; border: 1px dashed var(--line); border-radius: 16px; color: var(--muted); }
+
+	/* Dark mode (2026-11-12): follows the visitor's light/dark choice */
+	[data-iyp-theme="dark"] .iyp-dir { --ink: #F0EEFA; --muted: #A9A4C8; --line: #332C5A; }
+	[data-iyp-theme="dark"] .iyp-search, [data-iyp-theme="dark"] .iyp-pill, [data-iyp-theme="dark"] .iyp-card { background: #1B1736; }
+	[data-iyp-theme="dark"] .iyp-pill { color: #C9C4E2 !important; }
+	[data-iyp-theme="dark"] .iyp-pill.on { background: #F0EEFA; color: #100D22 !important; }
+	[data-iyp-theme="dark"] .iyp-card p { color: #C9C4E2; }
+	[data-iyp-theme="dark"] .iyp-foot { border-top-color: #332C5A; }
+	[data-iyp-theme="dark"] .iyp-call { color: color-mix(in srgb, var(--c) 45%, #fff) !important; }
+	[data-iyp-theme="dark"] .iyp-card:hover { border-color: #4F4690; }
 	.iyp-empty b { display: block; color: var(--ink); font-size: 1.1rem; margin-bottom: 6px; }
 
 	@media (max-width: 767px) {

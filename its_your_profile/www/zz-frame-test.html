@@ -1,0 +1,17 @@
+{% extends "templates/base.html" %}
+{#- TEMPORARY visual check (2026-11-12): delete after -#}
+{% block navbar %}{% endblock %}
+{% block footer %}{% endblock %}
+{% block content %}
+<div style="display:flex;gap:6px;background:#555;padding:4px">
+	<iframe data-theme="light" src="/business/iyp-26-11-00031" width="390" height="2400" style="border:0;flex:none"></iframe>
+	<iframe data-theme="dark" src="/business/iyp-26-11-00031" width="390" height="2400" style="border:0;flex:none"></iframe>
+	<iframe data-theme="light" src="/this-page-is-missing" width="390" height="2400" style="border:0;flex:none"></iframe>
+	<iframe data-theme="dark" src="/login" width="390" height="2400" style="border:0;flex:none"></iframe>
+</div>
+<script>
+	document.querySelectorAll("iframe").forEach(function (f) {
+		f.addEventListener("load", function () { f.contentDocument.documentElement.setAttribute("data-iyp-theme", f.getAttribute("data-theme")); });
+	});
+</script>
+{% endblock %}

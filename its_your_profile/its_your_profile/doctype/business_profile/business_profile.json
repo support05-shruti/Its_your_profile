@@ -25,6 +25,7 @@
   "linkedin_status",
   "column_break_contact",
   "phone",
+  "hide_phone",
   "email",
   "website_url",
   "address_section",
@@ -237,6 +238,13 @@
    "label": "Phone"
   },
   {
+   "default": "0",
+   "description": "Off (default): your phone number is public on your page, with Call and WhatsApp buttons. Tick to keep it private: it is hidden from your page, the visiting card picture, Save Contact and what AI reads.",
+   "fieldname": "hide_phone",
+   "fieldtype": "Check",
+   "label": "Keep my phone number private"
+  },
+  {
    "fieldname": "email",
    "fieldtype": "Data",
    "label": "Email"
@@ -364,7 +372,7 @@
  "index_web_pages_for_search": 1,
  "is_published_field": "published",
  "links": [],
- "modified": "2026-11-07 12:00:00.000000",
+ "modified": "2026-11-07 18:00:00.000000",
  "modified_by": "Administrator",
  "module": "Its Your Profile",
  "name": "Business Profile",

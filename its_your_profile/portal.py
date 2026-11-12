@@ -16,10 +16,53 @@ def redirect(url: str):
 
 
 def send_owner_to_dashboard(login_manager):
-	"""on_login hook: business owners (Website Users) go to their dashboard at /notifications.
+	"""on_login hook: everyone lands on the dashboard at /notifications after logging in.
 
+	CHANGE 2026-11-12: staff (System Users) too. Before, they were sent to the Desk, and no button
+	on the website may open the Desk; staff open it themselves by typing /desk.
 	Only this login request is affected (a request flag, read by get_home_page), so the home page
 	at / still shows the home page later. A ?redirect-to= in the login URL still wins."""
-	user = getattr(login_manager, "user", None) or frappe.session.user
-	if frappe.get_cached_value("User", user, "user_type") == "Website User":
-		frappe.local.flags.home_page = OWNER_DASHBOARD
+	frappe.local.flags.home_page = OWNER_DASHBOARD
+
+
+LOGO = "/assets/its_your_profile/images/iyp-logo.png"
+
+
+def use_our_logo(context):
+	"""update_website_context hook (2026-11-07): the sign-in, sign-up and forgot-password page shows
+	our logo. Frappe's login page takes its logo from Website/Navbar Settings or else the first app's
+	app_logo_url hook, which is Frappe's own logo when several apps are installed. This runs after
+	the page's own get_context, so it wins. A logo uploaded in Website Settings > App Logo is kept."""
+	if (context.get("path") or getattr(frappe.local, "path", "") or "").strip("/") != "login":
+		return None
+	if frappe.get_website_settings("app_logo"):
+		return None
+	return {"logo": LOGO}
+
+
+# Runs in <head> before anything is drawn: the visitor's saved light/dark choice (set with the
+# 🌙 button on the home page or the dashboard, key "iyp-theme"), else the phone's own setting.
+THEME_SCRIPT = (
+	"<script>(function(){var s=null;try{s=localStorage.getItem('iyp-theme')}catch(e){}"
+	"var d=s?s==='dark':!!(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches);"
+	"document.documentElement.setAttribute('data-iyp-theme',d?'dark':'light');})();</script>"
+	# Sent inside every page (never a stale cached file), 2026-11-12:
+	# - the right logo for light / dark in Frappe's top bar (brand_html has both) and on the login card
+	# - Frappe's "Switch To Desk" and "Apps" menu items never shown (no website button opens the Desk)
+	"<style>"
+	".iyp-brand-dark{display:none!important}"
+	"[data-iyp-theme=dark] .iyp-brand-light{display:none!important}"
+	"[data-iyp-theme=dark] .iyp-brand-dark{display:inline-block!important}"
+	"[data-iyp-theme=dark] img.app-logo{content:url('/assets/its_your_profile/images/iyp-logo-dark.png')}"
+	".switch-to-desk,.dropdown-item.apps,a[href='/desk'],a[href='/app'],a[href='/apps']{display:none!important}"
+	"</style>"
+)
+
+
+def add_theme_script(context):
+	"""update_website_context hook (2026-11-12): dark mode on every website page, not only the home
+	page and the dashboard. Adds THEME_SCRIPT to <head> (Frappe prints head_include there); the dark
+	colours are in iyp_site.css and in each page's own styles."""
+	if THEME_SCRIPT in (context.get("head_include") or ""):
+		return None
+	return {"head_include": (context.get("head_include") or "") + THEME_SCRIPT}

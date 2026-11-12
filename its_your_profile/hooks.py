@@ -42,11 +42,24 @@ website_context = {
 	"favicon": "/assets/its_your_profile/images/iyp-favicon.png",
 	# Loading splash (after login and while the backend loads) shows our logo, not Frappe's (2026-11-06)
 	"splash_image": "/assets/its_your_profile/images/iyp-logo.png",
-	# Our logo in Frappe's top bar (web forms, login and other standard pages)
-	"brand_html": '<img src="/assets/its_your_profile/images/iyp-logo.png" alt="It\'s Your Profile" style="height:46px;width:auto;max-height:none;max-width:none">',  # Frappe caps brand images at 22px
-	# Footer credit on every standard page (web form, business pages, directory, login...),
-	# in place of Frappe's "Built on Frappe". The home page has its own footer with the same line.
-	"footer_powered": 'Developed by <a href="https://softworld.co.in" target="_blank" rel="noopener" style="color:#3B2E7E;font-weight:600">SoftWorld Solutions Pvt. Ltd.</a>',
+	# Our logo in Frappe's top bar (web forms, login and other standard pages). Two images since
+	# 2026-11-12: the dark-text logo for light mode, the light-text one for dark mode; the head style
+	# from portal.add_theme_script shows the right one. Frappe caps brand images at 22px, hence the size.
+	"brand_html": (
+		'<img class="iyp-brand-light" src="/assets/its_your_profile/images/iyp-logo.png" alt="It\'s Your Profile" style="height:46px;width:auto;max-height:none;max-width:none">'
+		'<img class="iyp-brand-dark" src="/assets/its_your_profile/images/iyp-logo-dark.png" alt="It\'s Your Profile" style="height:46px;width:auto;max-height:none;max-width:none">'
+	),
+	# Account menu on Frappe's pages (2026-11-12): our pages only. Frappe's "My Account" (/me) and the
+	# "Switch To Desk" / "Apps" items lead to the Desk, which no website button may open.
+	"post_login": [
+		{"label": "Dashboard", "url": "/notifications"},
+		{"label": "My information", "url": "/account"},
+		{"label": "Log out", "url": "/logout"},
+	],
+	# (2026-11-06 credit on every standard page removed 2026-11-07)
+	# Frappe's footer shows nothing here (2026-11-07): the credit is only in the home page footer.
+	# Not empty, or Frappe would show its own "Built on Frappe" line.
+	"footer_powered": '<span></span>',
 }
 
 # Includes in <head>
@@ -59,10 +72,23 @@ website_context = {
 # include js, css files in header of web template
 # web_include_css = "/assets/its_your_profile/css/its_your_profile.css"
 # web_include_js = "/assets/its_your_profile/js/its_your_profile.js"
-# "Developed by SoftWorld Solutions Pvt. Ltd." badge fixed on every website page (2026-11-06)
-web_include_js = ["/assets/its_your_profile/js/iyp_credit.js"]
+# Login logo + Android sign-up fixes on every website page (iyp_footer.js). Renamed from
+# iyp_credit.js (2026-11-07) so browsers drop the old cached credit badge.
+# iyp_share.js (2026-11-12): the Share menu (WhatsApp, Facebook, LinkedIn, X, Telegram, Email, SMS, Copy)
+# _ASSET_VERSION (2026-11-12): Frappe links these files with no version, so phones kept old copies
+# for days (the dashboard stayed half white in dark mode). Change this number whenever
+# iyp_site.css, iyp_footer.js or iyp_share.js change, and every browser downloads the new files.
+_ASSET_VERSION = "20261112c"
+web_include_js = [
+	f"/assets/its_your_profile/js/iyp_footer.js?v={_ASSET_VERSION}",
+	f"/assets/its_your_profile/js/iyp_share.js?v={_ASSET_VERSION}",
+]
 # Site look for Frappe's standard pages: login page with our logo, owner's dashboard (2026-11-06)
-web_include_css = ["/assets/its_your_profile/css/iyp_site.css"]
+web_include_css = [f"/assets/its_your_profile/css/iyp_site.css?v={_ASSET_VERSION}"]
+
+# Our logo on the sign-in / sign-up page instead of Frappe's (2026-11-07), and the light/dark
+# choice applied in <head> on every website page (2026-11-12)
+update_website_context = ["its_your_profile.portal.use_our_logo", "its_your_profile.portal.add_theme_script"]
 
 # Business owners land on their dashboard (/notifications) right after logging in (2026-11-06)
 on_login = ["its_your_profile.portal.send_owner_to_dashboard"]
@@ -268,6 +294,8 @@ scheduler_events = {
 # ----------------
 # before_request = ["its_your_profile.utils.before_request"]
 # after_request = ["its_your_profile.utils.after_request"]
+# Security headers on every response: nosniff, referrer policy, safe CSP, HSTS on HTTPS (2026-11-12)
+after_request = ["its_your_profile.security_headers.add_security_headers"]
 
 # Job Events
 # ----------

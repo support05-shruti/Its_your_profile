@@ -1,229 +1,244 @@
 {% extends "templates/base.html" %}
-{#- CHANGE NOTE 2026-11-07: the dashboard is its own full page now (like the home page), not inside
-    Frappe's standard page frame: our header with the logo and an account menu, a lavender page,
-    a hero card, stat tiles, a 7-day views chart, a "page strength" ring with tips, the business
-    card(s), the activity feed with filters, and an app-like bottom bar on phones.
-    Data comes from notifications.py. -#}
+{#- CHANGE NOTE 2026-11-07 (redesign): the owner's dashboard in a calmer, hand-made style: warm
+    paper background, thin borders, line icons (SVG sprite below) instead of emoji, no gradients,
+    glows or count-up animations. Same content as before: greeting, 7-day numbers, views chart,
+    activity feed with filters, the main business with page completeness, other businesses in a
+    full-width grid, and a bottom bar on phones. Data comes from notifications.py. -#}
 
 {% block title %}{{ _("My Dashboard · It's Your Profile") }}{% endblock %}
 
 {% block head_include %}
 {{ super() }}
-<meta name="theme-color" content="#F3F0FB">
+<meta name="theme-color" content="#F6F4FC" data-light="#F6F4FC" data-dark="#100D22">
 <meta name="mobile-web-app-capable" content="yes">
+<script>
+	// Dark mode (2026-11-12): the same saved choice as the home page ("iyp-theme"), else the phone's
+	// own setting. Set before the page paints, so there is no white flash.
+	(function () {
+		var saved = null;
+		try { saved = localStorage.getItem("iyp-theme"); } catch (e) { /* storage blocked */ }
+		var dark = saved ? saved === "dark" : !!(window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches);
+		document.documentElement.setAttribute("data-iyp-theme", dark ? "dark" : "light");
+	})();
+</script>
 <link rel="manifest" href="/assets/its_your_profile/manifest.json">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=Instrument+Serif:ital@1&display=swap" rel="stylesheet">
 <style>
+	/* 2026-11-12: the home page's palette and font (Sora, logo indigo and orange, lavender), light and
+	   dark, so every page of the site matches */
 	:root {
-		--ink: #1E1838; --text: #3F3A5E; --muted: #5A5578; --faint: #7D7898; --line: #E4DFF3;
-		--blue: #3B2E7E; --blue-dark: #2E2454; --violet: #6B55D6; --sky: #F3F0FB; --peach: #FFF1E6;
-		--orange: #E87012; --orange-dark: #B55406; --mint: #E9FBF1; --green: #0E7A45; --lilac: #F3EEFF; --purple: #5B3CC4;
+		--paper: #F6F4FC; --card: #FFFFFF; --ink: #1E1838; --text: #3F3A5E; --muted: #5A5578; --faint: #7D7898;
+		--line: #E4DFF3; --line-soft: #EEEAF7; --brand: #3B2E7E; --brand-soft: #F3F0FB;
+		--accent: #E87012; --accent-soft: #FFF1E6; --ok: #0E7A45; --ok-soft: #E9FBF1;
+		--hover: #FBFAFE; --line-strong: #CFC6F0; --bar: #C9C1EA; --brand-hover: #2E2454; --toast: #1E1838;
 	}
+	/* Dark mode: the home page's dark colours */
+	:root[data-iyp-theme="dark"] {
+		color-scheme: dark;
+		--paper: #100D22; --card: #1B1736; --ink: #F0EEFA; --text: #C9C4E2; --muted: #A9A4C8; --faint: #8984AB;
+		--line: #332C5A; --line-soft: #2A2550; --brand: #AFA2F5; --brand-soft: #2A2550;
+		--accent: #FFA867; --accent-soft: #33221A; --ok: #5FD39A; --ok-soft: #10291F;
+		--hover: #221D44; --line-strong: #463E7A; --bar: #4A4180; --brand-hover: #C4BAFA; --toast: #F0EEFA;
+	}
+	:root[data-iyp-theme="dark"] .d-btn.primary, :root[data-iyp-theme="dark"] .d-me-btn span { color: #100D22 !important; }
+	:root[data-iyp-theme="dark"] .d-toast { color: #100D22; }
+	:root[data-iyp-theme="dark"] .d-logo-light, .d-logo-dark { display: none !important; }
+	:root[data-iyp-theme="dark"] .d-logo-dark { display: block !important; }
+	/* Logos keep a white tile in dark mode, so dark logos stay visible */
+	:root[data-iyp-theme="dark"] .d-logo-box { border-color: transparent; }
+	.d-theme { width: 40px; height: 40px; display: grid; place-items: center; border: 1px solid var(--line); border-radius: 12px; background: var(--card); color: var(--text); cursor: pointer; }
+	.d-theme:hover { border-color: var(--line-strong); }
+	.d-theme .d-sun, :root[data-iyp-theme="dark"] .d-theme .d-moon { display: none; }
+	:root[data-iyp-theme="dark"] .d-theme .d-sun { display: block; }
+	/* 2026-11-12: the page's own background and text always win, even over an old cached copy of
+	   iyp_site.css that gave this page a light lavender background, dark text and floating circles
+	   (body[data-path="notifications"] rules), which made dark mode look half white */
+	html body[data-path="notifications"] { background: var(--paper) !important; color: var(--ink) !important; font-family: Sora, system-ui, -apple-system, "Segoe UI", sans-serif; }
+	html body[data-path="notifications"]::before, html body[data-path="notifications"]::after { display: none !important; content: none !important; }
 	html { overflow-x: clip; }
-	body {
-		margin: 0; font-family: Sora, system-ui, -apple-system, sans-serif; color: var(--ink);
-		background: linear-gradient(180deg, #F3F0FB 0, #F7F5FC 520px, #FBFAFE 100%) fixed !important;
-	}
-	.d-page *, .d-head * { box-sizing: border-box; }
-	.d-page a, .d-page button, .d-head a, .d-head button { -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
-	.d-blob { position: fixed; z-index: -1; border-radius: 50%; pointer-events: none; }
-	.d-blob.b1 { width: 380px; height: 380px; left: -170px; top: 140px; background: #FFE3CF; opacity: .7; animation: d-float 13s ease-in-out infinite alternate; }
-	.d-blob.b2 { width: 300px; height: 300px; right: -120px; top: 60px; background: #DDF5E8; opacity: .8; animation: d-float 15s ease-in-out infinite alternate-reverse; }
-	@keyframes d-float { to { transform: translate3d(30px, 40px, 0) scale(1.08); } }
-	@keyframes d-up { from { opacity: 0; transform: translateY(16px); } }
-	@keyframes d-grow { from { transform: scaleY(0); } }
-	@keyframes d-live { 70% { box-shadow: 0 0 0 7px rgba(24, 160, 88, 0); } 100% { box-shadow: 0 0 0 0 rgba(24, 160, 88, 0); } }
+	body { margin: 0; font-family: Sora, system-ui, -apple-system, "Segoe UI", sans-serif; color: var(--ink); background: var(--paper) !important; -webkit-font-smoothing: antialiased; }
+	.d-page *, .d-head *, .d-dock * { box-sizing: border-box; }
+	.d-page a, .d-page button, .d-head a, .d-head button, .d-dock a, .d-dock button { -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
+	.i { width: 18px; height: 18px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; }
+	.num { font-variant-numeric: tabular-nums; }
 
 	/* Header */
-	.d-head { position: sticky; top: 0; z-index: 1040; background: rgba(243, 240, 251, .82); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); border-bottom: 1px solid rgba(228, 223, 243, .7); }
+	.d-head { position: sticky; top: 0; z-index: 1040; background: var(--paper); border-bottom: 1px solid var(--line); }
 	.d-head-row { max-width: 1120px; margin: 0 auto; padding: 10px 20px; display: flex; align-items: center; gap: 14px; }
-	.d-head-row .d-logo img { display: block; height: 46px; width: auto; }
-	.d-head-links { margin-left: auto; display: flex; align-items: center; gap: 6px; }
-	.d-head-links > a { padding: 9px 14px; border-radius: 12px; font-size: 15px; font-weight: 600; color: var(--text); text-decoration: none; }
-	.d-head-links > a:hover, .d-head-links > a.on { background: #fff; color: var(--blue); }
-	.d-me { position: relative; }
-	.d-me-btn { display: flex; align-items: center; gap: 8px; padding: 4px 10px 4px 4px; border: 1px solid var(--line); border-radius: 999px; background: #fff; cursor: pointer; font: inherit; font-weight: 700; font-size: 14px; color: var(--ink); }
-	.d-me-btn span { width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; color: #fff; background: linear-gradient(135deg, var(--blue), var(--violet)); }
-	.d-menu { position: absolute; right: 0; top: calc(100% + 8px); min-width: 220px; padding: 8px; background: #fff; border: 1px solid var(--line); border-radius: 18px; box-shadow: 0 26px 50px -20px rgba(30, 24, 56, .45); display: none; }
-	.d-menu.open { display: block; animation: d-up .2s ease; }
-	.d-menu a { display: flex; align-items: center; gap: 10px; min-height: 46px; padding: 0 14px; border-radius: 12px; font-size: 15px; font-weight: 600; color: var(--ink); text-decoration: none; }
-	.d-menu a:hover { background: var(--sky); color: var(--blue); }
+	.d-head-row .d-logo img { display: block; height: 42px; width: auto; }
+	.d-head-links { margin-left: auto; display: flex; align-items: center; gap: 4px; }
+	.d-head-links > a { position: relative; padding: 10px 12px; font-size: 15px; font-weight: 500; color: var(--muted); text-decoration: none; }
+	.d-head-links > a:hover { color: var(--ink); }
+	.d-head-links > a.on { color: var(--ink); font-weight: 600; }
+	.d-head-links > a.on::after { content: ""; position: absolute; left: 12px; right: 12px; bottom: -11px; height: 2px; background: var(--brand); }
+	.d-me { position: relative; margin-left: 8px; }
+	.d-me-btn { display: flex; align-items: center; gap: 8px; padding: 4px 10px 4px 4px; border: 1px solid var(--line); border-radius: 12px; background: var(--card); cursor: pointer; font: inherit; font-weight: 600; font-size: 14px; color: var(--ink); }
+	.d-me-btn span { width: 30px; height: 30px; border-radius: 9px; display: grid; place-items: center; color: #fff; background: var(--brand); font-size: 13px; }
+	.d-menu { position: absolute; right: 0; top: calc(100% + 6px); min-width: 210px; padding: 6px; background: var(--card); border: 1px solid var(--line); border-radius: 16px; box-shadow: 0 24px 50px -20px rgba(30, 24, 56, .4); display: none; }
+	.d-menu.open { display: block; }
+	.d-menu a { display: flex; align-items: center; gap: 10px; min-height: 42px; padding: 0 12px; border-radius: 6px; font-size: 14.5px; color: var(--text); text-decoration: none; }
+	.d-menu a:hover { background: var(--paper); color: var(--ink); }
 	.d-menu hr { margin: 6px 4px; border: 0; border-top: 1px solid var(--line); }
 
-	/* Layout: main column + side column on wide screens */
-	.d-page { max-width: 1120px; margin: 0 auto; padding: 24px 20px 64px; display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 22px; align-items: start; }
-	.d-main, .d-side { display: grid; gap: 22px; min-width: 0; }
-	.d-side { position: sticky; top: 88px; }
-	.d-card { background: #fff; border: 1px solid var(--line); border-radius: 26px; padding: 22px; box-shadow: 0 26px 50px -34px rgba(59, 46, 126, .55); animation: d-up .55s cubic-bezier(.2, .8, .2, 1) backwards; }
-	.d-card h2 { display: flex; align-items: center; gap: 10px; margin: 0 0 14px; font-size: 1.08rem; font-weight: 800; letter-spacing: -.02em; }
-	.d-card h2::before { content: ""; width: 16px; height: 4px; border-radius: 4px; background: var(--orange); }
-	.d-card h2 small { margin-left: auto; font-size: .75rem; font-weight: 600; color: var(--faint); letter-spacing: 0; }
+	/* Layout */
+	.d-page { max-width: 1120px; margin: 0 auto; padding: 28px 20px 64px; display: grid; grid-template-columns: minmax(0, 1fr) 330px; gap: 24px; align-items: start; }
+	.d-main, .d-side { display: grid; gap: 24px; min-width: 0; }
+	.d-side { position: sticky; top: 84px; }
+	.d-card { background: var(--card); border: 1px solid var(--line); border-radius: 20px; padding: 20px; }
+	.d-card h2, .d-more-title { display: flex; align-items: baseline; gap: 10px; margin: 0 0 16px; font-size: 1rem; font-weight: 600; color: var(--ink); }
+	.d-card h2 small, .d-more-title small { margin-left: auto; font-size: .8rem; font-weight: 400; color: var(--faint); }
 
-	/* Hero */
-	.d-hero { position: relative; overflow: hidden; isolation: isolate; padding: 28px; border-radius: 30px; color: #fff; background: linear-gradient(135deg, #2E2454 0%, #3B2E7E 48%, #6B55D6 100%); box-shadow: 0 34px 60px -30px rgba(59, 46, 126, .85); animation: d-up .55s cubic-bezier(.2, .8, .2, 1) backwards; }
-	.d-hero::before { content: ""; position: absolute; z-index: -1; width: 300px; height: 300px; right: -80px; top: -130px; border-radius: 50%; background: radial-gradient(circle, rgba(232, 112, 18, .75), rgba(232, 112, 18, 0) 70%); animation: d-float 10s ease-in-out infinite alternate; }
-	.d-hero::after { content: ""; position: absolute; z-index: -1; inset: 0; opacity: .14; background-image: radial-gradient(rgba(255, 255, 255, .9) 1px, transparent 1.4px); background-size: 22px 22px; -webkit-mask-image: linear-gradient(90deg, transparent, #000 70%); mask-image: linear-gradient(90deg, transparent, #000 70%); }
-	.d-date { margin: 0 0 6px; font-size: .8rem; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: rgba(255, 255, 255, .7); }
-	.d-hero h1 { margin: 0; font-size: clamp(1.6rem, 4.6vw, 2.4rem); font-weight: 800; letter-spacing: -.045em; line-height: 1.1; color: #fff; }
-	.d-hero h1 em { font-family: "Instrument Serif", Georgia, serif; font-style: italic; font-weight: 400; letter-spacing: 0; color: #FFD3B0; }
-	.d-hero-line { margin: 14px 0 0; max-width: 560px; font-size: .95rem; line-height: 1.6; color: rgba(255, 255, 255, .88); }
-	.d-hero-line b { color: #FFD3B0; }
-	.d-hero-btns { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 18px; }
-	.d-hbtn { display: inline-flex; align-items: center; gap: 8px; min-height: 46px; padding: 10px 18px; border-radius: 14px; border: 0; font: inherit; font-size: .9rem; font-weight: 700; text-decoration: none !important; cursor: pointer; transition: transform .15s ease; }
-	.d-hbtn:active { transform: scale(.96); }
-	.d-hbtn.white { background: #fff; color: var(--blue) !important; }
-	.d-hbtn.glass { background: rgba(255, 255, 255, .14); color: #fff !important; border: 1px solid rgba(255, 255, 255, .3); }
+	/* Greeting */
+	.d-hello { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 16px; padding-bottom: 4px; }
+	.d-date { margin: 0 0 4px; font-size: .85rem; color: var(--faint); }
+	.d-hello h1 { margin: 0; font-size: clamp(1.7rem, 4vw, 2.3rem); font-weight: 800; letter-spacing: -.035em; line-height: 1.15; color: var(--ink); }
+	.d-hello h1 em { font-family: "Instrument Serif", Georgia, serif; font-style: italic; font-weight: 400; letter-spacing: 0; color: #B55406; }
+	:root[data-iyp-theme="dark"] .d-hello h1 em { color: var(--accent); }
+	.d-hello-line { margin: 8px 0 0; max-width: 540px; font-size: .95rem; line-height: 1.55; color: var(--muted); }
+	.d-hello-line b { color: var(--ink); font-weight: 600; }
+	.d-btns { display: flex; flex-wrap: wrap; gap: 8px; }
 
-	/* Stat tiles */
-	.d-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
-	.d-tile { position: relative; overflow: hidden; padding: 18px; border-radius: 22px; background: #fff; border: 1px solid var(--line); box-shadow: 0 20px 40px -30px rgba(59, 46, 126, .6); animation: d-up .5s cubic-bezier(.2, .8, .2, 1) backwards; }
-	.d-tile:nth-child(2) { animation-delay: .07s; } .d-tile:nth-child(3) { animation-delay: .14s; }
-	.d-tile::after { content: ""; position: absolute; right: -26px; bottom: -26px; width: 86px; height: 86px; border-radius: 50%; opacity: .55; }
-	.d-tile.view::after { background: var(--sky); } .d-tile.lead::after { background: var(--peach); } .d-tile.ai::after { background: var(--lilac); }
-	.d-tile-ico { position: relative; z-index: 1; width: 42px; height: 42px; border-radius: 14px; display: grid; place-items: center; font-size: 19px; color: #fff; margin-bottom: 12px; }
-	.d-tile.view .d-tile-ico { background: linear-gradient(135deg, #3B2E7E, #6B55D6); }
-	.d-tile.lead .d-tile-ico { background: linear-gradient(135deg, #E87012, #F59E4C); }
-	.d-tile.ai .d-tile-ico { background: linear-gradient(135deg, #5B3CC4, #9B7BFF); }
-	.d-tile b { position: relative; z-index: 1; display: block; font-size: 2rem; font-weight: 800; letter-spacing: -.04em; line-height: 1; }
-	.d-tile span { position: relative; z-index: 1; display: block; margin-top: 6px; font-size: .8rem; color: var(--muted); }
+	/* Buttons */
+	.d-btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 42px; padding: 8px 16px; border-radius: 12px; border: 1px solid var(--line); background: var(--card); font: inherit; font-size: .9rem; font-weight: 500; color: var(--ink) !important; text-decoration: none !important; cursor: pointer; transition: background .12s ease, border-color .12s ease; }
+	.d-btn:hover { border-color: var(--line-strong); background: var(--hover); }
+	.d-btn.primary { background: var(--brand); border-color: var(--brand); color: #fff !important; }
+	.d-btn.primary:hover { background: var(--brand-hover); }
+	.d-btn.wa { background: #1F8F4E; border-color: #1F8F4E; color: #fff !important; }
+	.d-btn.icon { width: 42px; padding: 0; }
+
+	/* Numbers */
+	.d-stats { display: grid; grid-template-columns: repeat(3, 1fr); background: var(--card); border: 1px solid var(--line); border-radius: 20px; }
+	.d-stat { padding: 18px 20px; }
+	.d-stat + .d-stat { border-left: 1px solid var(--line-soft); }
+	.d-stat-label { display: flex; align-items: center; gap: 8px; font-size: .85rem; color: var(--muted); }
+	.d-stat-label .i { width: 16px; height: 16px; color: var(--faint); }
+	.d-stat b { display: block; margin-top: 10px; font-size: 2rem; font-weight: 600; letter-spacing: -.02em; line-height: 1; color: var(--ink); }
+	.d-stat small { display: block; margin-top: 6px; font-size: .78rem; color: var(--faint); }
 
 	/* 7-day chart */
-	.d-chart { display: flex; align-items: flex-end; gap: 10px; height: 160px; padding-top: 10px; }
+	.d-chart { display: flex; align-items: flex-end; gap: 12px; height: 150px; padding-bottom: 2px; border-bottom: 1px solid var(--line); }
 	.d-bar { flex: 1; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 6px; min-width: 0; }
-	.d-bar i { display: block; width: 100%; max-width: 42px; height: var(--h); border-radius: 10px 10px 6px 6px; background: linear-gradient(180deg, #6B55D6, #3B2E7E); transform-origin: bottom; animation: d-grow .8s cubic-bezier(.2, .8, .2, 1) backwards; animation-delay: calc(var(--i) * 70ms + .2s); }
-	.d-bar.today i { background: linear-gradient(180deg, #F59E4C, #E87012); }
-	.d-bar.zero i { background: #ECE8F7; }
-	.d-bar b { font-size: .78rem; font-weight: 800; color: var(--ink); }
-	.d-bar small { font-size: .7rem; font-weight: 600; color: var(--faint); white-space: nowrap; }
-	.d-bar.today small { color: var(--orange-dark); }
-
-	/* Business card */
-	.d-biz { overflow: hidden; padding: 0; }
-	.d-biz + .d-biz { margin-top: 0; }
-	.d-cover { position: relative; height: 92px; background: linear-gradient(120deg, var(--c), color-mix(in srgb, var(--c) 55%, #0b1220)); background-color: var(--c); }
-	.d-cover::after { content: ""; position: absolute; inset: 0; opacity: .2; background-image: radial-gradient(rgba(255, 255, 255, .9) 1px, transparent 1.4px); background-size: 18px 18px; }
-	.d-biz-body { padding: 0 20px 20px; }
-	.d-biz-top { display: flex; align-items: flex-end; justify-content: space-between; gap: 10px; margin-top: -38px; position: relative; }
-	.d-logo-box { width: 78px; height: 78px; border-radius: 22px; display: grid; place-items: center; overflow: hidden; background: #fff; border: 4px solid #fff; box-shadow: 0 14px 28px -12px rgba(30, 24, 56, .5); color: var(--blue); font-size: 1.5rem; font-weight: 800; }
-	.d-logo-box img { max-width: 66px; max-height: 66px; object-fit: contain; }
-	.d-status { display: inline-flex; align-items: center; gap: 6px; margin-bottom: 6px; padding: 5px 12px; border-radius: 999px; font-size: .75rem; font-weight: 700; }
-	.d-status.live { background: var(--mint); color: var(--green); }
-	.d-status.live i { width: 8px; height: 8px; border-radius: 50%; background: #18A058; animation: d-live 2s infinite; }
-	.d-status.draft { background: var(--peach); color: var(--orange-dark); }
-	.d-biz h3 { margin: 12px 0 2px; font-size: 1.2rem; font-weight: 800; letter-spacing: -.025em; }
-	.d-biz p { margin: 0; font-size: .85rem; color: var(--muted); }
-	.d-info { list-style: none; margin: 12px 0 0; padding: 0; display: grid; gap: 7px; font-size: .86rem; }
-	.d-info li { display: flex; align-items: center; gap: 8px; min-width: 0; overflow-wrap: anywhere; }
-	.d-info li span { flex: none; width: 1.2em; text-align: center; }
-	.d-info a { color: inherit; text-decoration: none; }
-	.d-info a:hover { text-decoration: underline; }
-	.d-info-empty { color: var(--muted); }
-	.d-info-empty a { color: #6B55D6; font-weight: 600; }
-	.d-acts { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-top: 16px; }
-	/* Other businesses: full-width grid under the dashboard */
-	.d-more { grid-column: 1 / -1; min-width: 0; }
-	.d-more-title { display: flex; align-items: center; gap: 10px; margin: 6px 4px 14px; font-size: 1.15rem; font-weight: 800; letter-spacing: -.02em; }
-	.d-more-title::before { content: ""; width: 16px; height: 4px; border-radius: 4px; background: var(--orange); }
-	.d-more-title small { padding: 2px 10px; border-radius: 999px; background: var(--lilac, #EEEAF7); font-size: .78rem; font-weight: 700; color: var(--blue); }
-	.d-more-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 22px; align-items: start; }
-	.d-act { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 50px; padding: 8px; border-radius: 15px; border: 1px solid var(--line); background: #FBFAFE; font: inherit; font-size: .86rem; font-weight: 700; color: var(--ink) !important; text-decoration: none !important; cursor: pointer; transition: transform .15s ease, border-color .15s ease, background .15s ease; }
-	.d-act:hover { border-color: var(--blue); background: #fff; }
-	.d-act:active { transform: scale(.96); }
-	.d-act.main { border: 0; color: #fff !important; background: linear-gradient(135deg, #3B2E7E, #6B55D6); box-shadow: 0 14px 26px -14px rgba(59, 46, 126, .9); }
-
-	/* Page strength ring */
-	.d-strength { display: flex; align-items: center; gap: 18px; }
-	.d-ring { position: relative; width: 104px; height: 104px; flex: none; }
-	.d-ring svg { width: 104px; height: 104px; transform: rotate(-90deg); }
-	.d-ring circle { fill: none; stroke-width: 10; }
-	.d-ring .bg { stroke: #EEEAF7; }
-	.d-ring .fg { stroke: url(#d-ring-grad); stroke-linecap: round; stroke-dasharray: 289; stroke-dashoffset: 289; transition: stroke-dashoffset 1.2s cubic-bezier(.2, .8, .2, 1) .3s; }
-	.d-ring b { position: absolute; inset: 0; display: grid; place-items: center; font-size: 1.4rem; font-weight: 800; letter-spacing: -.03em; }
-	.d-strength-text strong { display: block; font-size: .98rem; font-weight: 800; }
-	.d-strength-text p { margin: 4px 0 0; font-size: .82rem; color: var(--muted); line-height: 1.5; }
-	.d-tips { list-style: none; margin: 16px 0 0; padding: 0; display: grid; gap: 8px; }
-	.d-tips a { display: flex; align-items: center; gap: 10px; min-height: 46px; padding: 8px 12px; border-radius: 14px; background: #FBFAFE; border: 1px solid var(--line); font-size: .85rem; font-weight: 600; color: var(--ink) !important; text-decoration: none !important; }
-	.d-tips a::before { content: "+"; width: 24px; height: 24px; flex: none; border-radius: 8px; display: grid; place-items: center; font-weight: 800; color: #fff; background: var(--orange); }
-	.d-tips a:hover { border-color: var(--orange); }
-	.d-tips a::after { content: "→"; margin-left: auto; color: var(--faint); }
+	.d-bar i { display: block; width: 100%; max-width: 36px; height: var(--h); border-radius: 4px 4px 0 0; background: var(--bar); }
+	.d-bar.today i { background: var(--brand); }
+	.d-bar.zero i { background: var(--line-soft); }
+	.d-bar b { font-size: .78rem; font-weight: 500; color: var(--muted); }
+	.d-days { display: flex; gap: 12px; margin-top: 8px; }
+	.d-days span { flex: 1; text-align: center; font-size: .75rem; color: var(--faint); white-space: nowrap; }
+	.d-days span.today { color: var(--ink); font-weight: 600; }
 
 	/* Activity */
-	.d-chips { display: flex; gap: 8px; overflow-x: auto; padding: 2px 2px 12px; scrollbar-width: none; }
-	.d-chips::-webkit-scrollbar { display: none; }
-	.d-chip { flex: none; min-height: 40px; padding: 8px 16px; border-radius: 999px; border: 1px solid var(--line); background: #fff; font: inherit; font-size: .84rem; font-weight: 600; color: var(--text); cursor: pointer; }
-	.d-chip[aria-pressed="true"] { background: var(--blue); border-color: var(--blue); color: #fff; }
-	.d-day { margin: 14px 4px 8px; font-size: .72rem; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: var(--faint); }
-	.d-list { list-style: none; margin: 0; padding: 0; border: 1px solid #EFECF8; border-radius: 20px; overflow: hidden; }
-	.d-alert { display: flex; align-items: center; gap: 12px; padding: 13px 14px; border-top: 1px solid #F1EEF9; background: #fff; animation: d-up .4s ease backwards; animation-delay: calc(var(--i, 0) * 35ms); }
-	.d-alert:first-child { border-top: 0; }
-	.d-alert.new { background: #FBFAFE; }
-	.d-a-ico { width: 40px; height: 40px; border-radius: 13px; flex: none; display: grid; place-items: center; font-size: 18px; }
-	.d-alert.view .d-a-ico { background: var(--sky); } .d-alert.lead .d-a-ico { background: var(--peach); } .d-alert.ai .d-a-ico { background: var(--lilac); }
-	.d-a-text { flex: 1; min-width: 0; }
-	.d-a-text p { margin: 0; font-size: .9rem; line-height: 1.45; overflow-wrap: anywhere; }
-	.d-alert.new .d-a-text p { font-weight: 700; }
-	.d-a-text small { font-size: .75rem; color: var(--faint); }
-	.d-a-text a { color: var(--blue) !important; font-weight: 600; }
-	.d-new { width: 9px; height: 9px; border-radius: 50%; flex: none; background: var(--orange); }
+	.d-tabs { display: flex; gap: 2px; margin: -4px 0 8px; border-bottom: 1px solid var(--line); overflow-x: auto; scrollbar-width: none; }
+	.d-tabs::-webkit-scrollbar { display: none; }
+	.d-tab { flex: none; position: relative; padding: 10px 12px; border: 0; background: none; font: inherit; font-size: .88rem; color: var(--muted); cursor: pointer; }
+	.d-tab:hover { color: var(--ink); }
+	.d-tab[aria-pressed="true"] { color: var(--ink); font-weight: 600; }
+	.d-tab[aria-pressed="true"]::after { content: ""; position: absolute; left: 10px; right: 10px; bottom: -1px; height: 2px; background: var(--brand); }
+	.d-day { margin: 18px 0 4px; font-size: .78rem; font-weight: 600; color: var(--faint); }
+	.d-list { list-style: none; margin: 0; padding: 0; }
+	.d-alert { display: flex; align-items: center; gap: 12px; padding: 11px 2px; border-bottom: 1px solid var(--line-soft); }
+	.d-list .d-alert:last-child { border-bottom: 0; }
+	.d-a-ico { width: 32px; height: 32px; border-radius: 8px; flex: none; display: grid; place-items: center; background: var(--paper); color: var(--muted); }
+	.d-a-ico .i { width: 16px; height: 16px; }
+	.d-alert.k-lead .d-a-ico { background: var(--accent-soft); color: var(--accent); }
+	.d-alert.k-ai .d-a-ico { background: var(--brand-soft); color: var(--brand); }
+	.d-a-text { flex: 1; min-width: 0; font-size: .9rem; line-height: 1.45; color: var(--text); overflow-wrap: anywhere; }
+	.d-alert.is-new .d-a-text { color: var(--ink); font-weight: 600; }
+	.d-a-meta { flex: none; display: flex; align-items: center; gap: 10px; font-size: .78rem; color: var(--faint); white-space: nowrap; }
+	.d-a-meta a { color: var(--brand) !important; text-decoration: none; }
+	.d-a-meta a:hover { text-decoration: underline; }
+	.d-new { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); }
 	.d-hide { display: none !important; }
-	.d-empty { text-align: center; padding: 30px 18px; border: 1.5px dashed #CFC6F0; border-radius: 20px; background: linear-gradient(135deg, #F3F0FB, #FFF1E6); }
-	.d-empty div { font-size: 34px; }
-	.d-empty b { display: block; margin: 8px 0 6px; font-size: 1.05rem; }
-	.d-empty p { margin: 0 auto; max-width: 420px; font-size: .88rem; color: var(--muted); line-height: 1.55; }
-	.d-empty-btns { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-top: 16px; }
-	.d-empty-btns .d-act { flex: 0 1 auto; padding: 8px 18px; }
-	.d-empty-btns .wa { border: 0; background: #25D366; color: #fff !important; }
+	.d-empty { padding: 28px 8px 8px; text-align: center; }
+	.d-empty b { display: block; font-size: 1rem; font-weight: 600; }
+	.d-empty p { margin: 6px auto 0; max-width: 400px; font-size: .9rem; line-height: 1.55; color: var(--muted); }
+	.d-empty .d-btns { justify-content: center; margin-top: 16px; }
 
-	/* Footer + phone dock */
-	.d-foot { max-width: 1120px; margin: 0 auto; padding: 0 20px 40px; text-align: center; font-size: .82rem; color: var(--faint); }
-	.d-foot a { color: var(--blue); font-weight: 700; text-decoration: none; }
+	/* Business card */
+	.d-biz { padding: 0; overflow: hidden; border-top: 3px solid var(--c); }
+	.d-biz-body { padding: 18px 20px 20px; }
+	.d-biz-top { display: flex; align-items: center; gap: 12px; }
+	.d-logo-box { width: 52px; height: 52px; flex: none; border-radius: 10px; border: 1px solid var(--line); display: grid; place-items: center; overflow: hidden; background: #fff; color: var(--c); font-weight: 700; font-size: 1.05rem; }
+	.d-logo-box img { max-width: 44px; max-height: 44px; object-fit: contain; }
+	.d-biz-name { min-width: 0; }
+	.d-biz h3 { margin: 0; font-size: 1.05rem; font-weight: 600; line-height: 1.3; overflow-wrap: anywhere; color: var(--ink); }
+	.d-biz-tags { margin: 2px 0 0; font-size: .82rem; color: var(--muted); }
+	.d-status { display: inline-flex; align-items: center; gap: 6px; margin-top: 14px; font-size: .8rem; font-weight: 500; }
+	.d-status::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+	.d-status.live { color: var(--ok); }
+	.d-status.draft { color: var(--accent); }
+	.d-info { list-style: none; margin: 12px 0 0; padding: 12px 0 0; border-top: 1px solid var(--line-soft); display: grid; gap: 8px; font-size: .88rem; color: var(--text); }
+	.d-info li { display: flex; align-items: flex-start; gap: 10px; min-width: 0; overflow-wrap: anywhere; line-height: 1.4; }
+	.d-info .i { width: 16px; height: 16px; margin-top: 1px; color: var(--faint); }
+	.d-info a { color: inherit; text-decoration: none; }
+	.d-info a:hover { color: var(--brand); text-decoration: underline; }
+	.d-info-empty { color: var(--muted); }
+	.d-private { margin-left: 6px; padding: 1px 7px; border-radius: 4px; background: var(--paper); border: 1px solid var(--line); font-size: .72rem; font-weight: 500; color: var(--muted); }
+	.d-info-empty a { color: var(--brand) !important; font-weight: 500; }
+	.d-acts { display: flex; gap: 8px; margin-top: 16px; }
+	.d-acts .d-btn:not(.icon) { flex: 1; }
+
+	/* Page completeness */
+	.d-meter-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+	.d-meter-head b { font-size: 1.6rem; font-weight: 600; letter-spacing: -.02em; }
+	.d-meter-head span { font-size: .85rem; color: var(--muted); }
+	.d-meter { height: 6px; margin: 10px 0 0; border-radius: 3px; background: var(--line-soft); overflow: hidden; }
+	.d-meter i { display: block; height: 100%; width: var(--p); border-radius: 3px; background: var(--brand); }
+	.d-meter-note { margin: 10px 0 0; font-size: .84rem; line-height: 1.5; color: var(--muted); }
+	.d-tips { list-style: none; margin: 14px 0 0; padding: 0; border-top: 1px solid var(--line-soft); }
+	.d-tips a { display: flex; align-items: center; gap: 10px; padding: 11px 0; border-bottom: 1px solid var(--line-soft); font-size: .88rem; color: var(--text) !important; text-decoration: none !important; }
+	.d-tips li:last-child a { border-bottom: 0; padding-bottom: 0; }
+	.d-tips a .i { width: 16px; height: 16px; color: var(--faint); }
+	.d-tips a .i:last-child { margin-left: auto; }
+	.d-tips a:hover { color: var(--brand) !important; }
+
+	/* Other businesses */
+	.d-more { grid-column: 1 / -1; min-width: 0; margin-top: 8px; }
+	.d-more-title { font-size: 1.05rem; }
+	.d-more-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 20px; align-items: start; }
+
+	/* Footer, toast, phone bar */
+	.d-foot { max-width: 1120px; margin: 0 auto; padding: 0 20px 40px; }
 	.d-dock { display: none; }
-	.d-toast { position: fixed; left: 50%; bottom: 110px; transform: translate(-50%, 20px); opacity: 0; pointer-events: none; z-index: 1060; padding: 10px 18px; border-radius: 999px; background: #1E1838; color: #fff; font-size: .88rem; transition: all .25s ease; }
-	.d-toast.show { opacity: 1; transform: translate(-50%, 0); }
+	.d-toast { position: fixed; left: 50%; bottom: 100px; transform: translateX(-50%); opacity: 0; pointer-events: none; z-index: 1060; padding: 9px 16px; border-radius: 8px; background: var(--toast); color: #fff; font-size: .88rem; transition: opacity .2s ease; }
+	.d-toast.show { opacity: 1; }
 
 	@media (max-width: 960px) {
-		.d-page { grid-template-columns: minmax(0, 1fr); }
-		.d-side { position: static; }
-		/* On one column, the business card and strength come right after the stats */
-		.d-page { display: flex; flex-direction: column; }
+		/* stretch: every card full width on one column (the grid's align-items:start shrank some) */
+		.d-page { display: flex; flex-direction: column; align-items: stretch; }
 		.d-main, .d-side { display: contents; }
-		.d-hero { order: 1; } .d-stats { order: 2; } .d-biz { order: 3; } .d-str-card { order: 4; } .d-chart-card { order: 5; } .d-act-card { order: 6; } .d-more { order: 7; }
-		.d-more-grid .d-biz { order: 0; }
+		.d-side { position: static; }
+		/* On one column: greeting, numbers, main business, completeness, chart, activity, others */
+		.d-hello { order: 1; } .d-stats { order: 2; } .d-side > .d-biz { order: 3; } .d-str-card { order: 4; } .d-chart-card { order: 5; } .d-act-card { order: 6; } .d-more { order: 7; }
 	}
-	@media (max-width: 640px) { .d-more-grid { grid-template-columns: minmax(0, 1fr); gap: 14px; } }
 	@media (max-width: 640px) {
 		.d-head-row { padding: 8px 14px; }
-		.d-head-row .d-logo img { height: 38px; }
+		.d-head-row .d-logo img { height: 36px; }
 		.d-head-links > a { display: none; }
 		.d-me-btn em { display: none; }
-		.d-page { padding: 14px 12px 130px; gap: 14px; }
-		.d-hero { padding: 22px 18px; border-radius: 24px; }
-		.d-hero-btns .d-hbtn { flex: 1 1 auto; justify-content: center; }
-		.d-stats { gap: 8px; }
-		.d-tile { padding: 12px 10px; border-radius: 18px; }
-		.d-tile-ico { width: 34px; height: 34px; border-radius: 11px; font-size: 16px; margin-bottom: 8px; }
-		.d-tile b { font-size: 1.5rem; }
-		.d-tile span { font-size: .7rem; }
-		.d-card { padding: 16px; border-radius: 22px; }
+		.d-page { padding: 18px 14px 120px; gap: 16px; }
+		.d-hello .d-btns { width: 100%; }
+		.d-hello .d-btns .d-btn { flex: 1; }
+		.d-stat { padding: 14px 12px; }
+		.d-stat-label { font-size: .76rem; }
+		.d-stat-label .i { display: none; }
+		.d-stat b { font-size: 1.55rem; margin-top: 6px; }
+		.d-card { padding: 16px; }
 		.d-biz { padding: 0; }
-		.d-chart { height: 130px; gap: 6px; }
-		.d-ring, .d-ring svg { width: 88px; height: 88px; }
-		.d-foot { padding-bottom: 120px; }
+		.d-biz-body { padding: 16px; }
+		.d-chart, .d-days { gap: 6px; }
+		.d-chart { height: 120px; }
+		.d-alert { flex-wrap: wrap; }
+		.d-a-meta { width: 100%; padding-left: 44px; }
+		.d-more-grid { grid-template-columns: minmax(0, 1fr); gap: 16px; }
 		.d-dock {
-			display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 4px;
-			position: fixed; left: 10px; right: 10px; bottom: calc(10px + env(safe-area-inset-bottom, 0px)); z-index: 1045;
-			padding: 6px; border-radius: 22px; background: rgba(255, 255, 255, .96); border: 1px solid var(--line);
-			-webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); box-shadow: 0 18px 40px -16px rgba(30, 24, 56, .45);
+			display: flex; position: fixed; left: 0; right: 0; bottom: 0; z-index: 1045;
+			padding: 6px 6px calc(6px + env(safe-area-inset-bottom, 0px)); background: var(--card); border-top: 1px solid var(--line);
 		}
-		.d-dock a, .d-dock button { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; min-height: 54px; border: 0; border-radius: 16px; background: transparent; font: inherit; font-size: .66rem; font-weight: 700; color: var(--muted) !important; text-decoration: none !important; cursor: pointer; }
-		.d-dock span { font-size: 20px; line-height: 1; }
-		.d-dock .on { background: var(--sky); color: var(--blue) !important; }
-		.d-dock a:active, .d-dock button:active { transform: scale(.94); }
-	}
-	@media (prefers-reduced-motion: reduce) {
-		*, *::before, *::after { animation: none !important; transition: none !important; }
+		.d-dock a, .d-dock button { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; min-height: 52px; border: 0; background: none; font: inherit; font-size: .7rem; font-weight: 500; color: var(--muted) !important; text-decoration: none !important; cursor: pointer; }
+		.d-dock .i { width: 21px; height: 21px; }
+		.d-dock .on { color: var(--brand) !important; font-weight: 600; }
 	}
 </style>
 {% endblock %}
@@ -233,19 +248,23 @@
 {%- set first_name = (full_name or "").split(" ")[0] -%}
 <header class="d-head">
 	<div class="d-head-row">
-		<a class="d-logo" href="/"><img src="/assets/its_your_profile/images/iyp-logo.png" alt="It's Your Profile"></a>
+		<a class="d-logo" href="/"><img class="d-logo-light" src="/assets/its_your_profile/images/iyp-logo.png" alt="It's Your Profile"><img class="d-logo-dark" src="/assets/its_your_profile/images/iyp-logo-dark.png" alt="It's Your Profile"></a>
 		<nav class="d-head-links" aria-label="{{ _('Main') }}">
 			<a href="/">{{ _("Home") }}</a>
 			<a href="/notifications" class="on">{{ _("Dashboard") }}</a>
 			<a href="/account">{{ _("My information") }}</a>
+			<button type="button" class="d-theme" aria-label="{{ _('Dark theme') }}" aria-pressed="false" title="{{ _('Switch light / dark') }}">
+				<svg class="i d-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5z"/></svg>
+				<svg class="i d-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+			</button>
 			<div class="d-me">
 				<button type="button" class="d-me-btn" aria-haspopup="true" aria-expanded="false"><span aria-hidden="true">{{ (full_name or user_email or "?")[0] | upper }}</span><em>{{ first_name or _("Account") }}</em></button>
 				<div class="d-menu" role="menu">
-					<a href="/notifications" role="menuitem">📊 {{ _("Dashboard") }}</a>
-					<a href="/account" role="menuitem">🪪 {{ _("My information") }}</a>
-					<a href="/" role="menuitem">🏠 {{ _("Home") }}</a>
+					<a href="/notifications" role="menuitem"><svg class="i"><use href="#i-grid"/></svg>{{ _("Dashboard") }}</a>
+					<a href="/account" role="menuitem"><svg class="i"><use href="#i-id"/></svg>{{ _("My information") }}</a>
+					<a href="/" role="menuitem"><svg class="i"><use href="#i-home"/></svg>{{ _("Home") }}</a>
 					<hr>
-					<a href="/?cmd=web_logout" role="menuitem">🚪 {{ _("Log out") }}</a>
+					<a href="/logout" role="menuitem"><svg class="i"><use href="#i-logout"/></svg>{{ _("Log out") }}</a>
 				</div>
 			</div>
 		</nav>
@@ -256,37 +275,63 @@
 {% block content %}
 {%- set first_name = (full_name or "").split(" ")[0] -%}
 {%- set main = profiles[0] if profiles else None -%}
+
+{#- Line icons, drawn once and reused with <use href="#i-..."> -#}
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+	<symbol id="i-eye" viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></symbol>
+	<symbol id="i-phone" viewBox="0 0 24 24"><path d="M21 16.5v3a2 2 0 0 1-2.2 2 19.5 19.5 0 0 1-8.5-3 19.2 19.2 0 0 1-6-6 19.5 19.5 0 0 1-3-8.5A2 2 0 0 1 3.3 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.6a2 2 0 0 1-.5 2.1L7.3 9.6a16 16 0 0 0 6 6l1.2-1.2a2 2 0 0 1 2.1-.5c.8.3 1.7.6 2.6.7a2 2 0 0 1 1.8 1.9z"/></symbol>
+	<symbol id="i-chat" viewBox="0 0 24 24"><path d="M21 12a8.5 8.5 0 0 1-12.3 7.6L3 21l1.4-5.4A8.5 8.5 0 1 1 21 12z"/></symbol>
+	<symbol id="i-bot" viewBox="0 0 24 24"><rect x="4" y="7" width="16" height="12" rx="3"/><path d="M12 3v4M9 12.5v1M15 12.5v1M2 12v3M22 12v3"/></symbol>
+	<symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.2-4.2"/></symbol>
+	<symbol id="i-mail" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3.5 7 8.5 6 8.5-6"/></symbol>
+	<symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.6 3.8 5.6 3.8 9s-1.3 6.4-3.8 9c-2.5-2.6-3.8-5.6-3.8-9S9.5 5.6 12 3z"/></symbol>
+	<symbol id="i-pin" viewBox="0 0 24 24"><path d="M12 21s-7-6.1-7-11a7 7 0 0 1 14 0c0 4.9-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></symbol>
+	<symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4.5 21a7.5 7.5 0 0 1 15 0"/></symbol>
+	<symbol id="i-link" viewBox="0 0 24 24"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></symbol>
+	<symbol id="i-share" viewBox="0 0 24 24"><circle cx="18" cy="5" r="2.5"/><circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="19" r="2.5"/><path d="m8.2 10.8 7.6-4.4M8.2 13.2l7.6 4.4"/></symbol>
+	<symbol id="i-edit" viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16v4z"/><path d="m13.5 6.5 4 4"/></symbol>
+	<symbol id="i-home" viewBox="0 0 24 24"><path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10v10h13V10"/></symbol>
+	<symbol id="i-grid" viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="7" height="9" rx="1.5"/><rect x="13.5" y="3.5" width="7" height="5" rx="1.5"/><rect x="13.5" y="11.5" width="7" height="9" rx="1.5"/><rect x="3.5" y="15.5" width="7" height="5" rx="1.5"/></symbol>
+	<symbol id="i-id" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="11" r="2"/><path d="M6 16a3 3 0 0 1 6 0M15 10h3M15 14h3"/></symbol>
+	<symbol id="i-logout" viewBox="0 0 24 24"><path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3"/><path d="M10 16l-4-4 4-4M6 12h10"/></symbol>
+	<symbol id="i-camera" viewBox="0 0 24 24"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></symbol>
+	<symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+	<symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></symbol>
+</svg>
+
 <main class="d-page">
 	<div class="d-main">
-		<!-- Hero -->
-		<section class="d-hero">
-			<p class="d-date">{{ today }}</p>
-			<h1><span data-greet>{{ _("Hello") }}</span>, <em>{{ first_name or _("there") }}</em> 👋</h1>
-			<p class="d-hero-line">
-				{% if has_profile and (week.views or week.leads) %}
-				{{ _("This week your page was viewed {0} times and {1} people tapped to contact you.").format("<b>" ~ week.views ~ "</b>", "<b>" ~ week.leads ~ "</b>") }}
-				{% elif has_profile %}
-				{{ _("Your page is live. Share it on WhatsApp to get your first visitors this week.") }}
-				{% else %}
-				{{ _("Scan your visiting card and your business page is ready in a minute.") }}
-				{% endif %}
-			</p>
-			<div class="d-hero-btns">
+		<!-- Greeting -->
+		<section class="d-hello">
+			<div>
+				<p class="d-date">{{ today }}</p>
+				<h1><span data-greet>{{ _("Hello") }}</span>, <em>{{ first_name or _("there") }}</em></h1>
+				<p class="d-hello-line">
+					{% if has_profile and (week.views or week.leads) %}
+					{{ _("This week your page was viewed {0} times and {1} people tapped to contact you.").format("<b>" ~ week.views ~ "</b>", "<b>" ~ week.leads ~ "</b>") }}
+					{% elif has_profile %}
+					{{ _("Your page is live. Share it on WhatsApp to get your first visitors this week.") }}
+					{% else %}
+					{{ _("Scan your visiting card and your business page is ready in a minute.") }}
+					{% endif %}
+				</p>
+			</div>
+			<div class="d-btns">
 				{% if main and main.page_url %}
-				<a class="d-hbtn white" href="{{ main.page_url }}" target="_blank" rel="noopener">👁️ {{ _("View my page") }}</a>
-				<button type="button" class="d-hbtn glass" data-share="{{ main.page_url }}" data-title="{{ main.company_name | e }}">📤 {{ _("Share") }}</button>
+				<a class="d-btn primary" href="{{ main.page_url }}" target="_blank" rel="noopener"><svg class="i"><use href="#i-eye"/></svg>{{ _("View my page") }}</a>
+				<button type="button" class="d-btn" data-share="{{ main.page_url }}" data-title="{{ main.company_name | e }}"><svg class="i"><use href="#i-share"/></svg>{{ _("Share") }}</button>
 				{% elif not main %}
-				<a class="d-hbtn white" href="/#start">📷 {{ _("Scan my visiting card") }}</a>
+				<a class="d-btn primary" href="/#start"><svg class="i"><use href="#i-camera"/></svg>{{ _("Scan my visiting card") }}</a>
 				{% endif %}
 			</div>
 		</section>
 
 		{% if has_profile %}
-		<!-- Stat tiles -->
+		<!-- Last 7 days -->
 		<div class="d-stats" aria-label="{{ _('Last 7 days') }}">
-			<div class="d-tile view"><div class="d-tile-ico" aria-hidden="true">👀</div><b data-count="{{ week.views }}">{{ week.views }}</b><span>{{ _("Page views") }}</span></div>
-			<div class="d-tile lead"><div class="d-tile-ico" aria-hidden="true">📞</div><b data-count="{{ week.leads }}">{{ week.leads }}</b><span>{{ _("Calls & chats") }}</span></div>
-			<div class="d-tile ai"><div class="d-tile-ico" aria-hidden="true">🤖</div><b data-count="{{ week.ai }}">{{ week.ai }}</b><span>{{ _("AI visits") }}</span></div>
+			<div class="d-stat"><div class="d-stat-label"><svg class="i"><use href="#i-eye"/></svg>{{ _("Page views") }}</div><b class="num">{{ week.views }}</b><small>{{ _("last 7 days") }}</small></div>
+			<div class="d-stat"><div class="d-stat-label"><svg class="i"><use href="#i-phone"/></svg>{{ _("Calls & chats") }}</div><b class="num">{{ week.leads }}</b><small>{{ _("last 7 days") }}</small></div>
+			<div class="d-stat"><div class="d-stat-label"><svg class="i"><use href="#i-bot"/></svg>{{ _("AI visits") }}</div><b class="num">{{ week.ai }}</b><small>{{ _("last 7 days") }}</small></div>
 		</div>
 
 		<!-- 7-day views chart -->
@@ -294,10 +339,13 @@
 			<h2>{{ _("Views this week") }}<small>{{ _("Last 7 days") }}</small></h2>
 			<div class="d-chart" role="img" aria-label="{{ _('Page views on each of the last 7 days') }}">
 				{% for d in chart %}
-				<div class="d-bar{% if d.today %} today{% endif %}{% if not d.views %} zero{% endif %}" style="--h: {{ d.height }}%; --i: {{ loop.index0 }}">
-					<b>{{ d.views }}</b><i></i><small>{{ d.label }}</small>
+				<div class="d-bar{% if d.today %} today{% endif %}{% if not d.views %} zero{% endif %}" style="--h: {{ d.height }}%">
+					<b class="num">{{ d.views }}</b><i></i>
 				</div>
 				{% endfor %}
+			</div>
+			<div class="d-days" aria-hidden="true">
+				{% for d in chart %}<span{% if d.today %} class="today"{% endif %}>{{ d.label }}</span>{% endfor %}
 			</div>
 		</section>
 		{% endif %}
@@ -306,24 +354,25 @@
 		<section class="d-card d-act-card" id="activity">
 			<h2>{{ _("Who visited your page") }}{% if unread %}<small>{{ _("{0} new").format(unread) }}</small>{% endif %}</h2>
 			{% if days %}
-			<div class="d-chips" role="group" aria-label="{{ _('Filter') }}">
-				<button type="button" class="d-chip" data-filter="all" aria-pressed="true">{{ _("All") }}</button>
-				<button type="button" class="d-chip" data-filter="lead" aria-pressed="false">📞 {{ _("Calls & chats") }}</button>
-				<button type="button" class="d-chip" data-filter="ai" aria-pressed="false">🤖 {{ _("AI") }}</button>
-				<button type="button" class="d-chip" data-filter="view" aria-pressed="false">👀 {{ _("Views") }}</button>
+			<div class="d-tabs" role="group" aria-label="{{ _('Filter') }}">
+				<button type="button" class="d-tab" data-filter="all" aria-pressed="true">{{ _("All") }}</button>
+				<button type="button" class="d-tab" data-filter="lead" aria-pressed="false">{{ _("Calls & chats") }}</button>
+				<button type="button" class="d-tab" data-filter="ai" aria-pressed="false">{{ _("AI & search") }}</button>
+				<button type="button" class="d-tab" data-filter="view" aria-pressed="false">{{ _("Views") }}</button>
 			</div>
 			{% for day in days %}
 			<div class="d-day-group">
 				<div class="d-day">{{ day.label }}</div>
 				<ul class="d-list">
 					{% for alert in day.alerts %}
-					<li class="d-alert {{ alert.kind }}{% if not alert.read %} new{% endif %}" data-kind="{{ alert.kind }}" style="--i: {{ loop.index0 }}">
-						<span class="d-a-ico" aria-hidden="true">{{ alert.icon }}</span>
-						<div class="d-a-text">
-							<p>{{ alert.subject }}</p>
-							<small>{{ alert.when }}{% if alert.url %} · <a href="{{ alert.url }}">{{ _("Open page") }}</a>{% endif %}</small>
+					<li class="d-alert k-{{ alert.kind }}{% if not alert.read %} is-new{% endif %}" data-kind="{{ alert.kind }}">
+						<span class="d-a-ico" aria-hidden="true"><svg class="i"><use href="#i-{{ alert.glyph or 'eye' }}"/></svg></span>
+						<div class="d-a-text">{{ alert.subject }}</div>
+						<div class="d-a-meta">
+							{% if alert.url %}<a href="{{ alert.url }}">{{ _("Open page") }}</a>{% endif %}
+							<span>{{ alert.when }}</span>
+							{% if not alert.read %}<span class="d-new" title="{{ _('New') }}"></span>{% endif %}
 						</div>
-						{% if not alert.read %}<span class="d-new" title="{{ _('New') }}"></span>{% endif %}
 					</li>
 					{% endfor %}
 				</ul>
@@ -331,54 +380,52 @@
 			{% endfor %}
 			{% elif has_profile %}
 			<div class="d-empty">
-				<div aria-hidden="true">🚀</div>
 				<b>{{ _("No visits yet") }}</b>
 				<p>{{ _("Share your page on WhatsApp and LinkedIn. You'll see here when people view it or tap to call you.") }}</p>
 				{% if main and main.page_url %}
-				<div class="d-empty-btns">
-					<button type="button" class="d-act wa" data-wa="{{ main.page_url }}" data-title="{{ main.company_name | e }}">💬 {{ _("Share on WhatsApp") }}</button>
-					<button type="button" class="d-act" data-copy="{{ main.page_url }}">🔗 {{ _("Copy link") }}</button>
+				<div class="d-btns">
+					<button type="button" class="d-btn wa" data-wa="{{ main.page_url }}" data-title="{{ main.company_name | e }}"><svg class="i"><use href="#i-chat"/></svg>{{ _("Share on WhatsApp") }}</button>
+					<button type="button" class="d-btn" data-copy="{{ main.page_url }}"><svg class="i"><use href="#i-link"/></svg>{{ _("Copy link") }}</button>
 				</div>
 				{% endif %}
 			</div>
 			{% else %}
 			<div class="d-empty">
-				<div aria-hidden="true">🪪</div>
 				<b>{{ _("You don't have a business page yet") }}</b>
 				<p>{{ _("Scan your visiting card and your page is ready in a minute. We'll show you here who visits it.") }}</p>
-				<div class="d-empty-btns"><a class="d-act main" href="/#start">📷 {{ _("Scan my visiting card") }}</a></div>
+				<div class="d-btns"><a class="d-btn primary" href="/#start"><svg class="i"><use href="#i-camera"/></svg>{{ _("Scan my visiting card") }}</a></div>
 			</div>
 			{% endif %}
 		</section>
 	</div>
 
-	{#- 2026-11-07: one card macro; the side column shows only the main business and the rest go in
-	    a full-width grid below, so many businesses no longer make one long narrow column -#}
+	{#- One card macro: the side column shows the main business, the rest go in a full-width grid -#}
 	{% macro biz_card(p) %}
 		<article class="d-card d-biz" style="--c: {{ p.cover }}">
-			<div class="d-cover" aria-hidden="true"></div>
 			<div class="d-biz-body">
 				<div class="d-biz-top">
 					<div class="d-logo-box">{% if p.logo %}<img src="{{ p.logo | e }}" alt="">{% else %}{{ p.initials }}{% endif %}</div>
-					{% if p.page_url %}<span class="d-status live"><i aria-hidden="true"></i>{{ _("Live") }}</span>{% else %}<span class="d-status draft">● {{ _("Not published") }}</span>{% endif %}
+					<div class="d-biz-name">
+						<h3>{{ p.company_name or _("Untitled business") }}</h3>
+						{% set tags = [p.segment, p.business_nature] | select | list %}
+						{% if tags %}<p class="d-biz-tags">{{ tags | join(" · ") }}</p>{% endif %}
+					</div>
 				</div>
-				<h3>{{ p.company_name or _("Untitled business") }}</h3>
-				{% set tags = [p.segment, p.business_nature] | select | list %}
-				{% if tags %}<p>{{ tags | join(" · ") }}</p>{% endif %}
+				{% if p.page_url %}<span class="d-status live">{{ _("Live") }}</span>{% else %}<span class="d-status draft">{{ _("Not published") }}</span>{% endif %}
 				<ul class="d-info">
-					{% if p.person %}<li><span aria-hidden="true">👤</span>{{ p.person }}</li>{% endif %}
-					{% if p.phone %}<li><span aria-hidden="true">📞</span><a href="tel:{{ p.phone | e }}">{{ p.phone }}</a></li>{% endif %}
-					{% if p.email %}<li><span aria-hidden="true">✉️</span><a href="mailto:{{ p.email | e }}">{{ p.email }}</a></li>{% endif %}
-					{% if p.site_href %}<li><span aria-hidden="true">🌐</span><a href="{{ p.site_href | e }}" target="_blank" rel="noopener">{{ p.site_text }}</a></li>{% endif %}
-					{% if p.place %}<li><span aria-hidden="true">📍</span>{{ p.place }}</li>{% endif %}
-					{% if not (p.person or p.phone or p.email or p.site_href or p.place) %}<li class="d-info-empty">{{ _("No details yet.") }} <a href="{{ p.edit_url }}">{{ _("Add them") }}</a></li>{% endif %}
+					{% if p.person %}<li><svg class="i" aria-hidden="true"><use href="#i-user"/></svg>{{ p.person }}</li>{% endif %}
+					{% if p.phone %}<li><svg class="i" aria-hidden="true"><use href="#i-phone"/></svg><a href="tel:{{ p.phone | e }}">{{ p.phone }}</a>{% if p.hide_phone %}<small class="d-private" title="{{ _('Hidden from your public page') }}">{{ _("Private") }}</small>{% endif %}</li>{% endif %}
+					{% if p.email %}<li><svg class="i" aria-hidden="true"><use href="#i-mail"/></svg><a href="mailto:{{ p.email | e }}">{{ p.email }}</a></li>{% endif %}
+					{% if p.site_href %}<li><svg class="i" aria-hidden="true"><use href="#i-globe"/></svg><a href="{{ p.site_href | e }}" target="_blank" rel="noopener">{{ p.site_text }}</a></li>{% endif %}
+					{% if p.place %}<li><svg class="i" aria-hidden="true"><use href="#i-pin"/></svg>{{ p.place }}</li>{% endif %}
+					{% if not (p.person or p.phone or p.email or p.site_href or p.place) %}<li class="d-info-empty">{{ _("No details yet.") }}&nbsp;<a href="{{ p.edit_url }}">{{ _("Add them") }}</a></li>{% endif %}
 				</ul>
 				<div class="d-acts">
-					{% if p.page_url %}<a class="d-act main" href="{{ p.page_url }}" target="_blank" rel="noopener">👁️ {{ _("View") }}</a>{% endif %}
-					<a class="d-act" href="{{ p.edit_url }}">✏️ {{ _("Edit") }}</a>
+					{% if p.page_url %}<a class="d-btn primary" href="{{ p.page_url }}" target="_blank" rel="noopener">{{ _("View") }}</a>{% endif %}
+					<a class="d-btn" href="{{ p.edit_url }}"><svg class="i"><use href="#i-edit"/></svg>{{ _("Edit") }}</a>
 					{% if p.page_url %}
-					<button class="d-act" type="button" data-share="{{ p.page_url }}" data-title="{{ p.company_name | e }}">📤 {{ _("Share") }}</button>
-					<button class="d-act" type="button" data-copy="{{ p.page_url }}">🔗 {{ _("Copy link") }}</button>
+					<button class="d-btn icon" type="button" data-share="{{ p.page_url }}" data-title="{{ p.company_name | e }}" title="{{ _('Share') }}" aria-label="{{ _('Share') }}"><svg class="i"><use href="#i-share"/></svg></button>
+					<button class="d-btn icon" type="button" data-copy="{{ p.page_url }}" title="{{ _('Copy link') }}" aria-label="{{ _('Copy link') }}"><svg class="i"><use href="#i-link"/></svg></button>
 					{% endif %}
 				</div>
 			</div>
@@ -389,26 +436,18 @@
 		{% if main %}{{ biz_card(main) }}{% endif %}
 
 		{% if strength %}
-		<!-- Page strength -->
+		<!-- Page completeness -->
 		<section class="d-card d-str-card">
-			<h2>{{ _("Page strength") }}</h2>
-			<div class="d-strength">
-				<div class="d-ring">
-					<svg viewBox="0 0 104 104" aria-hidden="true">
-						<defs><linearGradient id="d-ring-grad" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#6B55D6"/><stop offset="1" stop-color="#E87012"/></linearGradient></defs>
-						<circle class="bg" cx="52" cy="52" r="46"/>
-						<circle class="fg" cx="52" cy="52" r="46" data-percent="{{ strength.percent }}"/>
-					</svg>
-					<b>{{ strength.percent }}%</b>
-				</div>
-				<div class="d-strength-text">
-					<strong>{% if strength.percent >= 100 %}{{ _("Excellent! 🎉") }}{% elif strength.percent >= 70 %}{{ _("Looking good") }}{% else %}{{ _("Let's make it stronger") }}{% endif %}</strong>
-					<p>{{ _("Complete pages get more calls and are easier for AI to recommend.") }}</p>
-				</div>
+			<h2>{{ _("Page completeness") }}</h2>
+			<div class="d-meter-head">
+				<b class="num">{{ strength.percent }}%</b>
+				<span>{% if strength.percent >= 100 %}{{ _("Complete") }}{% elif strength.percent >= 70 %}{{ _("Nearly there") }}{% else %}{{ _("A few things missing") }}{% endif %}</span>
 			</div>
+			<div class="d-meter" role="progressbar" aria-valuenow="{{ strength.percent }}" aria-valuemin="0" aria-valuemax="100"><i style="--p: {{ strength.percent }}%"></i></div>
+			<p class="d-meter-note">{{ _("Complete pages get more calls and are easier for AI to recommend.") }}</p>
 			{% if strength.tips %}
 			<ul class="d-tips">
-				{% for tip in strength.tips %}<li><a href="{{ main.edit_url }}">{{ tip }}</a></li>{% endfor %}
+				{% for tip in strength.tips %}<li><a href="{{ main.edit_url }}{% if tip == _('Add your logo') %}#logo{% endif %}"><svg class="i" aria-hidden="true"><use href="#i-plus"/></svg>{{ tip }}<svg class="i" aria-hidden="true"><use href="#i-arrow"/></svg></a></li>{% endfor %}
 			</ul>
 			{% endif %}
 		</section>
@@ -416,9 +455,9 @@
 	</aside>
 
 	{% if profiles | length > 1 %}
-	<!-- All other businesses, full width -->
+	<!-- Other businesses, full width -->
 	<section class="d-more">
-		<h2 class="d-more-title">{{ _("My other businesses") }}<small>{{ profiles | length - 1 }}</small></h2>
+		<h2 class="d-more-title">{{ _("Your other businesses") }}<small>{{ profiles | length - 1 }}</small></h2>
 		<div class="d-more-grid">
 			{% for p in profiles[1:] %}{{ biz_card(p) }}{% endfor %}
 		</div>
@@ -428,17 +467,17 @@
 
 <!-- Phone bottom bar -->
 <nav class="d-dock iyp-bar iyp-dock" aria-label="{{ _('Quick actions') }}">
-	<a href="/"><span aria-hidden="true">🏠</span>{{ _("Home") }}</a>
-	<a href="/notifications" class="on"><span aria-hidden="true">📊</span>{{ _("Dashboard") }}</a>
-	{% if main and main.page_url %}<a href="{{ main.page_url }}" target="_blank" rel="noopener"><span aria-hidden="true">👁️</span>{{ _("My page") }}</a>{% endif %}
-	<a href="/account"><span aria-hidden="true">🪪</span>{{ _("My info") }}</a>
-	{% if main and main.page_url %}<button type="button" data-share="{{ main.page_url }}" data-title="{{ main.company_name | e }}"><span aria-hidden="true">📤</span>{{ _("Share") }}</button>{% endif %}
+	<a href="/"><svg class="i" aria-hidden="true"><use href="#i-home"/></svg>{{ _("Home") }}</a>
+	<a href="/notifications" class="on"><svg class="i" aria-hidden="true"><use href="#i-grid"/></svg>{{ _("Dashboard") }}</a>
+	{% if main and main.page_url %}<a href="{{ main.page_url }}" target="_blank" rel="noopener"><svg class="i" aria-hidden="true"><use href="#i-eye"/></svg>{{ _("My page") }}</a>{% endif %}
+	<a href="/account"><svg class="i" aria-hidden="true"><use href="#i-id"/></svg>{{ _("My info") }}</a>
+	{% if main and main.page_url %}<button type="button" data-share="{{ main.page_url }}" data-title="{{ main.company_name | e }}"><svg class="i" aria-hidden="true"><use href="#i-share"/></svg>{{ _("Share") }}</button>{% endif %}
 </nav>
 <div class="d-toast" id="d-toast" role="status" aria-live="polite"></div>
 {% endblock %}
 
 {% block footer %}
-{#- The "Developed by" credit floats on every page (iyp_credit.js), so no footer line here -#}
+{#- The "Developed by" credit line is added at the end of every page (iyp_footer.js) -#}
 <footer class="d-foot" aria-hidden="true"></footer>
 <script>
 (function () {
@@ -446,6 +485,23 @@
 	var h = new Date().getHours();
 	var greet = document.querySelector("[data-greet]");
 	if (greet) greet.textContent = h < 12 ? {{ _("Good morning") | tojson }} : h < 17 ? {{ _("Good afternoon") | tojson }} : {{ _("Good evening") | tojson }};
+
+	// Light / dark switch (2026-11-12): same saved choice as the home page
+	var root = document.documentElement, themeBtn = document.querySelector(".d-theme");
+	var themeMeta = document.querySelector('meta[name="theme-color"][data-dark]');
+	function applyTheme(theme) {
+		root.setAttribute("data-iyp-theme", theme);
+		if (themeBtn) themeBtn.setAttribute("aria-pressed", theme === "dark" ? "true" : "false");
+		if (themeMeta) themeMeta.setAttribute("content", themeMeta.getAttribute(theme === "dark" ? "data-dark" : "data-light"));
+	}
+	applyTheme(root.getAttribute("data-iyp-theme") === "dark" ? "dark" : "light");
+	if (themeBtn) {
+		themeBtn.addEventListener("click", function () {
+			var next = root.getAttribute("data-iyp-theme") === "dark" ? "light" : "dark";
+			applyTheme(next);
+			try { localStorage.setItem("iyp-theme", next); } catch (e) { /* storage blocked */ }
+		});
+	}
 
 	// Account menu
 	var meBtn = document.querySelector(".d-me-btn"), menu = document.querySelector(".d-menu");
@@ -466,32 +522,15 @@
 		clearTimeout(t._timer);
 		t._timer = setTimeout(function () { t.classList.remove("show"); }, 1800);
 	}
-	var still = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-
-	// Numbers count up; the strength ring fills
-	if (!still) {
-		document.querySelectorAll("[data-count]").forEach(function (el) {
-			var end = +el.getAttribute("data-count"), start = performance.now();
-			if (!end) return;
-			(function step(now) {
-				var p = Math.min((now - start) / 900, 1);
-				el.textContent = Math.round(end * (1 - Math.pow(1 - p, 3)));
-				if (p < 1) requestAnimationFrame(step);
-			})(start);
-		});
-	}
-	var ring = document.querySelector(".d-ring .fg");
-	if (ring) {
-		var pct = Math.max(0, Math.min(100, +ring.getAttribute("data-percent") || 0));
-		requestAnimationFrame(function () { ring.style.strokeDashoffset = String(289 - 289 * pct / 100); });
-	}
 
 	// Share: Android/iPhone share sheet, else WhatsApp; copy link
 	document.querySelectorAll("[data-share]").forEach(function (btn) {
 		btn.addEventListener("click", function () {
 			var url = location.origin + btn.getAttribute("data-share");
 			var title = btn.getAttribute("data-title") || "";
-			if (navigator.share) navigator.share({ title: title, url: url }).catch(function () {});
+			// 2026-11-12: Share asks first (iyp_share.js menu); the old behaviour only if that didn't load
+			if (window.iypShare) window.iypShare(title, url);
+			else if (navigator.share) navigator.share({ title: title, url: url }).catch(function () {});
 			else window.open("https://wa.me/?text=" + encodeURIComponent(title + " - " + url), "_blank", "noopener");
 		});
 	});
@@ -504,18 +543,18 @@
 	document.querySelectorAll("[data-copy]").forEach(function (btn) {
 		btn.addEventListener("click", function () {
 			var url = location.origin + btn.getAttribute("data-copy");
-			var done = function () { toast({{ _("Link copied!") | tojson }}); };
+			var done = function () { toast({{ _("Link copied") | tojson }}); };
 			if (navigator.clipboard) navigator.clipboard.writeText(url).then(done, function () { prompt("", url); });
 			else prompt("", url);
 		});
 	});
 
-	// Activity filter chips
-	var chips = document.querySelectorAll("[data-filter]");
-	chips.forEach(function (chip) {
-		chip.addEventListener("click", function () {
-			var f = chip.getAttribute("data-filter");
-			chips.forEach(function (c) { c.setAttribute("aria-pressed", c === chip ? "true" : "false"); });
+	// Activity filter tabs
+	var tabs = document.querySelectorAll("[data-filter]");
+	tabs.forEach(function (tab) {
+		tab.addEventListener("click", function () {
+			var f = tab.getAttribute("data-filter");
+			tabs.forEach(function (t) { t.setAttribute("aria-pressed", t === tab ? "true" : "false"); });
 			document.querySelectorAll(".d-day-group").forEach(function (group) {
 				var shown = 0;
 				group.querySelectorAll(".d-alert").forEach(function (a) {

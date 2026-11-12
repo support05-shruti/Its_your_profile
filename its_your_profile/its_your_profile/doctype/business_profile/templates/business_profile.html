@@ -3,9 +3,13 @@
 {% block title %}{{ company_name }}{% endblock %}
 
 {% block head_include %}
+{#- 2026-11-12: super() keeps head_include from hooks (the light/dark theme script) -#}
+{{ super() }}
 <script type="application/ld+json">
 {{ json_ld }}
 </script>
+{#- The one address search engines should index for this business (2026-11-12) -#}
+<link rel="canonical" href="{{ page_url | e }}">
 <meta property="og:type" content="business.business">
 <meta property="og:title" content="{{ company_name | e }}">
 <meta property="og:url" content="{{ page_url | e }}">
@@ -125,6 +129,15 @@
 	.iyp-avatar.iyp-avatar-logo {
 		width: auto; min-width: 120px; max-width: 100%; padding: 14px 20px; background: #fff;
 	}
+	/* "Add your logo" for the owner (2026-11-12), under the logo box */
+	.iyp-avatar-wrap { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; flex: none; max-width: 100%; }
+	.iyp-add-logo {
+		display: inline-flex; align-items: center; gap: 4px; padding: 6px 12px; border-radius: 999px;
+		border: 1.5px dashed var(--b-line); background: var(--b-soft); color: var(--b) !important;
+		font-size: .82rem; font-weight: 700; white-space: nowrap;
+	}
+	.iyp-add-logo:hover { border-style: solid; border-color: var(--b); }
+	[data-iyp-theme="dark"] .iyp-add-logo { color: var(--b-text) !important; }
 	/* Fixed height so small logos are scaled up, wide ones are fitted whole, never clipped */
 	.iyp-avatar-logo img { display: block; height: 88px; width: auto; max-width: 280px; object-fit: contain; }
 	@media (max-width: 767px) {
@@ -166,7 +179,9 @@
 	.iyp-fact { display: flex; align-items: center; gap: 12px; padding: 16px 18px; border-left: 1px solid var(--line); min-width: 0; }
 	.iyp-fact:first-child { border-left: 0; }
 	.iyp-fact-icon { width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; background: #fff; color: var(--b); border: 1px solid var(--line); flex: none; }
-	.iyp-fact b { display: block; font-size: 1.15rem; font-weight: 800; letter-spacing: -.01em; color: var(--ink); line-height: 1.2; overflow-wrap: anywhere; }
+	/* 2026-11-12: words are not split mid-word ("Manufactu-ring" on phones); a long word may hyphenate */
+	.iyp-fact b { display: block; font-size: 1.15rem; font-weight: 800; letter-spacing: -.01em; color: var(--ink); line-height: 1.2; overflow-wrap: break-word; word-break: normal; hyphens: auto; }
+	.iyp-fact > div, .iyp-fact > span:last-child { min-width: 0; }
 	.iyp-fact span { font-size: .78rem; color: var(--muted); }
 
 	/* Layout */
@@ -265,15 +280,11 @@
 	.iyp-cta a.iyp-link { color: #cbd5e1 !important; font-weight: 500; }
 	.iyp-cta a.iyp-link:hover { color: #fff !important; }
 
-	/* FAQs: plain <details>, so they open and close without any script */
+	/* FAQs (2026-11-07): every answer always open, easy for visitors and AI to read */
 	.iyp-faq { display: flex; flex-direction: column; gap: 10px; }
-	.iyp-faq details { border: 1px solid var(--line); border-radius: 14px; padding: 0 16px; background: #fff; transition: border-color .2s ease, box-shadow .2s ease; }
-	.iyp-faq details[open] { border-color: var(--b); box-shadow: 0 10px 24px -18px rgba(16,24,40,.35); }
-	.iyp-faq summary { cursor: pointer; list-style: none; padding: 14px 28px 14px 0; font-weight: 700; color: var(--ink); position: relative; }
-	.iyp-faq summary::-webkit-details-marker { display: none; }
-	.iyp-faq summary::after { content: "+"; position: absolute; right: 0; top: 50%; transform: translateY(-50%); font-size: 1.3rem; font-weight: 600; color: var(--b); transition: transform .2s ease; }
-	.iyp-faq details[open] summary::after { transform: translateY(-50%) rotate(45deg); }
-	.iyp-faq p { margin: 0 0 14px; color: var(--ink-2); line-height: 1.65; }
+	.iyp-faq-item { border: 1px solid var(--line); border-left: 3px solid var(--b); border-radius: 14px; padding: 14px 16px; background: #fff; }
+	.iyp-faq-item h3 { margin: 0 0 6px; font-size: 1rem; font-weight: 700; line-height: 1.4; color: var(--ink); }
+	.iyp-faq-item p { margin: 0; color: var(--ink-2); line-height: 1.65; }
 
 	/* Mobile action bar */
 	.iyp-bar { display: none; }
@@ -343,6 +354,8 @@
 		.iyp-fact:nth-child(even) { border-left: 1px solid var(--line); }
 		.iyp-fact:last-child:nth-child(odd) { grid-column: 1 / -1; }
 		.iyp-fact-icon { width: 34px; height: 34px; border-radius: 10px; }
+		/* Icon above the text on phones, so words like "Manufacturing" fit whole (2026-11-12) */
+		.iyp-fact { flex-direction: column; align-items: flex-start; gap: 8px; }
 		.iyp-fact b { font-size: 1rem; }
 		.iyp-card { padding: 20px; }
 		.iyp-grid, .iyp-main, .iyp-side { gap: 16px; }
@@ -401,7 +414,7 @@
 	.iyp-card h2 { font-size: 1.2rem; font-weight: 800; letter-spacing: -.02em; }
 	.iyp-h-icon { width: 38px; height: 38px; border-radius: 12px; }
 	.iyp-services li { border-radius: 16px; }
-	.iyp-faq details { border-radius: 16px; }
+	.iyp-faq-item { border-radius: 16px; }
 	.iyp-social { border-radius: 16px; }
 	.iyp-map { border-radius: 20px; }
 
@@ -460,6 +473,56 @@
 		}
 		.iyp-bar .iyp-bar-credit b { color: #3B2E7E; font-weight: 700; }
 	}
+
+	/* ---------- Dark mode (2026-11-12) ----------
+	   Follows the visitor's light/dark choice (<html data-iyp-theme>, set in <head> on every page).
+	   The business's own colour stays; text in that colour is lightened so it reads on dark.
+	   The logo and the QR code keep a white tile, so dark logos stay visible and the code scans. */
+	[data-iyp-theme="dark"] body { background: #100D22 !important; }
+	[data-iyp-theme="dark"] .iyp {
+		--ink: #F0EEFA; --ink-2: #C9C4E2; --muted: #A9A4C8; --line: #332C5A; --bg: #141029;
+		--surface: #1B1736;
+		--b-soft: color-mix(in srgb, var(--b) 20%, #1B1736);
+		--b-soft-2: color-mix(in srgb, var(--b) 30%, #1B1736);
+		--b-line: color-mix(in srgb, var(--b) 42%, #1B1736);
+		--b-text: color-mix(in srgb, var(--b) 45%, #FFFFFF);
+		--shadow: 0 1px 2px rgba(0,0,0,.3), 0 18px 40px -18px rgba(0,0,0,.65);
+	}
+	[data-iyp-theme="dark"] .iyp::before { background: #3A2516; opacity: .35; }
+	[data-iyp-theme="dark"] .iyp::after { background: #16332A; opacity: .35; }
+	[data-iyp-theme="dark"] .iyp-id, [data-iyp-theme="dark"] .iyp-card, [data-iyp-theme="dark"] .iyp-faq-item,
+	[data-iyp-theme="dark"] .iyp-btn-outline, [data-iyp-theme="dark"] .iyp-fact-icon { background: var(--surface); }
+	[data-iyp-theme="dark"] .iyp-btn-outline { border-color: #463E7A; }
+	[data-iyp-theme="dark"] .iyp-card:hover { box-shadow: var(--shadow); }
+	/* Brand-coloured text and icons, lightened */
+	[data-iyp-theme="dark"] .iyp-chip, [data-iyp-theme="dark"] .iyp-h-icon, [data-iyp-theme="dark"] .iyp-row-icon,
+	[data-iyp-theme="dark"] .iyp-social .iyp-s-icon, [data-iyp-theme="dark"] .iyp-fact-icon,
+	[data-iyp-theme="dark"] .iyp-btn-outline .iyp-i, [data-iyp-theme="dark"] .iyp-quote > .iyp-i,
+	[data-iyp-theme="dark"] a.iyp-row:hover .iyp-row-text div, [data-iyp-theme="dark"] .iyp-copy:hover { color: var(--b-text); }
+	[data-iyp-theme="dark"] .iyp-btn-outline:hover, [data-iyp-theme="dark"] .iyp-social:hover { border-color: var(--b-text); color: var(--b-text) !important; }
+	/* Logo tile stays white; the initials tile goes dark */
+	[data-iyp-theme="dark"] .iyp-avatar { border-color: var(--surface); }
+	[data-iyp-theme="dark"] .iyp-avatar:not(.iyp-avatar-logo) {
+		background: var(--surface); background-image: linear-gradient(160deg, var(--b-soft-2), var(--surface) 70%); color: var(--b-text);
+	}
+	[data-iyp-theme="dark"] .iyp-avatar.iyp-avatar-logo { background: #fff; border-color: #fff; }
+	/* Closing banner */
+	[data-iyp-theme="dark"] .iyp-cta { background: linear-gradient(135deg, #1A1638 0%, #2A1F1A 100%); border-color: #332C5A; color: #C9C4E2; }
+	[data-iyp-theme="dark"] .iyp-cta::after { background: #4A2E1A; opacity: .5; }
+	[data-iyp-theme="dark"] .iyp-cta::before { background: #2C2745; }
+	[data-iyp-theme="dark"] .iyp-cta strong { color: #F0EEFA; }
+	[data-iyp-theme="dark"] .iyp-cta strong em { color: #F5A462; }
+	[data-iyp-theme="dark"] .iyp-cta .iyp-btn-white { background: #AFA2F5; color: #100D22 !important; }
+	[data-iyp-theme="dark"] .iyp-cta a.iyp-link { color: #AFA2F5 !important; }
+	[data-iyp-theme="dark"] .iyp-toast { background: #F0EEFA; color: #100D22; }
+	/* Top bar */
+	[data-iyp-theme="dark"] .navbar .nav-link { color: #C9C4E2 !important; }
+	/* Phone bottom bar */
+	@media (max-width: 767px) {
+		[data-iyp-theme="dark"] .iyp-bar { background: rgba(30, 28, 43, .97); border-color: #332C5A; box-shadow: 0 20px 44px -18px rgba(0, 0, 0, .8); }
+		[data-iyp-theme="dark"] .iyp-bar a { color: var(--b-text) !important; }
+		[data-iyp-theme="dark"] .iyp-bar a.call, [data-iyp-theme="dark"] .iyp-bar a.wa { color: #fff !important; }
+	}
 </style>
 
 <article class="iyp">
@@ -467,11 +530,15 @@
 	<div class="iyp-cover" aria-hidden="true"></div>
 	<header class="iyp-id">
 		<div class="iyp-id-top">
-			{% if logo_url %}
-			<div class="iyp-avatar iyp-avatar-logo"><img src="{{ logo_url | e }}" alt="{{ _('{0} logo').format(company_name) | e }}"></div>
-			{% else %}
-			<div class="iyp-avatar" aria-hidden="true">{{ initials or "?" }}</div>
-			{% endif %}
+			<div class="iyp-avatar-wrap">
+				{% if logo_url %}
+				<div class="iyp-avatar iyp-avatar-logo"><img src="{{ logo_url | e }}" alt="{{ _('{0} logo').format(company_name) | e }}"></div>
+				{% else %}
+				<div class="iyp-avatar" aria-hidden="true">{{ initials or "?" }}</div>
+				{% endif %}
+				{#- Owner only, while there is no real logo (2026-11-12) -#}
+				{% if can_add_logo %}<a class="iyp-add-logo" href="{{ add_logo_url | e }}">＋ {{ _("Add your logo") }}</a>{% endif %}
+			</div>
 			<div class="iyp-id-name">
 				<h1>{{ company_name | e }}</h1>
 				<div class="iyp-chips">
@@ -542,12 +609,13 @@
 			{% if faq_items %}
 			<section class="iyp-card iyp-reveal" id="faq">
 				<h2><span class="iyp-h-icon">{{ icon("sparkles") }}</span>{{ _("Frequently Asked Questions") }}</h2>
+				{#- 2026-11-07: every answer is open (no click needed), so visitors and AI read them all -#}
 				<div class="iyp-faq">
 					{% for row in faq_items %}
-					<details {% if loop.first %}open{% endif %}>
-						<summary>{{ row.question | e }}</summary>
+					<div class="iyp-faq-item">
+						<h3>{{ row.question | e }}</h3>
 						<p>{{ row.answer | e }}</p>
-					</details>
+					</div>
 					{% endfor %}
 				</div>
 			</section>
@@ -577,7 +645,8 @@
 				<h2><span class="iyp-h-icon">{{ icon("pin") }}</span>{{ _("Location") }}</h2>
 				<div class="iyp-addr">
 					{% if address_line or city %}<p>{{ address | e }}</p>{% endif %}
-					{% if google_maps_url %}<a class="iyp-btn iyp-btn-outline" href="{{ google_maps_url | e }}" target="_blank" rel="noopener">{{ icon("external") }}{{ _("Open in Maps") }}</a>{% endif %}
+					{#- 2026-11-12: no "Open in Maps" button here: the Google map below already shows its own
+					    "Open in Maps" link, and Directions (top and phone bar) opens Maps too -#}
 				</div>
 				<iframe class="iyp-map" src="{{ map_embed_url | e }}" title="{{ _('Map of {0}').format(company_name) | e }}"
 					loading="lazy" referrerpolicy="no-referrer-when-downgrade" allowfullscreen></iframe>
@@ -625,10 +694,20 @@
 				</div>
 			</section>
 
-			{% if doc.profile_links %}
+			{#- LinkedIn is compulsory (2026-11-07): the card's link, else one found on the company website
+			    or by web search (tasks.find_linkedin). Until one is found, a LinkedIn button that
+			    searches LinkedIn for the company, so every page has LinkedIn. -#}
+			{% set has_li = doc.profile_links | selectattr("platform", "equalto", "LinkedIn") | list %}
+			{% set li_fallback = contact_linkedin_url or ("https://www.linkedin.com/search/results/companies/?keywords=" ~ ((company_name or contact_person or "") | urlencode)) %}
 			<section class="iyp-card iyp-reveal">
 				<h2><span class="iyp-h-icon">{{ icon("link") }}</span>{{ _("Find us on") }}</h2>
 				<div class="iyp-socials">
+					{% if not has_li %}
+					<a class="iyp-social" href="{{ li_fallback | e }}" rel="noopener" target="_blank">
+						<span class="iyp-s-icon">{{ icon("linkedin") }}</span>
+						<span>LinkedIn</span>
+					</a>
+					{% endif %}
 					{% for link in doc.profile_links %}
 					<a class="iyp-social" href="{{ link.url | e }}" rel="noopener" target="_blank">
 						<span class="iyp-s-icon">{{ icon(social_icons.get(link.label if link.platform == "Other" else link.platform, "link")) }}</span>
@@ -637,7 +716,6 @@
 					{% endfor %}
 				</div>
 			</section>
-			{% endif %}
 
 			<section class="iyp-card iyp-share-card iyp-reveal">
 				<h2><span class="iyp-h-icon">{{ icon("qr") }}</span>{{ _("Save & Share") }}</h2>
@@ -806,8 +884,11 @@
 		});
 	});
 
+	// 2026-11-12: Share asks first (iyp_share.js menu); the old behaviour only if that didn't load
 	document.getElementById("iyp-share").addEventListener("click", function () {
-		if (navigator.share) {
+		if (window.iypShare) {
+			window.iypShare(title, pageUrl);
+		} else if (navigator.share) {
 			navigator.share({ title: title, url: pageUrl }).catch(function () {});
 		} else {
 			window.open("https://wa.me/?text=" + encodeURIComponent(title + " - " + pageUrl), "_blank", "noopener");

@@ -4,7 +4,11 @@
 
 {% block head_include %}
 {{ super() }}
-<meta name="description" content="{{ description | e }}">
+{#- 2026-11-12: Frappe already prints the description from home.py, so it is not repeated here.
+    A preview image and link for WhatsApp / Facebook / LinkedIn shares of the home page: -#}
+<meta property="og:image" content="{{ share_image | e }}">
+<meta property="og:url" content="{{ home_url | e }}">
+<link rel="canonical" href="{{ home_url | e }}">
 <link rel="apple-touch-icon" href="/assets/its_your_profile/images/iyp-favicon.png">
 {#- Android (2026-11-06): address bar in our colours, and "Add to Home screen" installs the site like an app -#}
 <meta name="theme-color" content="#F3F0FB" media="(prefers-color-scheme: light)">
@@ -50,6 +54,8 @@
 		</a>
 		{#- Sign up button on phones (2026-11-07): always in view next to the menu button, not hidden in it -#}
 		{% if not logged_in %}<a class="iyp-btn iyp-btn-primary iyp-signup-m" href="/login?redirect-to=%2F#signup">{{ _("Sign up") }}</a>{% endif %}
+		{#- The owner's own logo (2026-11-07): opens their dashboard; beside ☰ on phones, last on wide screens -#}
+		{% if me %}<a class="iyp-me" href="/notifications" title="{{ me.name | e }} · {{ _('Dashboard') }}" aria-label="{{ _('My dashboard') }}">{% if me.logo %}<img src="{{ me.logo | e }}" alt="">{% else %}<span>{{ me.initials }}</span>{% endif %}</a>{% endif %}
 		<!-- Phone/tablet menu button (2026-11-06): home.js opens the links as a dropdown panel -->
 		<button class="iyp-menu-btn" type="button" aria-expanded="false" aria-controls="iyp-menu" aria-label="{{ _('Menu') }}">
 			<svg class="iyp-i iyp-menu-open" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
@@ -60,6 +66,7 @@
 			<a href="#why">{{ _("Why AI") }}</a>
 			<a href="#who">{{ _("Who it's for") }}</a>
 			<a href="#pricing">{{ _("Pricing") }}</a>
+			<a href="#faq">{{ _("FAQ") }}</a>
 			{#- 2026-11-07: no Backend / Directory links on the site (staff open /desk or /directory after
 			    logging in). Logged-in users get their own Dashboard and My information only. -#}
 			{% if logged_in %}
@@ -381,7 +388,7 @@
 	<!-- Features -->
 	<section class="iyp-band">
 		<div class="iyp-wrap iyp-grid4 iyp-stagger">
-			<div class="iyp-feature"><span class="iyp-ico iyp-tone-blue"><svg class="iyp-i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg></span><h3>{{ _("Ready for AI search") }}</h3><p>{{ _("Structured data and llms.txt that AI reads.") }}</p></div>
+			<div class="iyp-feature"><span class="iyp-ico iyp-tone-blue"><svg class="iyp-i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg></span><h3>{{ _("Ready for AI search") }}</h3><p>{{ _("Your details in a format AI assistants can read.") }}</p></div>
 			<div class="iyp-feature"><span class="iyp-ico iyp-tone-mint"><svg class="iyp-i" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12a8.5 8.5 0 0 1-12.6 7.4L3 21l1.6-5.2A8.5 8.5 0 1 1 21 12z"/></svg></span><h3>{{ _("Call & WhatsApp") }}</h3><p>{{ _("Customers reach you in one tap.") }}</p></div>
 			<div class="iyp-feature"><span class="iyp-ico iyp-tone-peach"><svg class="iyp-i" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3h-3zM17 20h4v-3"/></svg></span><h3>{{ _("QR code") }}</h3><p>{{ _("Print it on cards and counters.") }}</p></div>
 			<div class="iyp-feature"><span class="iyp-ico iyp-tone-lilac"><svg class="iyp-i" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></span><h3>{{ _("Your own dashboard") }}</h3><p>{{ _("See who visits and edit your page any time.") }}</p></div>
@@ -412,6 +419,21 @@
 			</div>
 		</div>
 	</section>
+
+	<!-- FAQ (2026-11-07): every answer is open, plain text on the page, plus FAQPage structured data
+	     below with the same text, so AI assistants and search engines can read it all. From home.py FAQS. -->
+	<section id="faq" class="iyp-wrap iyp-faq">
+		<h2 class="iyp-reveal">{{ _("Questions,") }} <em class="iyp-orange-em">{{ _("answered") }}</em></h2>
+		<div class="iyp-faq-list">
+			{% for f in faqs %}
+			<article class="iyp-faq-item">
+				<h3>{{ f.q }}</h3>
+				<p>{{ f.a }}</p>
+			</article>
+			{% endfor %}
+		</div>
+	</section>
+	<script type="application/ld+json">{{ faq_schema | tojson }}</script>
 
 	<!-- Directory search: backend users only (2026-11-06), as the directory is private on the live site -->
 	{% if is_backend_user %}
@@ -445,12 +467,13 @@
 {% block footer %}
 <footer class="iyp-foot">
 	<div class="iyp-wrap iyp-foot-row">
-		<!-- Developer credit (2026-11-06); the same line is on every other page via hooks.py footer_powered -->
+		<!-- Developer credit (2026-11-06): since 2026-11-07 the only place on the site it appears -->
 		<span class="iyp-credit">{{ _("Developed by") }} <a href="https://softworld.co.in" target="_blank" rel="noopener">SoftWorld Solutions Pvt. Ltd.</a></span>
+		{#- 2026-11-07: no visible llms.txt link (it is for AI crawlers, not people; /llms.txt still works) -#}
 		<nav aria-label="{{ _('Footer') }}">
 			{% if is_backend_user %}<a href="/directory">{{ _("Directory") }}</a>{% endif %}
 			<a href="#how">{{ _("How it works") }}</a>
-			<a href="/llms.txt">llms.txt</a>
+			<a href="/terms">{{ _("Terms & Conditions") }}</a>
 		</nav>
 	</div>
 </footer>

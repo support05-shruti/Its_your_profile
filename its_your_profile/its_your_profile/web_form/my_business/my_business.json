@@ -21,7 +21,7 @@
  "hide_footer": 0,
  "hide_navbar": 0,
  "idx": 0,
- "introduction_text": "<p>Snap a photo of your visiting card and we will fill in the details for you. Add your website and we will write a short summary of your business.</p>",
+ "introduction_text": "<p>Keep your business details up to date. Your page changes as soon as you click Save.</p>",
  "is_standard": 1,
  "key_required": 0,
  "list_columns": [
@@ -36,14 +36,14 @@
    "label": "City"
   },
   {
-   "fieldname": "card_scan_status",
-   "fieldtype": "Select",
-   "label": "Card Scan Status"
+   "fieldname": "state",
+   "fieldtype": "Data",
+   "label": "State"
   }
  ],
  "login_required": 1,
  "max_attachment_size": 10,
- "modified": "2026-11-07 12:00:00.000000",
+ "modified": "2026-11-12 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Its Your Profile",
  "name": "my-business",
@@ -59,36 +59,6 @@
  "title": "My Business Profile",
  "web_form_fields": [
   {
-   "fieldname": "card_section",
-   "fieldtype": "Section Break",
-   "label": "Visiting Card"
-  },
-  {
-   "fieldname": "visiting_card",
-   "fieldtype": "Attach Image",
-   "label": "Visiting Card",
-   "reqd": 0
-  },
-  {
-   "description": "Optional. Add it if the card has details on the back too.",
-   "fieldname": "visiting_card_back",
-   "fieldtype": "Attach Image",
-   "label": "Visiting Card (Back Side)",
-   "reqd": 0
-  },
-  {
-   "fieldname": "column_break_card",
-   "fieldtype": "Column Break"
-  },
-  {
-   "fieldname": "card_scan_status",
-   "fieldtype": "Select",
-   "label": "Card Scan Status",
-   "options": "Pending\nProcessing\nCompleted\nFailed",
-   "read_only": 1,
-   "reqd": 0
-  },
-  {
    "fieldname": "company_section",
    "fieldtype": "Section Break",
    "label": "Company"
@@ -97,6 +67,13 @@
    "fieldname": "company_name",
    "fieldtype": "Data",
    "label": "Company Name",
+   "reqd": 0
+  },
+  {
+   "description": "Upload your logo (PNG or JPG). Without one, we use the logo from your visiting card or website, or your initials.",
+   "fieldname": "company_logo",
+   "fieldtype": "Attach Image",
+   "label": "Company Logo",
    "reqd": 0
   },
   {
@@ -162,6 +139,14 @@
    "fieldname": "phone",
    "fieldtype": "Data",
    "label": "Phone",
+   "reqd": 0
+  },
+  {
+   "default": "0",
+   "description": "Your number is public by default. Tick to hide it from your page.",
+   "fieldname": "hide_phone",
+   "fieldtype": "Check",
+   "label": "Keep my phone number private",
    "reqd": 0
   },
   {

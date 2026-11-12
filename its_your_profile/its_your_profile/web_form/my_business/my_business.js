@@ -2,12 +2,122 @@ frappe.ready(function () {
 	const web_form = frappe.web_form;
 	const POLL_MS = 3000;
 
+	// CHANGE NOTE 2026-11-12: the same header and phone bottom bar as the dashboard, so "My information"
+	// looks and works like the rest of the site. Frappe's own top bar (whose account menu didn't open
+	// on phones and offered Desk links) is hidden while ours is shown. Styles in my_business.css.
+	const add_site_nav = () => {
+		if (document.querySelector(".iyp-wf-head")) return;
+		const esc = (s) => String(s || "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+		const icon = (d) => `<svg class="iyp-wf-i" viewBox="0 0 24 24" aria-hidden="true">${d}</svg>`;
+		const I = {
+			home: '<path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10v10h13V10"/>',
+			grid: '<rect x="3.5" y="3.5" width="7" height="9" rx="1.5"/><rect x="13.5" y="3.5" width="7" height="5" rx="1.5"/><rect x="13.5" y="11.5" width="7" height="9" rx="1.5"/><rect x="3.5" y="15.5" width="7" height="5" rx="1.5"/>',
+			eye: '<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>',
+			id: '<rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="11" r="2"/><path d="M6 16a3 3 0 0 1 6 0M15 10h3M15 14h3"/>',
+			share: '<circle cx="18" cy="5" r="2.5"/><circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="19" r="2.5"/><path d="m8.2 10.8 7.6-4.4M8.2 13.2l7.6 4.4"/>',
+			logout: '<path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3"/><path d="M10 16l-4-4 4-4M6 12h10"/>',
+			moon: '<path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5z"/>',
+			sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
+		};
+		const doc = web_form.doc || {};
+		const page_url = doc.published && doc.route ? "/" + doc.route : null;
+		const full_name = decodeURIComponent((frappe.get_cookie && frappe.get_cookie("full_name")) || "");
+		const first = full_name.split(" ")[0] || __("Account");
+
+		const head = document.createElement("header");
+		head.className = "iyp-wf-head";
+		head.innerHTML = `<div class="iyp-wf-row">
+			<a class="iyp-wf-logo" href="/"><img class="iyp-brand-light" src="/assets/its_your_profile/images/iyp-logo.png" alt="It's Your Profile"><img class="iyp-brand-dark" src="/assets/its_your_profile/images/iyp-logo-dark.png" alt="It's Your Profile"></a>
+			<nav class="iyp-wf-links">
+				<a href="/">${__("Home")}</a>
+				<a href="/notifications">${__("Dashboard")}</a>
+				<a href="/account" class="on">${__("My information")}</a>
+				<button type="button" class="iyp-wf-theme" aria-label="${__("Dark theme")}">${icon(I.moon)}${icon(I.sun)}</button>
+				<div class="iyp-wf-me">
+					<button type="button" class="iyp-wf-me-btn" aria-haspopup="true" aria-expanded="false"><span>${esc(first[0] || "?").toUpperCase()}</span><em>${esc(first)}</em></button>
+					<div class="iyp-wf-menu" role="menu">
+						<a href="/notifications">${icon(I.grid)}${__("Dashboard")}</a>
+						<a href="/account">${icon(I.id)}${__("My information")}</a>
+						<a href="/">${icon(I.home)}${__("Home")}</a>
+						<hr>
+						<a href="/logout">${icon(I.logout)}${__("Log out")}</a>
+					</div>
+				</div>
+			</nav>
+		</div>`;
+		document.body.prepend(head);
+
+		const dock = document.createElement("nav");
+		dock.className = "iyp-wf-dock";
+		dock.innerHTML = `<a href="/">${icon(I.home)}${__("Home")}</a>
+			<a href="/notifications">${icon(I.grid)}${__("Dashboard")}</a>
+			${page_url ? `<a href="${esc(page_url)}" target="_blank" rel="noopener">${icon(I.eye)}${__("My page")}</a>` : ""}
+			<a href="/account" class="on">${icon(I.id)}${__("My info")}</a>
+			${page_url ? `<button type="button" data-wf-share>${icon(I.share)}${__("Share")}</button>` : ""}`;
+		document.body.appendChild(dock);
+		document.documentElement.classList.add("iyp-own-nav");
+
+		// Account menu
+		const me_btn = head.querySelector(".iyp-wf-me-btn");
+		const menu = head.querySelector(".iyp-wf-menu");
+		me_btn.addEventListener("click", (e) => {
+			e.stopPropagation();
+			const open = !menu.classList.contains("open");
+			menu.classList.toggle("open", open);
+			me_btn.setAttribute("aria-expanded", open ? "true" : "false");
+		});
+		document.addEventListener("click", () => {
+			menu.classList.remove("open");
+			me_btn.setAttribute("aria-expanded", "false");
+		});
+
+		// Light / dark, the same saved choice as every page
+		head.querySelector(".iyp-wf-theme").addEventListener("click", () => {
+			const root = document.documentElement;
+			const next = root.getAttribute("data-iyp-theme") === "dark" ? "light" : "dark";
+			root.setAttribute("data-iyp-theme", next);
+			try { localStorage.setItem("iyp-theme", next); } catch (e) { /* storage blocked */ }
+		});
+
+		const share = dock.querySelector("[data-wf-share]");
+		if (share) {
+			share.addEventListener("click", () => {
+				const url = location.origin + page_url;
+				if (window.iypShare) window.iypShare(doc.company_name || document.title, url);
+				else window.open(url, "_blank", "noopener");
+			});
+		}
+	};
+	add_site_nav();
+
+	// "Add your logo" on the business page and the dashboard opens this form at #logo (2026-11-12):
+	// scroll to the logo field and highlight it
+	if (location.hash === "#logo") {
+		setTimeout(() => {
+			const field = web_form.fields_dict.company_logo;
+			if (!field) return;
+			const section = field.$wrapper.closest(".form-section").get(0);
+			if (section) section.classList.add("in");
+			field.$wrapper.get(0).scrollIntoView({ behavior: "smooth", block: "center" });
+			field.$wrapper.addClass("iyp-logo-focus");
+			setTimeout(() => field.$wrapper.removeClass("iyp-logo-focus"), 2600);
+		}, 600);
+	}
+
 	// CHANGE NOTE 2026-11-06: page decoration that goes with my_business.css: a 1-2-3 steps strip
 	// and perks under the introduction, friendlier upload/save labels, and sections that rise in
 	// as they scroll into view. Purely visual; the form works the same without it.
+	// CHANGE NOTE 2026-11-07: "My information" (editing a page) shows only the business details:
+	// no visiting card upload, scan status, scan steps or "from your visiting card" banner. This also
+	// hides the card section on sites where the updated web form hasn't been migrated yet.
+	["visiting_card", "visiting_card_back", "card_scan_status"].forEach((fieldname) => {
+		const field = web_form.fields_dict[fieldname];
+		if (field) field.$wrapper.closest(".form-section").hide();
+	});
+
 	const decorate = () => {
 		const head = document.querySelector(".web-form-head");
-		if (head && !head.querySelector(".iyp-steps")) {
+		if (head && web_form.is_new && !head.querySelector(".iyp-steps")) {
 			const step = web_form.is_new ? 0 : 1;
 			const labels = [__("Scan your card"), __("Check the details"), __("Go live & get found")];
 			const steps = document.createElement("div");
@@ -47,6 +157,7 @@ frappe.ready(function () {
 		};
 		label_attach("visiting_card", __("📷 Upload your visiting card photo"));
 		label_attach("visiting_card_back", __("＋ Add the back side (optional)"));
+		label_attach("company_logo", __("＋ Upload your logo"));
 		if (web_form.is_new) $(".web-form-footer .submit-btn").text(__("✨ Create my page"));
 
 		// Sections rise in one after another as they come into view
@@ -300,6 +411,23 @@ frappe.ready(function () {
 			});
 	};
 	web_form.on("website_url", (field, url) => read_links(url));
+
+	// CHANGE NOTE 2026-11-07: LinkedIn is compulsory. Save is blocked until the Profile Links table
+	// has a LinkedIn row with a link (usually filled in automatically from the card, the website or
+	// a web search).
+	web_form.validate = () => {
+		const rows = (web_form.fields_dict.profile_links && web_form.fields_dict.profile_links.grid.get_data()) || [];
+		const linkedin = rows.find((r) => r.platform === "LinkedIn" && (r.url || "").trim());
+		if (linkedin) return true;
+		frappe.msgprint({
+			title: __("LinkedIn is required"),
+			indicator: "orange",
+			message: __(
+				"Please add your LinkedIn page under <b>Links</b>: click <b>Add Row</b>, choose <b>LinkedIn</b> and paste the link (for example https://www.linkedin.com/company/your-company)."
+			),
+		});
+		return false;
+	};
 
 	// After a new card is submitted, go to its edit page so the user can watch the scan finish
 	const handle_success = web_form.handle_success.bind(web_form);

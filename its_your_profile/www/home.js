@@ -467,7 +467,10 @@
 				params.back_file_url = (scanState.back && scanState.back.fileUrl) || "";
 			}
 			call("its_your_profile.api.create_profile_from_card", params).then(function (made) {
-				scan.querySelector("[data-done-name]").textContent = made.company_name || "";
+				// 2026-11-12: a page for this company already existed, so it was updated, not copied
+				scan.querySelector("[data-done-name]").textContent = made.already_existed
+					? (made.company_name || "") + " · You already had this page, so we updated it instead of making a copy."
+					: made.company_name || "";
 				var view = scan.querySelector("[data-done-view]");
 				if (made.page_url) { view.href = made.page_url; view.hidden = false; } else { view.hidden = true; }
 				scan.querySelector("[data-done-edit]").href = made.edit_url;

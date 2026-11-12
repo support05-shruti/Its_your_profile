@@ -297,8 +297,40 @@ class BusinessProfile(WebsiteGenerator):
 				enqueue_after_commit=True,
 			)
 
-		if self.contact_person and (
-			self.has_value_changed("contact_person") or self.has_value_changed("company_name")
+		# Automatic logo (2026-11-12): no logo after the card scan → the website's logo, else the
+		# initials on the brand colour. A generated one is retried when a website is added later.
+		# 2026-11-12: a logo cut from the card photo is also upgraded to the website's own logo file,
+		# right after the scan and whenever the website changes. Uploaded logos are never touched.
+		from its_your_profile.tasks import AUTO_LOGO_NAME, GENERATED_LOGO_NAME
+
+		replaceable = bool(
+			GENERATED_LOGO_NAME.match(self.company_logo or "") or AUTO_LOGO_NAME.match(self.company_logo or "")
+		)
+		website_news = self.website_url and (self.has_value_changed("website_url") or self.flags.from_scan)
+		if (
+			(self.company_name or self.contact_person)
+			and self.card_scan_status not in ("Pending", "Processing")
+			and (not self.company_logo or (replaceable and website_news))
+		):
+			frappe.enqueue(
+				"its_your_profile.tasks.ensure_logo",
+				queue="long",
+				profile=self.name,
+				job_id=f"ensure_logo::{self.name}",
+				deduplicate=True,
+				enqueue_after_commit=True,
+			)
+
+		# LinkedIn is compulsory on every page (2026-11-07): look for it (website, then web search)
+		# whenever the contact, company or website changes and the page still lacks a LinkedIn link
+		# or the contact's own profile
+		missing_linkedin = not any(row.platform == "LinkedIn" and row.url for row in self.profile_links) or (
+			self.contact_person and not self.contact_linkedin_url
+		)
+		if (self.company_name or self.contact_person) and missing_linkedin and (
+			self.has_value_changed("contact_person")
+			or self.has_value_changed("company_name")
+			or self.has_value_changed("website_url")
 		):
 			frappe.enqueue(
 				"its_your_profile.tasks.find_linkedin",
@@ -396,15 +428,34 @@ class BusinessProfile(WebsiteGenerator):
 		context.page_brand_color = readable_on_white(self.brand_color or self.name_color)
 		context.map_embed_url = self.get_map_embed_url()
 		context.page_url = frappe.utils.get_url(self.route)
-		context.phone_numbers = [p for p in re.split(r"[/,]", self.phone or "") if p]
+		# Phone is public by default; "Keep my phone number private" hides it, with Call and WhatsApp
+		context.phone_numbers = [p for p in re.split(r"[/,]", self.public_phone or "") if p]
 		context.whatsapp_number = whatsapp_number(context.phone_numbers[0]) if context.phone_numbers else None
-		# Only public files can be shown to visitors
+		# Only public files can be shown to visitors. A private number is printed on the card too,
+		# so the card picture is not shown then.
 		context.card_images = [
-			self.get(side) for side in CARD_SIDES if (self.get(side) or "").startswith("/files/")
+			self.get(side)
+			for side in CARD_SIDES
+			if (self.get(side) or "").startswith("/files/") and not self.hide_phone
 		]
 		context.logo_url = self.get_logo_url()
+		# "Add your logo" under the logo box (2026-11-12): only for the page's owner, and only while
+		# the page has no logo or just the generated initials (the card had no logo)
+		from its_your_profile.tasks import GENERATED_LOGO_NAME
+
+		user = frappe.session.user
+		context.can_add_logo = (
+			user != "Guest"
+			and user == self.owner
+			and (not self.company_logo or bool(GENERATED_LOGO_NAME.match(self.company_logo or "")))
+		)
+		context.add_logo_url = f"/my-business/{self.name}/edit#logo"
+		# Share preview: the card, else the logo, else (2026-11-12) the site's own logo, so a shared
+		# link never shows an empty picture
 		context.og_image = (
-			frappe.utils.get_url(context.card_images[0]) if context.card_images else context.logo_url
+			frappe.utils.get_url(context.card_images[0])
+			if context.card_images
+			else context.logo_url or frappe.utils.get_url("/assets/its_your_profile/images/iyp-logo.png")
 		)
 		context.years_in_business = (
 			frappe.utils.now_datetime().year - self.established_year
@@ -413,7 +464,7 @@ class BusinessProfile(WebsiteGenerator):
 		)
 		context.vcard = json.dumps(self.get_vcard(context.phone_numbers)).replace("</", "<\\/")
 		context.services = self.get_services()
-		context.faq_items = [row for row in self.faqs if row.question and row.answer]
+		context.faq_items = self.get_page_faqs()
 		context.markdown_url = frappe.utils.get_url(self.route + ".md")
 		# Shown when there is no AI summary yet, so every page has a plain factual description
 		context.entity_summary = None if self.ai_summary else self.get_entity_summary()
@@ -421,6 +472,12 @@ class BusinessProfile(WebsiteGenerator):
 			"title": self.company_name,
 			"description": self.get_summary()[:300],
 		}
+
+	@property
+	def public_phone(self):
+		"""The phone number visitors, crawlers and the FAQ writer may see: None when the owner
+		ticked "Keep my phone number private" (2026-11-07). Public by default."""
+		return None if self.hide_phone else self.phone
 
 	def get_vcard(self, phone_numbers):
 		"""Contact file for the page's "Save Contact" button."""
@@ -466,7 +523,7 @@ class BusinessProfile(WebsiteGenerator):
 			("In the owner's words", " ".join((self.about_business or "").split())),
 			("Has a website", "yes" if self.website_url else None),
 			("Can be contacted by", ", ".join(
-				c for c, has in (("phone", self.phone), ("WhatsApp", self.phone), ("email", self.email)) if has
+				c for c, has in (("phone", self.public_phone), ("WhatsApp", self.public_phone), ("email", self.email)) if has
 			)),
 		]
 		return "\n".join(f"- {label}: {value}" for label, value in facts if value)
@@ -485,7 +542,7 @@ class BusinessProfile(WebsiteGenerator):
 			("Team size", self.employee_range and f"{self.employee_range} people"),
 			("Contact person", ", ".join(x for x in (self.contact_person, self.designation) if x)),
 			("Contact person's LinkedIn", self.contact_linkedin_url),
-			("Phone", self.phone),
+			("Phone", self.public_phone),
 			("Email", self.email),
 			("Website", self.website_url),
 			("Address", ", ".join(x for x in (self.address_line, self.city, self.state, self.pincode) if x)),
@@ -498,7 +555,7 @@ class BusinessProfile(WebsiteGenerator):
 			lines += ["", f"{h2} Products and services", ""] + [f"- {s}" for s in services]
 		if self.about_business:
 			lines += ["", f"{h2} In the owner's words", "", " ".join(self.about_business.split())]
-		if faqs := [row for row in self.faqs if row.question and row.answer]:
+		if faqs := self.get_page_faqs():
 			lines += ["", f"{h2} Questions and answers", ""]
 			for row in faqs:
 				lines += [f"{h3} {' '.join(row.question.split())}", "", " ".join(row.answer.split()), ""]
@@ -506,6 +563,46 @@ class BusinessProfile(WebsiteGenerator):
 			lines += ["", f"{h2} Elsewhere online", ""]
 			lines += [f"- {row.label or row.platform}: {row.url}" for row in links]
 		return "\n".join(lines).rstrip() + "\n"
+
+	def get_page_faqs(self):
+		"""The FAQs shown to everyone on the page, in its structured data and its .md version
+		(2026-11-07): the written FAQs (AI or owner), else basic ones built from the page's own
+		facts, so every page has a visible FAQ from the start."""
+		rows = [row for row in self.faqs if row.question and row.answer]
+		return rows or self.get_basic_faqs()
+
+	def get_basic_faqs(self):
+		"""Plain questions and answers from the fields; only facts the page already shows."""
+		name = self.company_name
+		if not name:
+			return []
+		faqs = []
+
+		def add(question, answer):
+			if answer:
+				faqs.append(frappe._dict(question=question, answer=answer))
+
+		add(f"What does {name} do?", self.get_summary())
+		if services := self.get_services():
+			add(f"What products and services does {name} offer?", f"{name} offers {join_words(services[:10])}.")
+		address = ", ".join(p for p in (self.address_line, self.city, self.state, self.pincode) if p)
+		if address:
+			add(f"Where is {name} located?", f"{name} is located at {' '.join(address.split())}, India.")
+		ways = []
+		if self.public_phone:
+			ways.append(f"call or WhatsApp {self.public_phone}")
+		if self.email:
+			ways.append(f"email {self.email}")
+		if self.website_url:
+			ways.append(f"visit {self.website_url}")
+		if ways:
+			add(f"How can I contact {name}?", f"You can {join_words(ways)}.")
+		if self.contact_person:
+			role = f", {self.designation}" if self.designation else ""
+			add(f"Who is the contact person at {name}?", f"The contact person is {self.contact_person}{role}.")
+		if self.established_year:
+			add(f"When was {name} established?", f"{name} was established in {self.established_year}.")
+		return faqs
 
 	def get_services(self):
 		"""The Products & Services field as a list, one entry per line, without repeats."""
@@ -555,7 +652,7 @@ class BusinessProfile(WebsiteGenerator):
 			"url": self.website_url or page_url,
 			"mainEntityOfPage": page_url,
 			"description": self.get_summary(),
-			"telephone": self.phone,
+			"telephone": self.public_phone,
 			"email": self.email,
 			"foundingDate": str(self.established_year) if self.established_year else None,
 			"numberOfEmployees": self.employee_range,
@@ -617,7 +714,7 @@ class BusinessProfile(WebsiteGenerator):
 		]
 
 		# Ready-made answers Google and AI assistants can quote
-		if faqs := [row for row in self.faqs if row.question and row.answer]:
+		if faqs := self.get_page_faqs():
 			graph.append(
 				{
 					"@type": "FAQPage",

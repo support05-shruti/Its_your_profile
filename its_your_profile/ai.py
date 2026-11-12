@@ -57,7 +57,8 @@ class CardDetails(BaseModel):
 		default_factory=list,
 		description="Box around the complete company logo (symbol, styled name and tagline) as "
 		"[ymin, xmin, ymax, xmax], each 0-1000 of the image "
-		"height or width. Empty if the card has no logo.",
+		"height or width. Empty if the card has no designed logo (only the name in plain text). "
+		"Never include descriptions, product lists or contact details.",
 	)
 
 
@@ -121,7 +122,12 @@ Give logo_box: a box around the complete company logo, as it would be cut out of
 as the company's logo. Include everything that is designed as part of the logo: the symbol or
 emblem, the company name written in the logo's style beside or under it, and a tagline printed
 as part of it. Leave out the person's name, contact details and address. Make sure the whole
-logo is inside the box. Use an empty list if there is no logo."""
+logo is inside the box. Use an empty list if there is no logo.
+A logo is a designed mark: a symbol, emblem or monogram, or a name drawn in a special lettering,
+shape or colour. If the card only prints the company name in ordinary text, it has NO logo: use
+an empty list. Never include in the box: lines describing the business ("Distributor for...",
+"Dealers in..."), lists of products, brands or services, addresses, phone numbers, emails or
+websites. A logo is at most the mark, the name and one short tagline."""
 
 # The summary is written for AI search engines, which quote clear factual definitions over marketing copy
 WEBSITE_PROMPT = """Below is text scraped from the website of {company}.
@@ -189,15 +195,17 @@ Reply with only a JSON object with these keys:
 - linkedin_url, facebook_url: the company's own pages if found, otherwise null
 - established_year: the year it was established as a number, otherwise null"""
 
-LINKEDIN_PROMPT = """Search Google for the LinkedIn pages of this business contact:
-Name: {person}
+LINKEDIN_PROMPT = """Search the web (Google, LinkedIn, the company's website) for the LinkedIn pages of
+this business. A search like "<company> <city> LinkedIn" or "site:linkedin.com/company <company>" helps.
+Contact name (may be "-"): {person}
 Job title: {designation}
 Company: {company}
 City: {city}
 Website: {website}
 
 1. person_url: this person's own LinkedIn profile (linkedin.com/in/...). Only give it if a search
-   result shows a profile with the same name AND the same company, website or city. Otherwise null.
+   result shows a profile with the same name AND the same company, website or city. Null if the
+   contact name is "-" or there is no such match.
 2. company_url: the company's LinkedIn page (linkedin.com/company/...), only if the name clearly
    matches. Otherwise null.
 Copy URLs exactly from the search results; never build or guess one.
@@ -342,14 +350,62 @@ def research_company(company=None, website=None, city=None) -> WebsiteInsights:
 
 def find_linkedin(person, designation=None, company=None, city=None, website=None) -> LinkedInMatch:
 	prompt = LINKEDIN_PROMPT.format(
-		person=person, designation=designation or "-", company=company or "-", city=city or "-", website=website or "-"
+		person=person or "-", designation=designation or "-", company=company or "-", city=city or "-", website=website or "-"
 	)
 	found = re.search(r"\{.*\}", _search(prompt), re.S)
 	return LinkedInMatch.model_validate_json(found.group()) if found else LinkedInMatch()
 
 
+def can_search() -> bool:
+	"""True when a web search is possible: Gemini (Google Search) or OpenAI (web search tool)."""
+	return bool(_setting("gemini_api_key") or _setting("openai_api_key"))
+
+
 def _search(prompt) -> str:
-	"""Always Gemini, whatever the provider setting: it is the one with Google Search built in."""
+	"""A web search answered by AI. Gemini with Google Search first; if there is no Gemini key, or
+	it fails (e.g. an invalid key), OpenAI with its web search tool (2026-11-07)."""
+	if _setting("gemini_api_key"):
+		try:
+			return _gemini_search(prompt)
+		except Exception:
+			if not _setting("openai_api_key"):
+				raise
+			frappe.log_error("Gemini search failed, using OpenAI web search")
+	if _setting("openai_api_key"):
+		return _openai_search(prompt)
+	return ""
+
+
+def _openai_search(prompt) -> str:
+	"""OpenAI Responses API with the web_search tool; returns the answer text."""
+	api_key = _setting("openai_api_key")
+	base_url = (_setting("openai_base_url") or DEFAULT_OPENAI_BASE_URL).rstrip("/")
+	response = requests.post(
+		f"{base_url}/responses",
+		headers={"Authorization": f"Bearer {api_key}"},
+		json={
+			"model": _setting("openai_model") or DEFAULT_OPENAI_MODEL,
+			"tools": [{"type": "web_search"}],
+			"input": prompt,
+		},
+		timeout=180,
+	)
+	if not response.ok:
+		raise Exception(f"AI web search failed ({response.status_code}): {response.text[:500]}")
+	data = response.json()
+	if data.get("output_text"):
+		return data["output_text"]
+	return "".join(
+		part.get("text") or ""
+		for item in data.get("output") or []
+		if item.get("type") == "message"
+		for part in item.get("content") or []
+		if part.get("type") == "output_text"
+	)
+
+
+def _gemini_search(prompt) -> str:
+	"""Gemini with Google Search built in."""
 	from google.genai import types
 
 	client = _client()

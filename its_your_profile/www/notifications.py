@@ -32,7 +32,7 @@ def get_context(context):
 		filters={"owner": user},
 		fields=[
 			"name", "route", "company_name", "city", "state", "business_nature", "segment", "company_logo",
-			"published", "brand_color", "contact_person", "designation", "phone", "email", "website_url",
+			"published", "brand_color", "contact_person", "designation", "phone", "hide_phone", "email", "website_url",
 		],
 		order_by="creation desc",
 	)
@@ -163,9 +163,17 @@ def page_strength(name):
 	# The AI summary from the website also tells customers what the business does
 	if not doc.about_business and doc.ai_summary:
 		doc.about_business = doc.ai_summary
-	has_links = frappe.db.count("Business Profile Link", {"parent": name, "parenttype": "Business Profile"})
+	# Generated initials are a stand-in, not the business's logo (2026-11-12): keep asking for one
+	from its_your_profile.tasks import GENERATED_LOGO_NAME
+
+	if GENERATED_LOGO_NAME.match(doc.company_logo or ""):
+		doc.company_logo = None
+	# LinkedIn is compulsory (2026-11-07), so it is checked on its own
+	has_linkedin = frappe.db.count(
+		"Business Profile Link", {"parent": name, "parenttype": "Business Profile", "platform": "LinkedIn"}
+	)
 	checks = [(bool(str(doc.get(field) or "").strip()), _(tip)) for field, tip in STRENGTH_CHECKS]
-	checks.append((bool(has_links), _("Add your LinkedIn or other links")))
+	checks.insert(0, (bool(has_linkedin), _("Add your LinkedIn page (required)")))
 	done = sum(1 for ok, _tip in checks if ok)
 	return {"percent": round(done * 100 / len(checks)), "tips": [tip for ok, tip in checks if not ok][:3]}
 
@@ -206,4 +214,11 @@ def describe_visit(visit, companies=None):
 			text += " · " + _("from {0}").format(visit.source)
 	if companies and companies.get(visit.business_profile):
 		text += " · " + companies[visit.business_profile]
-	return frappe._dict(icon=icon, kind=kind, subject=text)
+	return frappe._dict(icon=icon, glyph=GLYPHS.get(icon, "eye"), kind=kind, subject=text)
+
+
+# The dashboard draws line icons (an SVG sprite in notifications.html) instead of the alert emoji
+GLYPHS = {
+	"👀": "eye", "📞": "phone", "💬": "chat", "✉️": "mail", "📍": "pin", "🌐": "globe",
+	"📇": "user", "🔗": "link", "🤖": "bot", "🔎": "search",
+}

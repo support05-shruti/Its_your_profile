@@ -133,6 +133,37 @@ def create_profile_from_card(
 				{"platform": link["platform"], "label": (link.get("label") or "")[:140], "url": link["url"][:500]},
 			)
 
+	# CHANGE 2026-11-12: no duplicate pages. The same owner scanning a card again for a company they
+	# already have a page for (e.g. MONARCH INDUSTRIES three times) gets that page back, with any
+	# blank fields filled from the new card, instead of a second page.
+	if doc.company_name:
+		existing = frappe.db.get_value(
+			"Business Profile",
+			# The database compares names without caring about capitals ("Monarch" = "MONARCH")
+			{"owner": frappe.session.user, "company_name": doc.company_name.strip()},
+			"name",
+			order_by="creation asc",
+		)
+		if existing:
+			page = frappe.get_doc("Business Profile", existing)
+			changed = False
+			for fieldname in allowed:
+				if doc.get(fieldname) and not page.get(fieldname):
+					page.set(fieldname, doc.get(fieldname))
+					changed = True
+			if not page.business_nature and doc.business_nature:
+				page.business_nature = doc.business_nature
+				changed = True
+			if changed:
+				page.save(ignore_permissions=True)
+			return {
+				"name": page.name,
+				"company_name": page.company_name,
+				"page_url": "/" + page.route if page.published and page.route else None,
+				"edit_url": f"/my-business/{page.name}/edit",
+				"already_existed": True,
+			}
+
 	# Same as the My Business web form, which owners use to create their profile
 	doc.insert(ignore_permissions=True)
 	return {

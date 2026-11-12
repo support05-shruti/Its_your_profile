@@ -43,6 +43,7 @@ PROFILE_FIELDS = [
 	"designation",
 	"contact_linkedin_url",
 	"phone",
+	"hide_phone",  # a private number is left out (doc.public_phone)
 	"email",
 	"website_url",
 	"address_line",
@@ -73,6 +74,12 @@ class CrawlerTextPage(BaseRenderer):
 					# The HTML page is the one to cite
 					"Link": f'<{get_url(doc.route)}>; rel="canonical"',
 				},
+			)
+
+		if self.path == "sitemap.xml":
+			return self.build_response(
+				get_sitemap_xml(),
+				headers={"Content-Type": "application/xml; charset=utf-8", "Cache-Control": "public, max-age=3600"},
 			)
 
 		# Every crawler fetches robots.txt; only the llms files say an AI read the directory
@@ -174,8 +181,35 @@ def get_robots_txt() -> str:
 	return "\n".join(lines) + "\n"
 
 
+# Frappe's own pages that only exist when switched on in their settings; when switched off they
+# redirect to /404, so they must not be listed in the sitemap (2026-11-12)
+SETTINGS_PAGES = {"about": "About Us Settings", "contact": "Contact Us Settings"}
+
+
+def get_sitemap_xml() -> str:
+	"""Frappe's sitemap (www pages + published profiles), minus pages that are switched off.
+	Frappe lists /about and /contact even when disabled, and crawlers then hit dead pages."""
+	from xml.sax.saxutils import escape
+
+	from frappe.www.sitemap import get_context as frappe_sitemap
+
+	links = []
+	for link in frappe_sitemap(frappe._dict())["links"]:
+		route = link["loc"].split("://", 1)[-1].split("/", 1)[-1].strip("/")
+		settings = SETTINGS_PAGES.get(route)
+		if settings and frappe.db.get_single_value(settings, "is_disabled"):
+			continue
+		links.append(link)
+	urls = "".join(
+		f"\n\t<url>\n\t\t<loc>{escape(link['loc'])}</loc>\n\t\t<lastmod>{escape(str(link['lastmod']))}</lastmod>\n\t</url>"
+		for link in links
+	)
+	return f'<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">{urls}\n</urlset>\n'
+
+
 BUILDERS = {
 	"llms.txt": get_llms_txt,
 	"llms-full.txt": get_llms_full_txt,
 	"robots.txt": get_robots_txt,
+	"sitemap.xml": get_sitemap_xml,
 }
