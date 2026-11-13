@@ -441,3 +441,17 @@ body::after { width: 300px; height: 300px; right: -110px; top: 60px; background:
 [data-iyp-theme="dark"] .web-form-wrapper input[type="checkbox"] { background-color: #141029; border-color: #463E7A; }
 [data-iyp-theme="dark"] .awesomplete > ul, [data-iyp-theme="dark"] .dropdown-menu { background: #1B1736 !important; border-color: #332C5A !important; color: #F0EEFA !important; }
 [data-iyp-theme="dark"] .awesomplete > ul > li[aria-selected="true"], [data-iyp-theme="dark"] .awesomplete > ul > li:hover { background: #2A2550 !important; }
+
+/* "My Business Profile" list (/my-business/list), 2026-11-13. It now opens the Dashboard instead,
+   but if it is ever shown, its rows stay readable in both themes. */
+.web-list-container .web-list-table table, .web-list-container .web-list-table .table { color: var(--iyp-ink); background: transparent; }
+.web-list-container .web-list-table th, .web-list-container .web-list-table td { border-color: var(--iyp-line) !important; color: var(--iyp-text) !important; vertical-align: middle; }
+.web-list-container .web-list-table tbody tr { cursor: pointer; }
+.web-list-container .web-list-table tbody tr:hover td { background: #F6F4FC; }
+.web-list-container .web-list-table td a, .web-list-container .web-list-table td .ellipsis { color: var(--iyp-ink) !important; font-weight: 600; }
+[data-iyp-theme="dark"] .web-list-container .web-list-table th { color: #A9A4C8 !important; border-color: #332C5A !important; }
+[data-iyp-theme="dark"] .web-list-container .web-list-table td { color: #E6E2F5 !important; border-color: #332C5A !important; }
+[data-iyp-theme="dark"] .web-list-container .web-list-table td a, [data-iyp-theme="dark"] .web-list-container .web-list-table td .ellipsis { color: #F0EEFA !important; }
+[data-iyp-theme="dark"] .web-list-container .web-list-table tbody tr:hover td { background: #1B1736; }
+[data-iyp-theme="dark"] .web-list-container .web-list-header, [data-iyp-theme="dark"] .web-list-container { border-color: #332C5A !important; }
+[data-iyp-theme="dark"] .web-list-container .no-result { color: #A9A4C8 !important; }
