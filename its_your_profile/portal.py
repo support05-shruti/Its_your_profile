@@ -61,8 +61,13 @@ THEME_SCRIPT = (
 
 def add_theme_script(context):
 	"""update_website_context hook (2026-11-12): dark mode on every website page, not only the home
-	page and the dashboard. Adds THEME_SCRIPT to <head> (Frappe prints head_include there); the dark
-	colours are in iyp_site.css and in each page's own styles."""
-	if THEME_SCRIPT in (context.get("head_include") or ""):
+	page and the dashboard. Adds THEME_SCRIPT to <head>; the dark colours are in iyp_site.css and in
+	each page's own styles.
+
+	CHANGE 2026-11-13: through head_html (printed by templates/includes/head.html, which no page
+	replaces), not head_include: Frappe's login page replaces the head_include block without keeping
+	it, so the login / sign-up page never followed dark mode. Website Settings > Head HTML is kept."""
+	head_html = context.get("head_html") or ""
+	if THEME_SCRIPT in head_html:
 		return None
-	return {"head_include": (context.get("head_include") or "") + THEME_SCRIPT}
+	return {"head_html": head_html + THEME_SCRIPT}

@@ -633,7 +633,9 @@ class BusinessProfile(WebsiteGenerator):
 		if self.contact_person:
 			role = f"the {self.designation} of" if self.designation else "the contact person at"
 			sentences.append(f"{self.contact_person} is {role} {self.company_name}.")
-		return " ".join(sentences)
+		# 2026-11-13: a name ending in "." (e.g. "... Pvt. Ltd.") must not end the sentence with "..";
+		# "..." (a real ellipsis) is left alone
+		return re.sub(r"(?<!\.)\.\.(?!\.)", ".", " ".join(sentences))
 
 	def get_summary(self):
 		"""The AI summary once written, else the summary built from the fields."""

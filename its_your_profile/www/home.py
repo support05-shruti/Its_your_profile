@@ -4,6 +4,12 @@ import frappe
 
 from its_your_profile.www.directory import is_backend_user
 
+# 2026-11-13: never served from a saved copy. The header depends on who is logged in (Sign up for
+# visitors; Dashboard, My information and the owner's logo for owners). A saved copy showed a
+# logged-in owner the visitors' "Sign up" button, and /login then sent them straight back here
+# (Frappe sends logged-in users away from the login page), so sign-up seemed broken.
+no_cache = 1
+
 # Where "Create my page" goes: the existing sign-up form until the no-login /create page is built
 CREATE_URL = "/my-business/new"
 

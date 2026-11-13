@@ -403,3 +403,41 @@ body::after { width: 300px; height: 300px; right: -110px; top: 60px; background:
 .web-form-wrapper .frappe-control[data-fieldname="company_logo"] img { max-height: 90px; width: auto; background: #fff; border-radius: 10px; padding: 6px; }
 .iyp-logo-focus { border-radius: 16px; box-shadow: 0 0 0 4px rgba(232, 112, 18, .35); transition: box-shadow .3s ease; }
 [data-iyp-theme="dark"] .web-form-wrapper .frappe-control[data-fieldname="company_logo"] .btn-attach { background: #141029 !important; border-color: #4F4690 !important; }
+
+/* Dark mode for Frappe's own controls on this form (2026-11-13): the Links table, its row editor,
+   "Add row", attach boxes and dropdowns take their colours from Frappe's variables, which stayed
+   light, so the table showed white rows with pale text. Give those variables dark values. */
+[data-iyp-theme="dark"] {
+	--fg-color: #141029; --bg-color: #100D22; --card-bg: #1B1736; --modal-bg: #1B1736;
+	--subtle-fg: #1B1736; --subtle-accent: #1A1638; --control-bg: #141029; --control-bg-on-gray: #141029;
+	--border-color: #332C5A; --table-border-color: #332C5A; --dark-border-color: #463E7A;
+	--text-color: #F0EEFA; --text-muted: #A9A4C8; --text-light: #A9A4C8; --heading-color: #F0EEFA;
+	--btn-default-bg: #1B1736; --btn-default-hover-bg: #2A2550;
+}
+[data-iyp-theme="dark"] .web-form-wrapper .form-grid .grid-heading-row,
+[data-iyp-theme="dark"] .web-form-wrapper .form-grid .grid-heading-row .grid-row,
+[data-iyp-theme="dark"] .web-form-wrapper .form-grid .grid-heading-row .static-area { background: #1B1736 !important; color: #C9C4E2 !important; }
+[data-iyp-theme="dark"] .web-form-wrapper .form-grid .grid-body .data-row,
+[data-iyp-theme="dark"] .web-form-wrapper .form-grid .grid-body .grid-static-col,
+[data-iyp-theme="dark"] .web-form-wrapper .form-grid .grid-body .row-index,
+[data-iyp-theme="dark"] .web-form-wrapper .form-grid .grid-body .row-check { background: #141029 !important; color: #F0EEFA !important; }
+[data-iyp-theme="dark"] .web-form-wrapper .form-grid .grid-row,
+[data-iyp-theme="dark"] .web-form-wrapper .form-grid .grid-static-col,
+[data-iyp-theme="dark"] .web-form-wrapper .form-grid .row-index { border-color: #332C5A !important; }
+[data-iyp-theme="dark"] .web-form-wrapper .form-grid .grid-row .static-area,
+[data-iyp-theme="dark"] .web-form-wrapper .form-grid .grid-row .static-area a { color: #F0EEFA !important; }
+[data-iyp-theme="dark"] .web-form-wrapper .form-grid .grid-row .btn-open-row,
+[data-iyp-theme="dark"] .web-form-wrapper .form-grid .grid-row .btn-open-row svg { color: #C9C4E2 !important; stroke: currentColor; }
+/* The row editor that opens when a row is tapped */
+[data-iyp-theme="dark"] .web-form-wrapper .grid-row-open,
+[data-iyp-theme="dark"] .web-form-wrapper .grid-row-open .grid-form-heading,
+[data-iyp-theme="dark"] .web-form-wrapper .grid-row-open .grid-form-body { background: #1B1736 !important; color: #F0EEFA !important; border-color: #332C5A !important; }
+/* Add row / Delete and other small buttons */
+[data-iyp-theme="dark"] .web-form-wrapper .grid-buttons .btn,
+[data-iyp-theme="dark"] .web-form-wrapper .btn-secondary,
+[data-iyp-theme="dark"] .web-form-wrapper .btn-xs { background: #1B1736 !important; border: 1px solid #463E7A !important; color: #F0EEFA !important; }
+[data-iyp-theme="dark"] .web-form-wrapper .grid-buttons .btn:hover { background: #2A2550 !important; }
+/* Checkboxes, dropdown lists and link suggestions */
+[data-iyp-theme="dark"] .web-form-wrapper input[type="checkbox"] { background-color: #141029; border-color: #463E7A; }
+[data-iyp-theme="dark"] .awesomplete > ul, [data-iyp-theme="dark"] .dropdown-menu { background: #1B1736 !important; border-color: #332C5A !important; color: #F0EEFA !important; }
+[data-iyp-theme="dark"] .awesomplete > ul > li[aria-selected="true"], [data-iyp-theme="dark"] .awesomplete > ul > li:hover { background: #2A2550 !important; }

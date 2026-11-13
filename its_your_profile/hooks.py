@@ -78,7 +78,7 @@ website_context = {
 # _ASSET_VERSION (2026-11-12): Frappe links these files with no version, so phones kept old copies
 # for days (the dashboard stayed half white in dark mode). Change this number whenever
 # iyp_site.css, iyp_footer.js or iyp_share.js change, and every browser downloads the new files.
-_ASSET_VERSION = "20261112d"
+_ASSET_VERSION = "20261113a"
 web_include_js = [
 	f"/assets/its_your_profile/js/iyp_footer.js?v={_ASSET_VERSION}",
 	f"/assets/its_your_profile/js/iyp_share.js?v={_ASSET_VERSION}",

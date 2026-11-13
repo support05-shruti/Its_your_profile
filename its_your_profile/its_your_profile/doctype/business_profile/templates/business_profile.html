@@ -83,8 +83,14 @@
 {#- Colours come from the visiting card (validated hex codes only), darkened to stay readable -#}
 <style>
 	.iyp {
-		--b: {{ page_brand_color or "#1F5F8B" }};
-		--n: {{ page_name_color or page_brand_color or "#1F5F8B" }};
+		/* CHANGE 2026-11-13: buttons, chips, icons, links and the phone bar use the SITE's indigo, like
+		   every other page; each business's own card colour stays only in the cover band at the top
+		   (--company) and the initials of a page with no logo (--n). Before, every page took its card
+		   colour (blue, red, green...) everywhere and looked like a different website. */
+		--company: {{ page_brand_color or "#3B2E7E" }};
+		--company-deep: color-mix(in srgb, var(--company) 55%, #0b1220);
+		--b: #3B2E7E;
+		--n: {{ page_name_color or page_brand_color or "#3B2E7E" }};
 		--b-soft: color-mix(in srgb, var(--b) 8%, #fff);
 		--b-soft-2: color-mix(in srgb, var(--b) 14%, #fff);
 		--b-line: color-mix(in srgb, var(--b) 22%, #fff);
@@ -106,7 +112,7 @@
 		background:
 			radial-gradient(circle at 85% -20%, rgba(255,255,255,.28) 0, transparent 45%),
 			radial-gradient(circle at 10% 120%, rgba(255,255,255,.14) 0, transparent 40%),
-			linear-gradient(120deg, var(--b) 0%, var(--b-deep) 100%);
+			linear-gradient(120deg, var(--company) 0%, var(--company-deep) 100%);
 	}
 	.iyp-cover::after {
 		content: ""; position: absolute; inset: 0; opacity: .18;
@@ -482,6 +488,8 @@
 	[data-iyp-theme="dark"] .iyp {
 		--ink: #F0EEFA; --ink-2: #C9C4E2; --muted: #A9A4C8; --line: #332C5A; --bg: #141029;
 		--surface: #1B1736;
+		--b: #6B55D6; /* the site's violet in dark mode, as on the home page (2026-11-13) */
+		--company-deep: color-mix(in srgb, var(--company) 45%, #0b0a16);
 		--b-soft: color-mix(in srgb, var(--b) 20%, #1B1736);
 		--b-soft-2: color-mix(in srgb, var(--b) 30%, #1B1736);
 		--b-line: color-mix(in srgb, var(--b) 42%, #1B1736);

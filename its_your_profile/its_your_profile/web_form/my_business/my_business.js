@@ -1,3 +1,14 @@
+// CHANGE NOTE 2026-11-13: dark mode for Frappe's own parts of this form. The Links table, its row
+// editor, "Add row" and dropdowns are Frappe (Espresso) components; they only turn dark when <html>
+// has data-theme="dark". Our site sets data-iyp-theme; mirror it here so they follow the same choice
+// (my_business.css then tints them in the site's colours). Runs as soon as the script loads.
+(function () {
+	const root = document.documentElement;
+	const sync = () => root.setAttribute("data-theme", root.getAttribute("data-iyp-theme") === "dark" ? "dark" : "light");
+	sync();
+	new MutationObserver(sync).observe(root, { attributes: true, attributeFilter: ["data-iyp-theme"] });
+})();
+
 frappe.ready(function () {
 	const web_form = frappe.web_form;
 	const POLL_MS = 3000;

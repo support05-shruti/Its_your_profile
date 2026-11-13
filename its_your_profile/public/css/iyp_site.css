@@ -261,3 +261,7 @@ body[data-path="404"] .error-page .details a, body[data-path="error"] .error-pag
 [data-iyp-theme="dark"] body[data-path="404"] .error-page h4, [data-iyp-theme="dark"] body[data-path="error"] .error-page h4 { color: #F0EEFA; }
 [data-iyp-theme="dark"] body[data-path="404"] .error-page .details::before { color: #A9A4C8; }
 [data-iyp-theme="dark"] body[data-path="404"] .error-page .details a, [data-iyp-theme="dark"] body[data-path="error"] .error-page .details a { background: #AFA2F5; color: #100D22 !important; }
+/* 2026-11-13: the divider under "Page not found" in the site's colours, not Frappe's grey/white */
+body[data-path="404"] .error-page hr, body[data-path="404"] .error-page h4 + *, body[data-path="error"] .error-page hr { border-color: #E4DFF3 !important; }
+[data-iyp-theme="dark"] body[data-path="404"] .error-page hr, [data-iyp-theme="dark"] body[data-path="404"] .error-page h4 + *, [data-iyp-theme="dark"] body[data-path="error"] .error-page hr { border-color: #332C5A !important; }
+[data-iyp-theme="dark"] body[data-path="404"] .error-page h4, [data-iyp-theme="dark"] body[data-path="error"] .error-page h4 { border-color: #332C5A !important; }
