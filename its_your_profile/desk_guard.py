@@ -48,6 +48,16 @@ def keep_desk_private():
 		response.status_code = 404
 		raise HTTPException(response=response)
 
+	# 2026-11-13: Frappe's own list of business pages (/my-business, /my-business/list) is a plain page
+	# we never styled (unreadable in dark mode); the Dashboard already lists every business with View,
+	# Edit and Share, so it goes there. Frappe's read-only view of one page (/my-business/<name>) opens
+	# its edit form (My information) instead. /my-business/new and /<name>/edit are left alone.
+	if path in ("/my-business", "/my-business/list"):
+		raise HTTPException(response=redirect("/notifications", code=302))
+	parts = path.split("/")
+	if len(parts) == 3 and parts[1] == "my-business" and parts[2] not in ("new", "list"):
+		raise HTTPException(response=redirect(f"{path}/edit", code=302))
+
 	# 2026-11-12: Frappe's "My Account" (/me) and app switcher (/apps) pages link to the Desk, which no
 	# website button may open. Everyone goes to our dashboard instead (it sends guests to log in).
 	if path in ("/me", "/apps"):
