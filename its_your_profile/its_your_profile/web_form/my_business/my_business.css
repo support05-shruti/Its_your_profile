@@ -317,12 +317,15 @@ body::after { width: 300px; height: 300px; right: -110px; top: 60px; background:
 [data-iyp-theme="dark"] .web-form-wrapper .form-grid .grid-static-col, [data-iyp-theme="dark"] .web-form-wrapper .form-grid .static-area { color: #E9E6F2 !important; }
 /* Buttons and save bar */
 [data-iyp-theme="dark"] [data-doctype="Web Form"] .btn-default { background: #1B1736 !important; }
-[data-iyp-theme="dark"] [data-doctype="Web Form"] .page-content-wrapper .container .page_content .web-form .web-form-footer { background: rgba(30, 28, 43, .94); }
+[data-iyp-theme="dark"] [data-doctype="Web Form"] .page-content-wrapper .container .page_content .web-form .web-form-footer { background: rgba(27, 23, 54, .95); border-top-color: #332C5A !important; }
 [data-iyp-theme="dark"] #not-saved-badge { color: #F5A462 !important; }
 /* Steps, perks and banner (shown on a new page only) */
-[data-iyp-theme="dark"] .iyp-step { background: #161231; }
-[data-iyp-theme="dark"] .iyp-step b { background: #1B1736; }
-[data-iyp-theme="dark"] .iyp-step.on { color: #100D22; }
+[data-iyp-theme="dark"] .iyp-step { background: #161231; color: #E6E2F5; border-color: #332C5A; }
+[data-iyp-theme="dark"] .iyp-step b { background: #2A2550; color: #F0EEFA; border-color: #463E7A; }
+/* 2026-11-13: the current step keeps its bright violet pill with white text (the line above made its
+   background dark while its text was dark too, so "1 Scan your card" could not be read) */
+[data-iyp-theme="dark"] .iyp-step.on { background: linear-gradient(90deg, #6B55D6, #8F7FE0); color: #ffffff; border-color: transparent; }
+[data-iyp-theme="dark"] .iyp-step.on b { background: rgba(255, 255, 255, .22); color: #ffffff; border-color: transparent; }
 [data-iyp-theme="dark"] .iyp-perks span:nth-child(1) { background: #3A3216; color: #F2D88A; }
 [data-iyp-theme="dark"] .iyp-perks span:nth-child(2) { background: #2B2740; color: #CBBEFF; }
 [data-iyp-theme="dark"] .iyp-perks span:nth-child(3) { color: #8FDCB0; }
