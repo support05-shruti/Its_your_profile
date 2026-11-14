@@ -78,7 +78,7 @@ website_context = {
 # _ASSET_VERSION (2026-11-12): Frappe links these files with no version, so phones kept old copies
 # for days (the dashboard stayed half white in dark mode). Change this number whenever
 # iyp_site.css, iyp_footer.js or iyp_share.js change, and every browser downloads the new files.
-_ASSET_VERSION = "20261113a"
+_ASSET_VERSION = "20261113b"
 web_include_js = [
 	f"/assets/its_your_profile/js/iyp_footer.js?v={_ASSET_VERSION}",
 	f"/assets/its_your_profile/js/iyp_share.js?v={_ASSET_VERSION}",
@@ -251,6 +251,8 @@ ignore_links_on_delete = ["Profile Visit"]
 scheduler_events = {
 	"cron": {
 		"0 10 1 * *": ["its_your_profile.monthly_report.send_monthly_reports"],
+		# CHANGE NOTE 2026-11-13: random entrepreneur quote email every 2 minutes (off unless quote_mailer_enabled)
+		"*/2 * * * *": ["its_your_profile.quote_mailer.mailer.send_random_quote"],
 	},
 }
 

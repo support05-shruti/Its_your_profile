@@ -265,3 +265,32 @@ body[data-path="404"] .error-page .details a, body[data-path="error"] .error-pag
 body[data-path="404"] .error-page hr, body[data-path="404"] .error-page h4 + *, body[data-path="error"] .error-page hr { border-color: #E4DFF3 !important; }
 [data-iyp-theme="dark"] body[data-path="404"] .error-page hr, [data-iyp-theme="dark"] body[data-path="404"] .error-page h4 + *, [data-iyp-theme="dark"] body[data-path="error"] .error-page hr { border-color: #332C5A !important; }
 [data-iyp-theme="dark"] body[data-path="404"] .error-page h4, [data-iyp-theme="dark"] body[data-path="error"] .error-page h4 { border-color: #332C5A !important; }
+
+/* ---------- Set / reset password page (2026-11-13): same look as the login card ---------- */
+body[data-path="update-password"] {
+	font-family: Sora, system-ui, -apple-system, sans-serif;
+	background: linear-gradient(180deg, #F3F0FB 0, #F6F4FC 380px, #fff 900px) no-repeat, #fff !important; color: #1E1838;
+}
+body[data-path="update-password"] .page-card {
+	max-width: 440px !important; margin: 48px auto 32px !important; padding: 42px 38px 34px !important;
+	background: #fff !important; border: 1px solid #E4DFF3 !important; border-radius: 28px !important;
+	box-shadow: 0 40px 80px -40px rgba(59, 46, 126, .45) !important;
+}
+body[data-path="update-password"] .page-card-head { align-items: center !important; text-align: center !important; }
+body[data-path="update-password"] img.app-logo { content: url("/assets/its_your_profile/images/iyp-logo.png"); height: 60px !important; width: auto !important; max-width: 100% !important; }
+body[data-path="update-password"] .page-card-head h4, body[data-path="update-password"] .page-card-head-text h4 { font-weight: 800 !important; color: #1E1838 !important; text-align: center; width: 100%; }
+body[data-path="update-password"] .page-card-subtitle { color: #5A5578 !important; text-align: center; }
+body[data-path="update-password"] label { color: #1E1838 !important; font-weight: 600; }
+body[data-path="update-password"] .form-control { min-height: 46px; border: 1px solid #B9B4CC !important; border-radius: 12px !important; background: #fff !important; color: #1E1838 !important; }
+body[data-path="update-password"] .form-control:focus { border-color: #3B2E7E !important; box-shadow: 0 0 0 4px rgba(107, 85, 214, .16) !important; }
+body[data-path="update-password"] .es-button[data-variant="solid"], body[data-path="update-password"] .btn-primary {
+	min-height: 48px; border: 0 !important; border-radius: 14px !important; color: #fff !important; font-weight: 700 !important;
+	background: linear-gradient(90deg, #3B2E7E, #6B55D6) !important;
+}
+[data-iyp-theme="dark"] body[data-path="update-password"] { background: #100D22 !important; color: #F0EEFA; }
+[data-iyp-theme="dark"] body[data-path="update-password"] .page-card { background: #1B1736 !important; border-color: #332C5A !important; box-shadow: 0 40px 80px -40px rgba(0, 0, 0, .7) !important; }
+[data-iyp-theme="dark"] body[data-path="update-password"] img.app-logo { content: url("/assets/its_your_profile/images/iyp-logo-dark.png"); }
+[data-iyp-theme="dark"] body[data-path="update-password"] .page-card-head h4, [data-iyp-theme="dark"] body[data-path="update-password"] label { color: #F0EEFA !important; }
+[data-iyp-theme="dark"] body[data-path="update-password"] .page-card-subtitle { color: #A9A4C8 !important; }
+[data-iyp-theme="dark"] body[data-path="update-password"] .form-control { background: #141029 !important; border-color: #463E7A !important; color: #F0EEFA !important; }
+[data-iyp-theme="dark"] body[data-path="update-password"] .es-button[data-variant="solid"], [data-iyp-theme="dark"] body[data-path="update-password"] .btn-primary { background: linear-gradient(90deg, #6B55D6, #8F7FE0) !important; }

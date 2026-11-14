@@ -33,7 +33,8 @@ def use_our_logo(context):
 	our logo. Frappe's login page takes its logo from Website/Navbar Settings or else the first app's
 	app_logo_url hook, which is Frappe's own logo when several apps are installed. This runs after
 	the page's own get_context, so it wins. A logo uploaded in Website Settings > App Logo is kept."""
-	if (context.get("path") or getattr(frappe.local, "path", "") or "").strip("/") != "login":
+	# 2026-11-13: also the set / reset password page (from emails), which showed Frappe's logo
+	if (context.get("path") or getattr(frappe.local, "path", "") or "").strip("/") not in ("login", "update-password"):
 		return None
 	if frappe.get_website_settings("app_logo"):
 		return None

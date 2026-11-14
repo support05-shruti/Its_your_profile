@@ -11,6 +11,51 @@ from werkzeug.utils import redirect
 
 DESK_PATHS = ("/desk", "/app")
 
+# The first part of every address that belongs to our website, or that Frappe needs to work
+# (login, password reset from emails, two-factor QR, the API, files, real-time updates).
+SITE_PATHS = {
+	"", "login", "logout", "update-password", "qrcode", "terms", "notifications", "account",
+	"directory", "business", "my-business", "me", "apps", "desk", "app", "404",
+	"api", "assets", "files", "private", "socket.io", "website_script.js",
+}  # fmt: skip
+
+
+def is_frappe_page(path: str) -> bool:
+	"""True for an existing Frappe / ERPNext / HRMS website page that is not part of our website.
+	Addresses that don't exist at all are left to Frappe, which shows our "Page not found"."""
+	first = path.strip("/").split("/", 1)[0]
+	if first in SITE_PATHS or "." in first:
+		return False
+	return first in frappe_page_routes()
+
+
+def frappe_page_routes() -> set[str]:
+	"""First part of the address of every page the installed apps provide: their www pages, web forms
+	(except ours) and doctype list pages. Kept for 10 minutes."""
+	cached = frappe.cache.get_value("iyp_frappe_page_routes")
+	if cached is not None:
+		return set(cached)
+	routes = set()
+	try:
+		from frappe.website.router import get_doctypes_with_web_view, get_pages
+
+		routes |= {route.strip("/").split("/", 1)[0] for route in get_pages()}
+		routes |= {
+			(r or "").strip("/").split("/", 1)[0]
+			for r in frappe.get_all("Web Form", filters={"published": 1}, pluck="route")
+		}
+		for doctype in get_doctypes_with_web_view():
+			routes.add(frappe.scrub(doctype).replace("_", "-"))
+		# Pages Frappe renders without a www file
+		routes |= {"printview", "list", "error", "message", "portal", "support", "issues", "projects",
+			"orders", "invoices", "addresses", "third_party_apps", "newsletters", "blog", "search",
+			"dashboard", "unsubscribe", "contact", "about"}  # fmt: skip
+	except Exception:
+		frappe.log_error("desk_guard: could not list Frappe page routes")
+	routes -= SITE_PATHS
+	frappe.cache.set_value("iyp_frappe_page_routes", list(routes), expires_in_sec=600)
+	return routes
+
 
 def keep_desk_private():
 	"""before_request hook: send non-staff visitors of /desk or /app to the home page."""
@@ -62,6 +107,16 @@ def keep_desk_private():
 	# website button may open. Everyone goes to our dashboard instead (it sends guests to log in).
 	if path in ("/me", "/apps"):
 		raise HTTPException(response=redirect("/notifications", code=302))
+
+	# 2026-11-13: no Frappe / ERPNext / HRMS website page opens for the public. Frappe and the other
+	# installed apps bring their own pages (/portal, /support, /issues, /projects, /orders,
+	# /invoices, /addresses, /printview, /list, /error...), which look like Frappe, not our site.
+	# Anyone who is not staff opening a page outside our own site goes to the home page.
+	# Files (anything with a "." in its name: robots.txt, sitemap.xml, images...) are not affected.
+	if is_frappe_page(path):
+		user = frappe.session.user if getattr(frappe.local, "session", None) else "Guest"
+		if not (user != "Guest" and frappe.get_cached_value("User", user, "user_type") == "System User"):
+			raise HTTPException(response=redirect("/", code=302))
 
 	if not any(path == p or path.startswith(p + "/") for p in DESK_PATHS):
 		return
