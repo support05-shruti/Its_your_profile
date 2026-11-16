@@ -10,6 +10,56 @@
 	function add() {
 		fixLogo();
 		fixSignupButton();
+		addThemeSwitch();
+		countPageView();
+	}
+
+	// 2026-11-16: count views of the site's own pages (home, terms, directory...) for the staff
+	// dashboard, with where the visitor first came from in this tab. Business pages count themselves.
+	function countPageView() {
+		var path = location.pathname;
+		if (/^\/(business\/|app\b|login|update-password|api\/)/.test(path)) return;
+		var from = null;
+		try { from = JSON.parse(sessionStorage.getItem("iyp_site_from") || "null"); } catch (e) { from = null; }
+		if (!from) {
+			from = { referrer: document.referrer || "", utm: new URLSearchParams(location.search).get("utm_source") || "" };
+			try { sessionStorage.setItem("iyp_site_from", JSON.stringify(from)); } catch (e) { /* storage blocked */ }
+		}
+		var headers = { "Content-Type": "application/x-www-form-urlencoded" };
+		if (window.frappe && frappe.csrf_token) headers["X-Frappe-CSRF-Token"] = frappe.csrf_token;
+		fetch("/api/method/its_your_profile.tracking.track_page", {
+			method: "POST", headers: headers, keepalive: true, credentials: "same-origin",
+			body: new URLSearchParams({ path: path, referrer: from.referrer, utm: from.utm })
+		}).catch(function () {});
+	}
+
+	// 2026-11-16: light / dark switch on the sign-in / sign-up and set-password pages, which are
+	// Frappe's own pages and had no switch (the other pages have their own). Same saved choice
+	// ("iyp-theme") as the rest of the site.
+	function addThemeSwitch() {
+		var path = location.pathname.replace(/\/+$/, "");
+		if (path !== "/login" && path !== "/update-password") return;
+		if (document.querySelector(".iyp-theme-fab")) return;
+		var root = document.documentElement;
+		var btn = document.createElement("button");
+		btn.type = "button";
+		btn.className = "iyp-theme-fab";
+		btn.setAttribute("aria-label", "Switch light / dark");
+		btn.title = "Switch light / dark";
+		btn.innerHTML =
+			'<svg class="iyp-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5z"/></svg>' +
+			'<svg class="iyp-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>';
+		function sync() {
+			btn.setAttribute("aria-pressed", root.getAttribute("data-iyp-theme") === "dark" ? "true" : "false");
+		}
+		btn.addEventListener("click", function () {
+			var next = root.getAttribute("data-iyp-theme") === "dark" ? "light" : "dark";
+			root.setAttribute("data-iyp-theme", next);
+			try { localStorage.setItem("iyp-theme", next); } catch (e) { /* storage blocked */ }
+			sync();
+		});
+		sync();
+		document.body.appendChild(btn);
 	}
 
 

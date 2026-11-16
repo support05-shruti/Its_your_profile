@@ -71,4 +71,24 @@ def add_theme_script(context):
 	head_html = context.get("head_html") or ""
 	if THEME_SCRIPT in head_html:
 		return None
-	return {"head_html": head_html + THEME_SCRIPT}
+	return {"head_html": head_html + THEME_SCRIPT + one_tap_meta(context)}
+
+
+# Pages where a "Continue with Google" box would only confuse: signing in, setting a password
+NO_ONE_TAP_PATHS = ("login", "update-password", "logout")
+
+
+def one_tap_meta(context):
+	"""2026-11-16: <meta name="iyp-gsi-client"> with the Google Client ID, read by iyp_onetap.js, on
+	every website page for visitors who aren't logged in, when One Tap is on in Settings."""
+	if frappe.session.user != "Guest":
+		return ""
+	path = (context.get("path") or getattr(frappe.local, "path", "") or "").strip("/")
+	if path.split("/", 1)[0] in NO_ONE_TAP_PATHS:
+		return ""
+	from its_your_profile.one_tap import client_id
+
+	cid = client_id()
+	if not cid:
+		return ""
+	return f'<meta name="iyp-gsi-client" content="{frappe.utils.escape_html(cid)}">'

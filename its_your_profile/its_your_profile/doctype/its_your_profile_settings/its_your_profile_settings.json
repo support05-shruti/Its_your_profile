@@ -159,7 +159,7 @@
   },
   {
    "collapsible": 1,
-   "description": "Shows a small \"Continue as …\" Google box on business pages. Visitors who tap it appear by name and email in the owner's \"Who visited your page\". Get the Client ID from Google Cloud Console → APIs & Services → Credentials → Create OAuth client ID (Web application), with https://itsyourprofile.com as an Authorised JavaScript origin.",
+   "description": "Shows a small \"Continue as …\" Google box on every page for visitors who are not logged in. People who tap it appear by name and email on the staff dashboard (\"People on It's Your Profile\"), and on a business page also in that owner's \"Who visited your page\". Get the Client ID from Google Cloud Console → APIs & Services → Credentials → Create OAuth client ID (Web application), with https://itsyourprofile.com as an Authorised JavaScript origin.",
    "fieldname": "google_section",
    "fieldtype": "Section Break",
    "label": "Google One Tap (know who visited)"
@@ -168,7 +168,7 @@
    "default": "0",
    "fieldname": "google_one_tap",
    "fieldtype": "Check",
-   "label": "Show Google One Tap on business pages"
+   "label": "Show Google One Tap on the website"
   },
   {
    "depends_on": "google_one_tap",

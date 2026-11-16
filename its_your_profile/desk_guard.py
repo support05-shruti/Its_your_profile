@@ -35,25 +35,31 @@ def frappe_page_routes() -> set[str]:
 	cached = frappe.cache.get_value("iyp_frappe_page_routes")
 	if cached is not None:
 		return set(cached)
-	routes = set()
-	try:
-		from frappe.website.router import get_doctypes_with_web_view, get_pages
+	# Pages Frappe renders without a www file: always blocked, even if listing the others fails.
+	# CHANGE 2026-11-16: this list used to sit inside the try below, so one broken www page (an
+	# import error in home.py) emptied the whole list and /portal, /support... opened again.
+	routes = {"printview", "list", "error", "message", "portal", "support", "issues", "projects",
+		"orders", "invoices", "addresses", "third_party_apps", "newsletters", "blog", "search",
+		"dashboard", "unsubscribe", "contact", "about"}  # fmt: skip
+	complete = True
+	from frappe.website.router import get_doctypes_with_web_view, get_pages
 
-		routes |= {route.strip("/").split("/", 1)[0] for route in get_pages()}
-		routes |= {
+	for collect in (
+		lambda: {route.strip("/").split("/", 1)[0] for route in get_pages()},
+		lambda: {
 			(r or "").strip("/").split("/", 1)[0]
 			for r in frappe.get_all("Web Form", filters={"published": 1}, pluck="route")
-		}
-		for doctype in get_doctypes_with_web_view():
-			routes.add(frappe.scrub(doctype).replace("_", "-"))
-		# Pages Frappe renders without a www file
-		routes |= {"printview", "list", "error", "message", "portal", "support", "issues", "projects",
-			"orders", "invoices", "addresses", "third_party_apps", "newsletters", "blog", "search",
-			"dashboard", "unsubscribe", "contact", "about"}  # fmt: skip
-	except Exception:
-		frappe.log_error("desk_guard: could not list Frappe page routes")
+		},
+		lambda: {frappe.scrub(doctype).replace("_", "-") for doctype in get_doctypes_with_web_view()},
+	):
+		try:
+			routes |= collect()
+		except Exception:
+			complete = False
+			frappe.log_error("desk_guard: could not list some Frappe page routes")
 	routes -= SITE_PATHS
-	frappe.cache.set_value("iyp_frappe_page_routes", list(routes), expires_in_sec=600)
+	# A partial list is kept only briefly, so the full list is tried again soon
+	frappe.cache.set_value("iyp_frappe_page_routes", list(routes), expires_in_sec=600 if complete else 30)
 	return routes
 
 
@@ -72,11 +78,9 @@ def keep_desk_private():
 
 	# 2026-11-12: business pages live at /business/<name>; /business on its own made Frappe try to
 	# build an automatic list of all profiles, which failed with "500: There was an error building
-	# this page". Staff go to the (staff-only) directory, everyone else to the home page.
+	# this page". CHANGE 2026-11-16: the directory is public now, so everyone goes there.
 	if path == "/business":
-		user = frappe.session.user if getattr(frappe.local, "session", None) else "Guest"
-		staff = user != "Guest" and frappe.get_cached_value("User", user, "user_type") == "System User"
-		raise HTTPException(response=redirect("/directory" if staff else "/", code=302))
+		raise HTTPException(response=redirect("/directory", code=302))
 
 	# 2026-11-12: Frappe's own About and Contact pages, when switched off in their settings, answered
 	# with a 301 redirect to /404. Crawlers should get a plain "404 Not Found" at the address itself.

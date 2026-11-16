@@ -109,6 +109,8 @@ def get_context(context):
 			"days": days,
 			"unread": unread,
 			"leads": leads,
+			# 2026-11-16: everyone who tapped "Continue with Google" anywhere on the site (staff only)
+			"people": get_site_people() if is_staff else None,
 			"new_leads": sum(1 for lead in leads if lead.status == "New"),
 			"has_profile": bool(profiles),
 			"profiles": profiles,
@@ -122,6 +124,55 @@ def get_context(context):
 			"today": format_date(getdate(), "EEEE, d MMMM"),
 		}
 	)
+
+
+def get_site_people():
+	"""People who shared their name with Google One Tap on any page (one_tap.py), latest first."""
+	if not frappe.db.table_exists("Site Visitor"):
+		return None  # before `bench migrate`
+	rows = frappe.get_all(
+		"Site Visitor",
+		fields=["full_name", "email", "visits", "first_seen", "last_seen", "last_page", "source"],
+		order_by="last_seen desc",
+		limit_page_length=LIMIT,
+	)
+	week_ago = add_days(now_datetime(), -WEEK)
+	for row in rows:
+		row.when = pretty_date(row.last_seen)
+		row.first = format_date(row.first_seen) if row.first_seen else ""
+		row.initial = (row.full_name or row.email or "?")[0].upper()
+		row.found_on = row.source if row.source and row.source not in ("Direct", "It's Your Profile") else None
+		row.page_label = page_label(row.last_page)
+	# Views of the site's own pages (home, terms...), from iyp_footer.js → tracking.track_page
+	site_views = {"business_profile": ("is", "not set"), "event": "View", "visitor": "Person", "creation": (">=", week_ago)}
+	sources = frappe.db.sql(
+		"""select source, count(*) as visits from `tabProfile Visit`
+		where ifnull(business_profile, '') = '' and event = 'View' and visitor = 'Person' and creation >= %(since)s
+		group by source order by visits desc limit 4""",
+		{"since": week_ago},
+		as_dict=True,
+	)
+	return frappe._dict(
+		rows=rows,
+		site_views=frappe.db.count("Profile Visit", site_views),
+		home_views=frappe.db.count("Profile Visit", {**site_views, "path": "/"}),
+		sources=[s for s in sources if s.source],
+		total=frappe.db.count("Site Visitor"),
+		this_week=frappe.db.count("Site Visitor", {"last_seen": (">=", week_ago)}),
+		new_this_week=frappe.db.count("Site Visitor", {"first_seen": (">=", week_ago)}),
+	)
+
+
+def page_label(path):
+	"""'/business/iyp-26-11-00016' → the company's name; '/' → Home."""
+	path = (path or "/").rstrip("/") or "/"
+	if path == "/":
+		return _("Home")
+	if path.startswith("/business/"):
+		company = frappe.db.get_value("Business Profile", {"route": path.strip("/")}, "company_name")
+		if company:
+			return company
+	return path
 
 
 def get_leads(names, routes, companies):

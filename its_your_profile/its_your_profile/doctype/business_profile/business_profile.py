@@ -453,11 +453,6 @@ class BusinessProfile(WebsiteGenerator):
 			and (not self.company_logo or bool(GENERATED_LOGO_NAME.match(self.company_logo or "")))
 		)
 		context.add_logo_url = f"/my-business/{self.name}/edit#logo"
-		# Google One Tap (2026-11-16): "Continue as …" for visitors who aren't logged in here, so the
-		# owner can see who visited. Off unless switched on in Its Your Profile Settings.
-		from its_your_profile.one_tap import client_id
-
-		context.one_tap_client_id = client_id() if user == "Guest" else None
 		# Share preview: the card, else the logo, else (2026-11-12) the site's own logo, so a shared
 		# link never shows an empty picture
 		context.og_image = (

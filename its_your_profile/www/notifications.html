@@ -178,6 +178,24 @@
 	.d-lead-done[aria-pressed="true"] { border-color: transparent; background: var(--ok-soft); color: var(--ok) !important; }
 	.d-lead-done[disabled] { opacity: .6; cursor: wait; }
 
+	/* People on the site (2026-11-16) */
+	.d-site-nums { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+	.d-site-nums div { padding: 12px; border-radius: 12px; background: var(--paper); }
+	.d-site-nums b { display: block; font-size: 1.5rem; font-weight: 600; line-height: 1.1; color: var(--ink); }
+	.d-site-nums span { display: block; margin-top: 4px; font-size: .78rem; color: var(--muted); }
+	.d-site-from { display: flex; flex-wrap: wrap; gap: 6px 12px; margin: 12px 0 0; font-size: .82rem; color: var(--muted); }
+	.d-site-from span { color: var(--text); }
+	.d-site-from b { color: var(--ink); font-weight: 600; }
+	.d-site-total { margin: 10px 0 4px; padding-bottom: 10px; border-bottom: 1px solid var(--line-soft); font-size: .82rem; color: var(--faint); }
+	.d-person { display: flex; align-items: flex-start; gap: 12px; padding: 12px 2px; border-bottom: 1px solid var(--line-soft); }
+	.d-list .d-person:last-child { border-bottom: 0; padding-bottom: 2px; }
+	.d-person-av { width: 32px; height: 32px; flex: none; border-radius: 50%; display: grid; place-items: center; background: var(--ok-soft); color: var(--ok); font-size: .85rem; font-weight: 700; }
+	.d-person-body { flex: 1; min-width: 0; }
+	.d-person-top { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; font-size: .93rem; color: var(--ink); }
+	.d-person-top b { font-weight: 600; overflow-wrap: anywhere; }
+	.d-person-top a { font-size: .84rem; color: var(--brand) !important; text-decoration: none; overflow-wrap: anywhere; }
+	.d-person-top a:hover { text-decoration: underline; }
+
 	/* Business card */
 	.d-biz { padding: 0; overflow: hidden; border-top: 3px solid var(--c); }
 	.d-biz-body { padding: 18px 20px 20px; }
@@ -233,7 +251,7 @@
 		.d-main, .d-side { display: contents; }
 		.d-side { position: static; }
 		/* On one column: greeting, numbers, main business, completeness, chart, activity, others */
-		.d-hello { order: 1; } .d-stats, .d-leads-card { order: 2; } .d-side > .d-biz { order: 3; } .d-str-card { order: 4; } .d-chart-card { order: 5; } .d-act-card { order: 6; } .d-more { order: 7; }
+		.d-hello { order: 1; } .d-stats, .d-leads-card, .d-people-card { order: 2; } .d-side > .d-biz { order: 3; } .d-str-card { order: 4; } .d-chart-card { order: 5; } .d-act-card { order: 6; } .d-more { order: 7; }
 	}
 	@media (max-width: 640px) {
 		.d-head-row { padding: 8px 14px; }
@@ -403,6 +421,49 @@
 			</div>
 			{% endif %}
 		</section>
+
+		{% if people is not none %}
+		<!-- People on It's Your Profile (2026-11-16, staff only): everyone who tapped "Continue with Google" -->
+		<section class="d-card d-people-card" id="people">
+			<h2>{{ _("People on It's Your Profile") }}<small>{{ _("last 7 days") }}</small></h2>
+			{#- Website numbers (2026-11-16): visits to the site's own pages, and named people -#}
+			<div class="d-site-nums">
+				<div><b class="num">{{ people.site_views }}</b><span>{{ _("Website visits") }}</span></div>
+				<div><b class="num">{{ people.home_views }}</b><span>{{ _("Home page") }}</span></div>
+				<div><b class="num">{{ people.this_week }}</b><span>{{ _("Known people") }}</span></div>
+			</div>
+			{% if people.sources %}
+			<p class="d-site-from">{{ _("Came from") }}:
+				{% for s in people.sources %}<span>{{ (_("Direct") if s.source == "Direct" else s.source) | e }} <b class="num">{{ s.visits }}</b></span>{% endfor %}
+			</p>
+			{% endif %}
+			<p class="d-site-total">{{ _("{0} people have shared their name so far").format(people.total) }}</p>
+			{% if people.rows %}
+			<ul class="d-list">
+				{% for p in people.rows %}
+				<li class="d-person">
+					<span class="d-person-av" aria-hidden="true">{{ p.initial | e }}</span>
+					<div class="d-person-body">
+						<div class="d-person-top"><b>{{ p.full_name | e }}</b><a href="mailto:{{ p.email | e }}">{{ p.email | e }}</a></div>
+						<p class="d-lead-meta">
+							<span>{{ _("Last seen {0}").format(p.when) }}</span>
+							<span>{{ _("on {0}").format(p.page_label | e) }}</span>
+							{% if p.found_on %}<span>{{ _("from {0}").format(p.found_on | e) }}</span>{% endif %}
+							<span>{{ _("{0} visits").format(p.visits) if p.visits != 1 else _("1 visit") }}</span>
+							{% if p.first %}<span>{{ _("first {0}").format(p.first) }}</span>{% endif %}
+						</p>
+					</div>
+				</li>
+				{% endfor %}
+			</ul>
+			{% else %}
+			<div class="d-empty">
+				<b>{{ _("No names yet") }}</b>
+				<p>{{ _("When a visitor taps \"Continue with Google\" on any page of the site, their name and email show here.") }}</p>
+			</div>
+			{% endif %}
+		</section>
+		{% endif %}
 
 		<!-- 7-day views chart -->
 		<section class="d-card d-chart-card">

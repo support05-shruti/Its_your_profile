@@ -294,3 +294,20 @@ body[data-path="update-password"] .es-button[data-variant="solid"], body[data-pa
 [data-iyp-theme="dark"] body[data-path="update-password"] .page-card-subtitle { color: #A9A4C8 !important; }
 [data-iyp-theme="dark"] body[data-path="update-password"] .form-control { background: #141029 !important; border-color: #463E7A !important; color: #F0EEFA !important; }
 [data-iyp-theme="dark"] body[data-path="update-password"] .es-button[data-variant="solid"], [data-iyp-theme="dark"] body[data-path="update-password"] .btn-primary { background: linear-gradient(90deg, #6B55D6, #8F7FE0) !important; }
+
+/* 2026-11-16: light / dark switch on the sign-in and set-password pages (added by iyp_footer.js) */
+.iyp-theme-fab {
+	position: fixed; top: 16px; right: 16px; z-index: 1050;
+	width: 44px; height: 44px; display: grid; place-items: center; padding: 0;
+	border: 1px solid #E4DFF3; border-radius: 14px; background: #FFFFFF; color: #3B2E7E;
+	box-shadow: 0 10px 24px -14px rgba(59, 46, 126, .45); cursor: pointer;
+	-webkit-tap-highlight-color: transparent; transition: border-color .15s ease, transform .15s ease;
+}
+.iyp-theme-fab:hover { border-color: #CFC6F0; transform: translateY(-1px); }
+.iyp-theme-fab:focus-visible { outline: 3px solid rgba(59, 46, 126, .35); outline-offset: 2px; }
+.iyp-theme-fab svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.iyp-theme-fab .iyp-sun { display: none; }
+[data-iyp-theme="dark"] .iyp-theme-fab { background: #1B1736; border-color: #332C5A; color: #FFA867; box-shadow: 0 10px 24px -14px rgba(0, 0, 0, .8); }
+[data-iyp-theme="dark"] .iyp-theme-fab:hover { border-color: #463E7A; }
+[data-iyp-theme="dark"] .iyp-theme-fab .iyp-sun { display: block; }
+[data-iyp-theme="dark"] .iyp-theme-fab .iyp-moon { display: none; }

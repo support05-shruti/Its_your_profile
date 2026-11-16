@@ -2,7 +2,12 @@
 
 import frappe
 
-from its_your_profile.www.directory import is_backend_user
+
+def is_backend_user() -> bool:
+	"""True for staff who use the desk (/app): logged in, and a System User.
+	(2026-11-16: moved here from www/directory.py, which is public now and no longer needs it.)"""
+	user = frappe.session.user
+	return user != "Guest" and frappe.get_cached_value("User", user, "user_type") == "System User"
 
 # 2026-11-13: never served from a saved copy. The header depends on who is logged in (Sign up for
 # visitors; Dashboard, My information and the owner's logo for owners). A saved copy showed a

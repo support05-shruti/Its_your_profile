@@ -136,6 +136,20 @@ def log(profile, event, visitor, source=None, crawler=None, referrer=None, path=
 	).insert(ignore_permissions=True)
 
 
+@frappe.whitelist(allow_guest=True, methods=["POST"])
+@rate_limit(limit=60, seconds=60)
+def track_page(path: str, referrer: str | None = None, utm: str | None = None):
+	"""2026-11-16: a view of one of the site's own pages (home, terms, directory...), not a business
+	page, so staff see how many people use It's Your Profile and where they come from. Sent by
+	iyp_footer.js; business pages count themselves with track()."""
+	if not counts_as_visitor():
+		return
+	path = "/" + (path or "").strip().lstrip("/")[:140]
+	if path.startswith(("/business/", "/app", "/api", "/login", "/update-password")):
+		return
+	log(None, "View", visitor="Person", source=source_of(referrer, utm), referrer=referrer, path=path)
+
+
 def log_known_visit(profile, name, email, source=None, referrer=None):
 	"""A visitor who shared their name with Google One Tap (one_tap.py), 2026-11-16."""
 	frappe.get_doc(

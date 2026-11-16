@@ -67,8 +67,10 @@
 			<a href="#who">{{ _("Who it's for") }}</a>
 			<a href="#pricing">{{ _("Pricing") }}</a>
 			<a href="#faq">{{ _("FAQ") }}</a>
-			{#- 2026-11-07: no Backend / Directory links on the site (staff open /desk or /directory after
-			    logging in). Logged-in users get their own Dashboard and My information only. -#}
+			{#- 2026-11-16: the Business Directory is public now: every scanned business, no login -#}
+			<a href="/directory">{{ _("Businesses") }}</a>
+			{#- 2026-11-07: no Backend link on the site (staff open /desk after logging in). Logged-in
+			    users get their own Dashboard and My information only. -#}
 			{% if logged_in %}
 			<a href="/notifications">{{ _("Dashboard") }}</a>
 			<a href="/account">{{ _("My information") }}</a>

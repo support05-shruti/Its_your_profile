@@ -569,7 +569,7 @@
 	}
 </style>
 
-<article class="iyp">
+<article class="iyp" data-iyp-profile="{{ doc.name | e }}">
 	<div class="iyp-progress" aria-hidden="true"></div>
 	<div class="iyp-cover" aria-hidden="true"></div>
 	<header class="iyp-id">
@@ -954,57 +954,21 @@
 		});
 	})();
 
-	// 2026-11-16: Google One Tap. A small "Continue as …" Google box; if the visitor taps it, the
-	// owner sees their name and email in "Who visited your page" (one_tap.py). Shown only when it is
-	// switched on in Settings and the visitor isn't logged in here. Closing it hides it for this tab.
-	(function () {
-		var clientId = {{ (one_tap_client_id or "") | tojson }};
-		if (!clientId) return;
-		try { if (sessionStorage.getItem("iyp_onetap_closed")) return; } catch (e) { /* storage blocked */ }
-		function fillForm(person) {
-			var form = document.querySelector(".iyp-enq-form");
-			if (!form) return;
+	// 2026-11-16: Google One Tap runs on every page (public/js/iyp_onetap.js). When the visitor taps
+	// "Continue as …", it tells this page who they are: fill the contact form and say thanks.
+	var thanked = false;
+	document.addEventListener("iyp:known", function (e) {
+		var person = e.detail || {};
+		var form = document.querySelector(".iyp-enq-form");
+		if (form) {
 			if (!form.elements.visitor_name.value) form.elements.visitor_name.value = person.name || "";
 			if (!form.elements.email.value) form.elements.email.value = person.email || "";
 		}
-		function onCredential(response) {
-			fetch("/api/method/its_your_profile.one_tap.identify", {
-				method: "POST", credentials: "same-origin",
-				headers: { "Content-Type": "application/x-www-form-urlencoded", "Accept": "application/json" },
-				body: new URLSearchParams({ credential: response.credential, profile: landing.profile, referrer: landing.referrer, utm: landing.utm })
-			}).then(function (r) { return r.ok ? r.json() : null; }).then(function (data) {
-				var person = data && data.message;
-				if (!person) return;
-				fillForm(person);
-				toast({{ _("Thanks, {0}! {1} can see you visited.") | tojson }}.replace("{0}", person.first_name || "").replace("{1}", title));
-			}).catch(function () {});
+		if (!thanked && person.fresh !== false) {
+			thanked = true;
+			toast({{ _("Thanks, {0}! {1} can see you visited.") | tojson }}.replace("{0}", person.first_name || "").replace("{1}", title));
 		}
-		var script = document.createElement("script");
-		script.src = "https://accounts.google.com/gsi/client";
-		script.async = true;
-		script.onload = function () {
-			if (!window.google || !google.accounts || !google.accounts.id) return;
-			google.accounts.id.initialize({
-				client_id: clientId,
-				callback: onCredential,
-				auto_select: true,             // people who said yes before are recognised without a tap
-				cancel_on_tap_outside: true,
-				context: "use",
-				itp_support: true,
-				use_fedcm_for_prompt: true
-			});
-			// Wait a moment so the visitor sees the page first
-			setTimeout(function () {
-				google.accounts.id.prompt(function (n) {
-					if (n && n.isDismissedMoment && n.isDismissedMoment() && n.getDismissedReason && n.getDismissedReason() === "cancel_called") return;
-					if (n && n.isSkippedMoment && n.isSkippedMoment()) {
-						try { sessionStorage.setItem("iyp_onetap_closed", "1"); } catch (e) { /* storage blocked */ }
-					}
-				});
-			}, 2500);
-		};
-		document.head.appendChild(script);
-	})();
+	});
 
 	function toast(text) {
 		var t = document.getElementById("iyp-toast");
