@@ -136,6 +136,22 @@ def log(profile, event, visitor, source=None, crawler=None, referrer=None, path=
 	).insert(ignore_permissions=True)
 
 
+def log_known_visit(profile, name, email, source=None, referrer=None):
+	"""A visitor who shared their name with Google One Tap (one_tap.py), 2026-11-16."""
+	frappe.get_doc(
+		{
+			"doctype": "Profile Visit",
+			"business_profile": profile,
+			"event": "Signed In",
+			"visitor": "Known Person",
+			"visitor_name": name,
+			"visitor_email": email,
+			"source": source,
+			"referrer": (referrer or "")[:500] or None,
+		}
+	).insert(ignore_permissions=True)
+
+
 def notify_visit(profile, event, source):
 	"""'📞 Someone tapped Call · came from ChatGPT'. Views wait an hour, taps a minute, per source."""
 	icon, action = ALERTS[event]

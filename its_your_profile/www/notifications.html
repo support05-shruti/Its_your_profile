@@ -145,6 +145,8 @@
 	.d-a-ico .i { width: 16px; height: 16px; }
 	.d-alert.k-lead .d-a-ico { background: var(--accent-soft); color: var(--accent); }
 	.d-alert.k-ai .d-a-ico { background: var(--brand-soft); color: var(--brand); }
+	.d-alert.k-known .d-a-ico { background: var(--ok-soft); color: var(--ok); }
+	.d-alert.k-known .d-a-text { color: var(--ink); }
 	.d-a-text { flex: 1; min-width: 0; font-size: .9rem; line-height: 1.45; color: var(--text); overflow-wrap: anywhere; }
 	.d-alert.is-new .d-a-text { color: var(--ink); font-weight: 600; }
 	.d-a-meta { flex: none; display: flex; align-items: center; gap: 10px; font-size: .78rem; color: var(--faint); white-space: nowrap; }
@@ -156,6 +158,25 @@
 	.d-empty b { display: block; font-size: 1rem; font-weight: 600; }
 	.d-empty p { margin: 6px auto 0; max-width: 400px; font-size: .9rem; line-height: 1.55; color: var(--muted); }
 	.d-empty .d-btns { justify-content: center; margin-top: 16px; }
+
+	/* Leads (2026-11-14) */
+	.d-leads-new { color: var(--accent) !important; font-weight: 600 !important; }
+	.d-lead { display: flex; align-items: flex-start; gap: 12px; padding: 14px 2px; border-bottom: 1px solid var(--line-soft); }
+	.d-list .d-lead:last-child { border-bottom: 0; padding-bottom: 2px; }
+	.d-lead .d-a-ico { background: var(--brand-soft); color: var(--brand); }
+	.d-lead.is-open .d-a-ico { background: var(--accent-soft); color: var(--accent); }
+	.d-lead-body { flex: 1; min-width: 0; }
+	.d-lead-top { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px; font-size: .95rem; color: var(--ink); }
+	.d-lead-top b { font-weight: 600; overflow-wrap: anywhere; }
+	.d-lead-kind { color: var(--muted); font-size: .88rem; }
+	.d-lead-msg { margin: 6px 0 0; padding: 10px 12px; border-radius: 10px; background: var(--paper); font-size: .9rem; line-height: 1.5; color: var(--text); white-space: pre-line; overflow-wrap: anywhere; }
+	.d-lead-meta { display: flex; flex-wrap: wrap; gap: 4px 14px; margin: 6px 0 0; font-size: .8rem; color: var(--faint); }
+	.d-lead-meta span { overflow-wrap: anywhere; }
+	.d-lead-acts { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+	.d-lead-acts .d-btn { min-height: 38px; padding: 6px 12px; font-size: .85rem; }
+	.d-lead-done .i { width: 16px; height: 16px; }
+	.d-lead-done[aria-pressed="true"] { border-color: transparent; background: var(--ok-soft); color: var(--ok) !important; }
+	.d-lead-done[disabled] { opacity: .6; cursor: wait; }
 
 	/* Business card */
 	.d-biz { padding: 0; overflow: hidden; border-top: 3px solid var(--c); }
@@ -212,7 +233,7 @@
 		.d-main, .d-side { display: contents; }
 		.d-side { position: static; }
 		/* On one column: greeting, numbers, main business, completeness, chart, activity, others */
-		.d-hello { order: 1; } .d-stats { order: 2; } .d-side > .d-biz { order: 3; } .d-str-card { order: 4; } .d-chart-card { order: 5; } .d-act-card { order: 6; } .d-more { order: 7; }
+		.d-hello { order: 1; } .d-stats, .d-leads-card { order: 2; } .d-side > .d-biz { order: 3; } .d-str-card { order: 4; } .d-chart-card { order: 5; } .d-act-card { order: 6; } .d-more { order: 7; }
 	}
 	@media (max-width: 640px) {
 		.d-head-row { padding: 8px 14px; }
@@ -342,6 +363,47 @@
 			<div class="d-stat"><div class="d-stat-label"><svg class="i"><use href="#i-bot"/></svg>{{ _("AI visits") }}</div><b class="num">{{ week.ai }}</b><small>{{ _("last 7 days") }}</small></div>
 		</div>
 
+		<!-- Leads (2026-11-14): call-back requests and messages from the business pages -->
+		<section class="d-card d-leads-card" id="leads">
+			<h2>{{ _("Enquiries & call backs") }}{% if new_leads %}<small class="d-leads-new">{{ _("{0} new").format(new_leads) }}</small>{% endif %}</h2>
+			{% if leads %}
+			<ul class="d-list">
+				{% for lead in leads %}
+				<li class="d-lead{% if lead.status == 'New' %} is-open{% endif %}" data-lead="{{ lead.name | e }}">
+					<span class="d-a-ico" aria-hidden="true"><svg class="i"><use href="#i-{{ 'phone' if lead.kind == 'Callback' else 'mail' }}"/></svg></span>
+					<div class="d-lead-body">
+						<div class="d-lead-top">
+							<b>{{ lead.visitor_name | e }}</b>
+							<span class="d-lead-kind">{{ _("wants a call back") if lead.kind == "Callback" else _("sent a message") }}</span>
+						</div>
+						{% if lead.message %}<p class="d-lead-msg">{{ lead.message | e }}</p>{% endif %}
+						<p class="d-lead-meta">
+							{% if lead.phone %}<span>{{ lead.phone | e }}</span>{% endif %}
+							{% if lead.email %}<span>{{ lead.email | e }}</span>{% endif %}
+							{% if lead.found_on %}<span>{{ _("from {0}").format(lead.found_on | e) }}</span>{% endif %}
+							{% if lead.company %}<span>{{ lead.company | e }}</span>{% endif %}
+							<span>{{ lead.when }}</span>
+						</p>
+						<div class="d-lead-acts">
+							{% if lead.tel %}<a class="d-btn primary" href="tel:{{ lead.tel | e }}"><svg class="i"><use href="#i-phone"/></svg>{{ _("Call") }}</a>{% endif %}
+							{% if lead.wa %}<a class="d-btn wa" href="https://wa.me/{{ lead.wa | e }}" target="_blank" rel="noopener"><svg class="i"><use href="#i-chat"/></svg>WhatsApp</a>{% endif %}
+							{% if lead.email %}<a class="d-btn" href="mailto:{{ lead.email | e }}"><svg class="i"><use href="#i-mail"/></svg>{{ _("Email") }}</a>{% endif %}
+							<button type="button" class="d-btn d-lead-done" data-status="{{ 'Contacted' if lead.status == 'New' else 'New' }}" aria-pressed="{{ 'true' if lead.status == 'Contacted' else 'false' }}">
+								<svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg><span>{{ _("Contacted") if lead.status == "Contacted" else _("Mark as contacted") }}</span>
+							</button>
+						</div>
+					</div>
+				</li>
+				{% endfor %}
+			</ul>
+			{% else %}
+			<div class="d-empty">
+				<b>{{ _("No enquiries yet") }}</b>
+				<p>{{ _("Visitors can ask for a call back or send a message from your business page. They'll show here, and we'll email you too.") }}</p>
+			</div>
+			{% endif %}
+		</section>
+
 		<!-- 7-day views chart -->
 		<section class="d-card d-chart-card">
 			<h2>{{ _("Views this week") }}<small>{{ _("Last 7 days") }}</small></h2>
@@ -364,6 +426,7 @@
 			{% if days %}
 			<div class="d-tabs" role="group" aria-label="{{ _('Filter') }}">
 				<button type="button" class="d-tab" data-filter="all" aria-pressed="true">{{ _("All") }}</button>
+				<button type="button" class="d-tab" data-filter="known" aria-pressed="false">{{ _("Known people") }}</button>
 				<button type="button" class="d-tab" data-filter="lead" aria-pressed="false">{{ _("Calls & chats") }}</button>
 				<button type="button" class="d-tab" data-filter="ai" aria-pressed="false">{{ _("AI & search") }}</button>
 				<button type="button" class="d-tab" data-filter="view" aria-pressed="false">{{ _("Views") }}</button>
@@ -375,7 +438,7 @@
 					{% for alert in day.alerts %}
 					<li class="d-alert k-{{ alert.kind }}{% if not alert.read %} is-new{% endif %}" data-kind="{{ alert.kind }}">
 						<span class="d-a-ico" aria-hidden="true"><svg class="i"><use href="#i-{{ alert.glyph or 'eye' }}"/></svg></span>
-						<div class="d-a-text">{{ alert.subject }}</div>
+						<div class="d-a-text">{{ alert.subject | e }}</div>
 						<div class="d-a-meta">
 							{% if alert.url %}<a href="{{ alert.url }}">{{ _("Open page") }}</a>{% endif %}
 							<span>{{ alert.when }}</span>
@@ -554,6 +617,30 @@
 			var done = function () { toast({{ _("Link copied") | tojson }}); };
 			if (navigator.clipboard) navigator.clipboard.writeText(url).then(done, function () { prompt("", url); });
 			else prompt("", url);
+		});
+	});
+
+	// Leads (2026-11-14): mark a call back / message as contacted, or back to new
+	document.querySelectorAll(".d-lead-done").forEach(function (btn) {
+		btn.addEventListener("click", function () {
+			var row = btn.closest("[data-lead]"), status = btn.getAttribute("data-status");
+			var headers = { "Content-Type": "application/x-www-form-urlencoded", "Accept": "application/json" };
+			if (window.frappe && frappe.csrf_token) headers["X-Frappe-CSRF-Token"] = frappe.csrf_token;
+			btn.disabled = true;
+			fetch("/api/method/its_your_profile.enquiry.set_status", {
+				method: "POST", headers: headers, credentials: "same-origin",
+				body: new URLSearchParams({ name: row.getAttribute("data-lead"), status: status })
+			}).then(function (r) {
+				if (!r.ok) throw new Error();
+				var done = status === "Contacted";
+				btn.setAttribute("aria-pressed", done ? "true" : "false");
+				btn.setAttribute("data-status", done ? "New" : "Contacted");
+				btn.querySelector("span").textContent = done ? {{ _("Contacted") | tojson }} : {{ _("Mark as contacted") | tojson }};
+				row.classList.toggle("is-open", !done);
+				toast(done ? {{ _("Marked as contacted") | tojson }} : {{ _("Marked as new") | tojson }});
+			}).catch(function () {
+				toast({{ _("Could not save. Please try again.") | tojson }});
+			}).then(function () { btn.disabled = false; });
 		});
 	});
 

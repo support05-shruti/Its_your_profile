@@ -480,6 +480,42 @@
 		.iyp-bar .iyp-bar-credit b { color: #3B2E7E; font-weight: 700; }
 	}
 
+	/* ---------- Contact this business (2026-11-14) ---------- */
+	.iyp-enq { scroll-margin-top: 90px; }
+	.iyp-enq-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; padding: 4px; margin: 0 0 16px; border-radius: 14px; background: var(--b-soft); }
+	.iyp-enq-tab { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 42px; padding: 8px 6px; border: 0; border-radius: 10px; background: transparent; font: inherit; font-size: .86rem; font-weight: 600; color: var(--muted); cursor: pointer; }
+	.iyp-enq-tab .iyp-i { width: 16px; height: 16px; }
+	.iyp-enq-tab[aria-pressed="true"] { background: #fff; color: var(--b); box-shadow: 0 1px 2px rgba(30,24,56,.08), 0 6px 14px -8px rgba(59,46,126,.35); }
+	.iyp-enq-form { display: grid; gap: 12px; }
+	.iyp-field { display: grid; gap: 6px; margin: 0; font-size: .85rem; font-weight: 600; color: var(--ink-2); }
+	.iyp-field small { font-weight: 400; color: var(--muted); }
+	.iyp-field[hidden], .iyp-enq-tabs[hidden], .iyp-enq-form[hidden] { display: none; }
+	.iyp-field input, .iyp-field textarea {
+		width: 100%; min-height: 46px; padding: 11px 14px; border: 1px solid #D3CCE8; border-radius: 12px;
+		background: #fff; font: inherit; font-size: 16px; font-weight: 400; color: var(--ink); resize: vertical;
+	}
+	.iyp-field input::placeholder, .iyp-field textarea::placeholder { color: #9A95B5; }
+	.iyp-field input:focus, .iyp-field textarea:focus { outline: none; border-color: var(--b); box-shadow: 0 0 0 3px var(--b-soft-2); }
+	.iyp-enq-trap { position: absolute !important; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
+	.iyp-enq-send { width: 100%; margin-top: 2px; }
+	.iyp-enq-send[disabled] { opacity: .65; cursor: wait; transform: none; }
+	.iyp-enq-error { margin: 0; padding: 10px 12px; border-radius: 10px; background: #FDECEC; color: #A61B1B; font-size: .86rem; line-height: 1.45; }
+	.iyp-enq-note { margin: 0; font-size: .78rem; line-height: 1.5; color: var(--muted); text-align: center; }
+	.iyp-enq-note a { color: var(--b) !important; font-weight: 600; }
+	.iyp-enq-done { padding: 10px 4px 4px; text-align: center; }
+	.iyp-enq-done[hidden] { display: none; }
+	.iyp-enq-done-icon { width: 52px; height: 52px; margin: 0 auto 10px; border-radius: 50%; display: grid; place-items: center; background: #E9FBF1; color: #0E7A45; }
+	.iyp-enq-done-icon .iyp-i { width: 26px; height: 26px; }
+	.iyp-enq-done b { display: block; font-size: 1.1rem; color: var(--ink); }
+	.iyp-enq-done p { margin: 6px 0 0; font-size: .92rem; line-height: 1.55; color: var(--ink-2); }
+	[data-iyp-theme="dark"] .iyp-enq-tab[aria-pressed="true"] { background: var(--surface); color: var(--b-text); box-shadow: 0 6px 14px -8px rgba(0,0,0,.7); }
+	[data-iyp-theme="dark"] .iyp-field input, [data-iyp-theme="dark"] .iyp-field textarea { background: #141029; border-color: #463E7A; color: #F0EEFA; color-scheme: dark; }
+	[data-iyp-theme="dark"] .iyp-field input::placeholder, [data-iyp-theme="dark"] .iyp-field textarea::placeholder { color: #8984AB; }
+	[data-iyp-theme="dark"] .iyp-field input:focus, [data-iyp-theme="dark"] .iyp-field textarea:focus { border-color: #AFA2F5; box-shadow: 0 0 0 3px rgba(175,162,245,.22); }
+	[data-iyp-theme="dark"] .iyp-enq-error { background: #3A1820; color: #FFB4B4; }
+	[data-iyp-theme="dark"] .iyp-enq-note a { color: #AFA2F5 !important; }
+	[data-iyp-theme="dark"] .iyp-enq-done-icon { background: #10291F; color: #5FD39A; }
+
 	/* ---------- Dark mode (2026-11-12) ----------
 	   Follows the visitor's light/dark choice (<html data-iyp-theme>, set in <head> on every page).
 	   The business's own colour stays; text in that colour is lightened so it reads on dark.
@@ -567,6 +603,7 @@
 			{% if google_maps_url %}<a class="iyp-btn iyp-btn-outline" href="{{ google_maps_url | e }}" target="_blank" rel="noopener">{{ icon("pin") }}{{ _("Directions") }}</a>{% endif %}
 			{% if website_url %}<a class="iyp-btn iyp-btn-outline" href="{{ website_url | e }}" target="_blank" rel="noopener">{{ icon("globe") }}{{ _("Website") }}</a>{% endif %}
 			<button class="iyp-btn iyp-btn-outline" type="button" data-save>{{ icon("download") }}{{ _("Save Contact") }}</button>
+			<a class="iyp-btn iyp-btn-outline iyp-btn-enq" href="#enquire">{{ icon("phone") }}{{ _("Get a call back") }}</a>
 		</div>
 
 		{% if years_in_business or employee_range or business_nature or city %}
@@ -702,6 +739,37 @@
 				</div>
 			</section>
 
+			{#- 2026-11-14: leads. A visitor asks for a call back or sends a message; the owner gets it on
+			    their dashboard and by email (its_your_profile.enquiry). The hidden "company_website"
+			    field is a trap for bots. -#}
+			<section class="iyp-card iyp-reveal iyp-enq" id="enquire">
+				<h2><span class="iyp-h-icon">{{ icon("mail") }}</span>{{ _("Contact this business") }}</h2>
+				<div class="iyp-enq-tabs" role="group" aria-label="{{ _('How should they reach you?') }}">
+					<button type="button" class="iyp-enq-tab" data-kind="Callback" aria-pressed="true">{{ icon("phone") }}{{ _("Call back") }}</button>
+					<button type="button" class="iyp-enq-tab" data-kind="Message" aria-pressed="false">{{ icon("mail") }}{{ _("Message") }}</button>
+				</div>
+				<form class="iyp-enq-form" novalidate>
+					<input type="hidden" name="kind" value="Callback">
+					<label class="iyp-enq-trap" aria-hidden="true">Website<input type="text" name="company_website" tabindex="-1" autocomplete="off"></label>
+					<label class="iyp-field"><span>{{ _("Your name") }}</span>
+						<input type="text" name="visitor_name" maxlength="80" autocomplete="name" required></label>
+					<label class="iyp-field"><span>{{ _("Phone number") }}</span>
+						<input type="tel" name="phone" maxlength="20" autocomplete="tel" inputmode="tel" placeholder="98XXXXXXXX"></label>
+					<label class="iyp-field iyp-enq-msg-only" hidden><span>{{ _("Email") }} <small>({{ _("optional") }})</small></span>
+						<input type="email" name="email" maxlength="120" autocomplete="email" inputmode="email"></label>
+					<label class="iyp-field iyp-enq-msg-only" hidden><span>{{ _("Message") }}</span>
+						<textarea name="message" rows="4" maxlength="1000" placeholder="{{ _('What do you need?') }}"></textarea></label>
+					<p class="iyp-enq-error" role="alert" hidden></p>
+					<button class="iyp-btn iyp-btn-primary iyp-enq-send" type="submit">{{ icon("arrow") }}<span data-label-callback="{{ _('Request a call back') }}" data-label-message="{{ _('Send message') }}">{{ _("Request a call back") }}</span></button>
+					<p class="iyp-enq-note">{{ _("Your details go only to {0}.").format(company_name | e) }} <a href="/terms" target="_blank" rel="noopener">{{ _("Terms") }}</a></p>
+				</form>
+				<div class="iyp-enq-done" hidden>
+					<span class="iyp-enq-done-icon">{{ icon("check") }}</span>
+					<b>{{ _("Sent!") }}</b>
+					<p>{{ _("{0} has your details and will contact you soon.").format(company_name | e) }}</p>
+				</div>
+			</section>
+
 			{#- LinkedIn is compulsory (2026-11-07): the card's link, else one found on the company website
 			    or by web search (tasks.find_linkedin). Until one is found, a LinkedIn button that
 			    searches LinkedIn for the company, so every page has LinkedIn. -#}
@@ -805,6 +873,138 @@
 		var event = el && eventFor(el);
 		if (event) track(event);
 	});
+
+	// 2026-11-14: "Contact this business" form: call back or message, sent to the owner
+	(function () {
+		var box = document.getElementById("enquire");
+		if (!box) return;
+		var form = box.querySelector(".iyp-enq-form");
+		var tabs = box.querySelectorAll(".iyp-enq-tab");
+		var errorBox = box.querySelector(".iyp-enq-error");
+		var sendBtn = box.querySelector(".iyp-enq-send");
+		var sendLabel = sendBtn.querySelector("span");
+		var msgOnly = box.querySelectorAll(".iyp-enq-msg-only");
+		function setKind(kind) {
+			form.elements.kind.value = kind;
+			tabs.forEach(function (t) { t.setAttribute("aria-pressed", t.getAttribute("data-kind") === kind ? "true" : "false"); });
+			msgOnly.forEach(function (el) { el.hidden = kind !== "Message"; });
+			sendLabel.textContent = sendLabel.getAttribute(kind === "Message" ? "data-label-message" : "data-label-callback");
+			showError("");
+		}
+		function showError(text) {
+			errorBox.textContent = text;
+			errorBox.hidden = !text;
+		}
+		tabs.forEach(function (t) {
+			t.addEventListener("click", function () { setKind(t.getAttribute("data-kind")); });
+		});
+		// Buttons and links to #enquire open the form (on "Send a message" if the link asks for it)
+		document.querySelectorAll('a[href="#enquire"]').forEach(function (a) {
+			a.addEventListener("click", function () {
+				if (a.getAttribute("data-kind")) setKind(a.getAttribute("data-kind"));
+				setTimeout(function () { form.elements.visitor_name.focus({ preventScroll: true }); }, 400);
+			});
+		});
+		function serverMessage(data) {
+			try {
+				var list = JSON.parse(data._server_messages || "[]");
+				var first = JSON.parse(list[0] || "{}");
+				var div = document.createElement("div");
+				div.innerHTML = first.message || "";
+				return div.textContent;
+			} catch (e) { return ""; }
+		}
+		form.addEventListener("submit", function (e) {
+			e.preventDefault();
+			var f = form.elements, kind = f.kind.value;
+			var name = f.visitor_name.value.trim(), phone = f.phone.value.trim();
+			var email = f.email.value.trim(), message = f.message.value.trim();
+			if (name.length < 2) { showError({{ _("Please enter your name.") | tojson }}); return f.visitor_name.focus(); }
+			if (kind === "Callback" && !phone) { showError({{ _("Please enter your phone number so they can call you back.") | tojson }}); return f.phone.focus(); }
+			if (phone && !/^\+?[0-9][0-9 \-()]{6,18}$/.test(phone)) { showError({{ _("Please enter a valid phone number.") | tojson }}); return f.phone.focus(); }
+			if (kind === "Message" && !phone && !email) { showError({{ _("Please enter your phone number or email, so they can reply.") | tojson }}); return f.phone.focus(); }
+			if (kind === "Message" && message.length < 3) { showError({{ _("Please write your message.") | tojson }}); return f.message.focus(); }
+			showError("");
+			sendBtn.disabled = true;
+			var headers = { "Content-Type": "application/x-www-form-urlencoded", "Accept": "application/json" };
+			if (window.frappe && frappe.csrf_token) headers["X-Frappe-CSRF-Token"] = frappe.csrf_token;
+			fetch("/api/method/its_your_profile.enquiry.submit", {
+				method: "POST", headers: headers, credentials: "same-origin",
+				body: new URLSearchParams({
+					profile: landing.profile, kind: kind, visitor_name: name, phone: phone,
+					email: kind === "Message" ? email : "", message: kind === "Message" ? message : "",
+					company_website: f.company_website.value, referrer: landing.referrer, utm: landing.utm
+				})
+			}).then(function (r) {
+				return r.json().catch(function () { return {}; }).then(function (data) { return { ok: r.ok, status: r.status, data: data }; });
+			}).then(function (res) {
+				if (!res.ok) {
+					var text = res.status === 429
+						? {{ _("Too many tries. Please wait a while, or call them directly.") | tojson }}
+						: (serverMessage(res.data) || {{ _("Could not send. Please try again.") | tojson }});
+					throw new Error(text);
+				}
+				form.hidden = true;
+				box.querySelector(".iyp-enq-tabs").hidden = true;
+				box.querySelector(".iyp-enq-done").hidden = false;
+			}).catch(function (err) {
+				showError(err && err.message ? err.message : {{ _("Could not send. Please check your internet and try again.") | tojson }});
+				sendBtn.disabled = false;
+			});
+		});
+	})();
+
+	// 2026-11-16: Google One Tap. A small "Continue as …" Google box; if the visitor taps it, the
+	// owner sees their name and email in "Who visited your page" (one_tap.py). Shown only when it is
+	// switched on in Settings and the visitor isn't logged in here. Closing it hides it for this tab.
+	(function () {
+		var clientId = {{ (one_tap_client_id or "") | tojson }};
+		if (!clientId) return;
+		try { if (sessionStorage.getItem("iyp_onetap_closed")) return; } catch (e) { /* storage blocked */ }
+		function fillForm(person) {
+			var form = document.querySelector(".iyp-enq-form");
+			if (!form) return;
+			if (!form.elements.visitor_name.value) form.elements.visitor_name.value = person.name || "";
+			if (!form.elements.email.value) form.elements.email.value = person.email || "";
+		}
+		function onCredential(response) {
+			fetch("/api/method/its_your_profile.one_tap.identify", {
+				method: "POST", credentials: "same-origin",
+				headers: { "Content-Type": "application/x-www-form-urlencoded", "Accept": "application/json" },
+				body: new URLSearchParams({ credential: response.credential, profile: landing.profile, referrer: landing.referrer, utm: landing.utm })
+			}).then(function (r) { return r.ok ? r.json() : null; }).then(function (data) {
+				var person = data && data.message;
+				if (!person) return;
+				fillForm(person);
+				toast({{ _("Thanks, {0}! {1} can see you visited.") | tojson }}.replace("{0}", person.first_name || "").replace("{1}", title));
+			}).catch(function () {});
+		}
+		var script = document.createElement("script");
+		script.src = "https://accounts.google.com/gsi/client";
+		script.async = true;
+		script.onload = function () {
+			if (!window.google || !google.accounts || !google.accounts.id) return;
+			google.accounts.id.initialize({
+				client_id: clientId,
+				callback: onCredential,
+				auto_select: true,             // people who said yes before are recognised without a tap
+				cancel_on_tap_outside: true,
+				context: "use",
+				itp_support: true,
+				use_fedcm_for_prompt: true
+			});
+			// Wait a moment so the visitor sees the page first
+			setTimeout(function () {
+				google.accounts.id.prompt(function (n) {
+					if (n && n.isDismissedMoment && n.isDismissedMoment() && n.getDismissedReason && n.getDismissedReason() === "cancel_called") return;
+					if (n && n.isSkippedMoment && n.isSkippedMoment()) {
+						try { sessionStorage.setItem("iyp_onetap_closed", "1"); } catch (e) { /* storage blocked */ }
+					}
+				});
+			}, 2500);
+		};
+		document.head.appendChild(script);
+	})();
 
 	function toast(text) {
 		var t = document.getElementById("iyp-toast");

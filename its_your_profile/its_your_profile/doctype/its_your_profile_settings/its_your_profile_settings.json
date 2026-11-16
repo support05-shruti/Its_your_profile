@@ -23,7 +23,10 @@
   "column_break_whatsapp",
   "whatsapp_template_name",
   "whatsapp_template_language",
-  "whatsapp_api_version"
+  "whatsapp_api_version",
+  "google_section",
+  "google_one_tap",
+  "google_client_id"
  ],
  "fields": [
   {
@@ -153,11 +156,32 @@
    "fieldname": "whatsapp_api_version",
    "fieldtype": "Data",
    "label": "Graph API Version"
+  },
+  {
+   "collapsible": 1,
+   "description": "Shows a small \"Continue as …\" Google box on business pages. Visitors who tap it appear by name and email in the owner's \"Who visited your page\". Get the Client ID from Google Cloud Console → APIs & Services → Credentials → Create OAuth client ID (Web application), with https://itsyourprofile.com as an Authorised JavaScript origin.",
+   "fieldname": "google_section",
+   "fieldtype": "Section Break",
+   "label": "Google One Tap (know who visited)"
+  },
+  {
+   "default": "0",
+   "fieldname": "google_one_tap",
+   "fieldtype": "Check",
+   "label": "Show Google One Tap on business pages"
+  },
+  {
+   "depends_on": "google_one_tap",
+   "description": "Looks like 1234567890-abc123.apps.googleusercontent.com",
+   "fieldname": "google_client_id",
+   "fieldtype": "Data",
+   "label": "Google Client ID",
+   "mandatory_depends_on": "google_one_tap"
   }
  ],
  "issingle": 1,
  "links": [],
- "modified": "2026-11-05 14:02:26.000000",
+ "modified": "2026-11-16 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Its Your Profile",
  "name": "Its Your Profile Settings",

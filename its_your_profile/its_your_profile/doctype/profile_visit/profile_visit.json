@@ -12,6 +12,8 @@
   "column_break_main",
   "source",
   "crawler",
+  "visitor_name",
+  "visitor_email",
   "details_section",
   "referrer",
   "path"
@@ -33,7 +35,7 @@
    "in_list_view": 1,
    "in_standard_filter": 1,
    "label": "Event",
-   "options": "View\nCall\nWhatsApp\nEmail\nDirections\nWebsite\nSave Contact\nShare\nSocial Link\nCrawl",
+   "options": "View\nCall\nWhatsApp\nEmail\nDirections\nWebsite\nSave Contact\nShare\nSocial Link\nCrawl\nSigned In",
    "read_only": 1
   },
   {
@@ -42,7 +44,7 @@
    "in_list_view": 1,
    "in_standard_filter": 1,
    "label": "Visitor",
-   "options": "Person\nAI Crawler\nSearch Crawler",
+   "options": "Person\nKnown Person\nAI Crawler\nSearch Crawler",
    "read_only": 1
   },
   {
@@ -63,6 +65,21 @@
    "fieldtype": "Data",
    "in_standard_filter": 1,
    "label": "Crawler",
+   "read_only": 1
+  },
+  {
+   "description": "Shared by the visitor with Google One Tap (2026-11-16)",
+   "fieldname": "visitor_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Visitor Name",
+   "read_only": 1
+  },
+  {
+   "fieldname": "visitor_email",
+   "fieldtype": "Data",
+   "label": "Visitor Email",
+   "options": "Email",
    "read_only": 1
   },
   {
@@ -87,7 +104,7 @@
  ],
  "in_create": 1,
  "links": [],
- "modified": "2026-11-04 12:00:00.000000",
+ "modified": "2026-11-16 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Its Your Profile",
  "name": "Profile Visit",

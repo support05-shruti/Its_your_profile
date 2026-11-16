@@ -67,7 +67,7 @@ def get_context(context):
 		frappe.get_all(
 			"Profile Visit",
 			filters={"business_profile": ("in", names)},
-			fields=["event", "visitor", "source", "crawler", "creation", "business_profile"],
+			fields=["event", "visitor", "visitor_name", "visitor_email", "source", "crawler", "creation", "business_profile"],
 			order_by="creation desc",
 			limit_page_length=LIMIT,
 		)
@@ -86,6 +86,8 @@ def get_context(context):
 		if not days or days[-1]["label"] != label:
 			days.append({"label": label, "alerts": []})
 		days[-1]["alerts"].append(item)
+	# 2026-11-14: call-back requests and messages left on the business pages (enquiry.py)
+	leads = get_leads(names, routes, companies)
 	frappe.cache.hset(SEEN_KEY, user, now_datetime())
 
 	# The bell's alerts count as seen once the owner has looked here
@@ -106,6 +108,8 @@ def get_context(context):
 			"is_staff": is_staff,
 			"days": days,
 			"unread": unread,
+			"leads": leads,
+			"new_leads": sum(1 for lead in leads if lead.status == "New"),
 			"has_profile": bool(profiles),
 			"profiles": profiles,
 			"full_name": frappe.utils.get_fullname(user),
@@ -118,6 +122,30 @@ def get_context(context):
 			"today": format_date(getdate(), "EEEE, d MMMM"),
 		}
 	)
+
+
+def get_leads(names, routes, companies):
+	"""The latest call-back requests and messages for these businesses, newest first."""
+	if not names or not frappe.db.table_exists("Business Enquiry"):
+		return []  # before `bench migrate` has created the table
+	leads = frappe.get_all(
+		"Business Enquiry",
+		filters={"business_profile": ("in", names)},
+		fields=["name", "business_profile", "kind", "status", "visitor_name", "phone", "email", "message", "source", "creation"],
+		order_by="creation desc",
+		limit_page_length=LIMIT,
+	)
+	for lead in leads:
+		lead.when = pretty_date(lead.creation)
+		lead.company = companies.get(lead.business_profile)
+		lead.url = "/" + routes[lead.business_profile] if routes.get(lead.business_profile) else None
+		digits = re.sub(r"[^0-9+]", "", lead.phone or "")
+		lead.tel = digits or None
+		# WhatsApp needs the country code: a 10-digit Indian number gets 91 in front
+		wa = digits.lstrip("+")
+		lead.wa = ("91" + wa if len(wa) == 10 else wa) if wa else None
+		lead.found_on = lead.source if lead.source and lead.source not in ("Direct", "It's Your Profile") else None
+	return leads
 
 
 def daily_views(names):
@@ -208,6 +236,18 @@ def day_label(when):
 def describe_visit(visit, companies=None):
 	"""One line for the activity feed: an icon, what happened, where the visitor came from, and its
 	kind for the filter chips (lead = a call or chat tap, ai = AI read it or sent the visitor)."""
+	if visit.visitor == "Known Person":
+		# 2026-11-16: shared their name with Google One Tap (one_tap.py)
+		icon, kind = "👤", "known"
+		who = visit.visitor_name or _("Someone")
+		if visit.visitor_email:
+			who += f" ({visit.visitor_email})"
+		text = _("{0} viewed your page").format(who)
+		if visit.source and visit.source not in ("Direct", "It's Your Profile"):
+			text += " · " + _("from {0}").format(visit.source)
+		if companies and companies.get(visit.business_profile):
+			text += " · " + companies[visit.business_profile]
+		return frappe._dict(icon=icon, glyph="user", kind=kind, subject=text)
 	if visit.visitor == "AI Crawler":
 		icon, kind, text = "🤖", "ai", _("{0} read your page").format(visit.crawler or _("An AI assistant"))
 	elif visit.visitor == "Search Crawler":

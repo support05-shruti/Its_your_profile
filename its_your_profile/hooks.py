@@ -141,7 +141,7 @@ website_generators = ["Business Profile"]
 page_renderer = ["its_your_profile.llms_txt.CrawlerTextPage"]
 
 # Visit logs never stop a Business Profile from being deleted
-ignore_links_on_delete = ["Profile Visit"]
+ignore_links_on_delete = ["Profile Visit", "Business Enquiry"]
 
 # automatically load and sync documents of this doctype from downstream apps
 # importable_doctypes = [doctype_1]
