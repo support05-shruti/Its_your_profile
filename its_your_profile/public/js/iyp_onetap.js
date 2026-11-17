@@ -26,7 +26,10 @@
 		} catch (e) { /* storage blocked */ }
 		return null;
 	}
-	if (store(CLOSED)) return;
+	// Closed the pop-up earlier in this tab: no pop-up again, but the page's own button still works
+	var popupClosed = !!store(CLOSED);
+	var buttons = document.querySelectorAll("[data-iyp-gsi-button]");
+	if (popupClosed && !buttons.length) return;
 
 	// Where the visitor first came from in this tab (Google, WhatsApp, ChatGPT...)
 	var firstVisit = null;
@@ -37,6 +40,14 @@
 	}
 
 	function announce(person) {
+		// The "Continue with Google" buttons become "Shared as …"
+		buttons.forEach(function (box) {
+			var wrap = box.closest("[data-iyp-gsi-wrap]") || box;
+			wrap.classList.add("is-known");
+			wrap.hidden = false;
+			var done = wrap.querySelector("[data-iyp-gsi-done]");
+			if (done) done.textContent = (done.getAttribute("data-text") || "").replace("{0}", person.name || person.email || "");
+		});
 		var event;
 		try { event = new CustomEvent("iyp:known", { detail: person }); } catch (e) { return; }
 		document.dispatchEvent(event);
@@ -78,6 +89,21 @@
 			itp_support: true,
 			use_fedcm_for_prompt: true
 		});
+		// 2026-11-16: a visible "Continue with Google" button where the page asks for one, so a
+		// visitor who closed the pop-up (or never saw it) can still share their name
+		buttons.forEach(function (box) {
+			if (box.childElementCount) return;
+			try {
+				google.accounts.id.renderButton(box, {
+					type: "standard", theme: document.documentElement.getAttribute("data-iyp-theme") === "dark" ? "filled_black" : "outline",
+					size: "large", text: "continue_with", shape: "pill", logo_alignment: "left",
+					width: Math.min(360, Math.max(220, box.clientWidth || 300))
+				});
+				var wrap = box.closest("[data-iyp-gsi-wrap]");
+				if (wrap) wrap.hidden = false;
+			} catch (e) { /* button could not be drawn */ }
+		});
+		if (popupClosed) return;
 		google.accounts.id.prompt(function (n) {
 			if (n && n.isSkippedMoment && n.isSkippedMoment()) store(CLOSED, "1");
 		});

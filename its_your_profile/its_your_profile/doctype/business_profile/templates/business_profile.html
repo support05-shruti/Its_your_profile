@@ -516,6 +516,17 @@
 	[data-iyp-theme="dark"] .iyp-enq-note a { color: #AFA2F5 !important; }
 	[data-iyp-theme="dark"] .iyp-enq-done-icon { background: #10291F; color: #5FD39A; }
 
+	/* "Continue with Google" in the contact box (2026-11-16) */
+	.iyp-gsi[hidden] { display: none; }
+	.iyp-gsi { margin: 0 0 16px; text-align: center; }
+	.iyp-gsi-ask { margin: 0 0 10px; font-size: .86rem; font-weight: 600; color: var(--ink-2); }
+	.iyp-gsi-btn { display: flex; justify-content: center; min-height: 44px; }
+	.iyp-gsi-done { display: none; margin: 0; padding: 10px 12px; border-radius: 12px; background: #E9FBF1; color: #0E7A45; font-size: .88rem; font-weight: 600; overflow-wrap: anywhere; }
+	.iyp-gsi.is-known .iyp-gsi-ask, .iyp-gsi.is-known .iyp-gsi-btn { display: none; }
+	.iyp-gsi.is-known .iyp-gsi-done { display: block; }
+	.iyp-gsi-or { display: flex; align-items: center; gap: 10px; margin: 14px 0 0; font-size: .78rem; color: var(--muted); }
+	.iyp-gsi-or::before, .iyp-gsi-or::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+	[data-iyp-theme="dark"] .iyp-gsi-done { background: #10291F; color: #5FD39A; }
 	/* ---------- Dark mode (2026-11-12) ----------
 	   Follows the visitor's light/dark choice (<html data-iyp-theme>, set in <head> on every page).
 	   The business's own colour stays; text in that colour is lightened so it reads on dark.
@@ -744,6 +755,14 @@
 			    field is a trap for bots. -#}
 			<section class="iyp-card iyp-reveal iyp-enq" id="enquire">
 				<h2><span class="iyp-h-icon">{{ icon("mail") }}</span>{{ _("Contact this business") }}</h2>
+				{#- 2026-11-16: "Continue with Google" (iyp_onetap.js draws Google's button here when One Tap is
+				    on). Shares the visitor's name and email with this business and fills the form below. -#}
+				<div class="iyp-gsi" data-iyp-gsi-wrap hidden>
+					<p class="iyp-gsi-ask">{{ _("Let {0} know who you are").format(company_name | e) }}</p>
+					<div class="iyp-gsi-btn" data-iyp-gsi-button></div>
+					<p class="iyp-gsi-done" data-iyp-gsi-done data-text="{{ _('✓ Shared as {0}') | e }}"></p>
+					<div class="iyp-gsi-or"><span>{{ _("or fill in the form") }}</span></div>
+				</div>
 				<div class="iyp-enq-tabs" role="group" aria-label="{{ _('How should they reach you?') }}">
 					<button type="button" class="iyp-enq-tab" data-kind="Callback" aria-pressed="true">{{ icon("phone") }}{{ _("Call back") }}</button>
 					<button type="button" class="iyp-enq-tab" data-kind="Message" aria-pressed="false">{{ icon("mail") }}{{ _("Message") }}</button>

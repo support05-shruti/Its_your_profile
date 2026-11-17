@@ -351,9 +351,17 @@
 					{#- Staff overview (2026-11-12): every business, not one owner's -#}
 					{% if is_staff %}
 					<span class="d-staff">{{ _("Staff view") }}</span>
+					{% if week.leads == 1 %}
+					{{ _("All {0} businesses on It's Your Profile. This week they were viewed {1} times and {2} person tapped to contact them.").format("<b>" ~ (profiles | length) ~ "</b>", "<b>" ~ week.views ~ "</b>", "<b>" ~ week.leads ~ "</b>") }}
+					{% else %}
 					{{ _("All {0} businesses on It's Your Profile. This week they were viewed {1} times and {2} people tapped to contact them.").format("<b>" ~ (profiles | length) ~ "</b>", "<b>" ~ week.views ~ "</b>", "<b>" ~ week.leads ~ "</b>") }}
+					{% endif %}
 					{% elif has_profile and (week.views or week.leads) %}
+					{% if week.leads == 1 %}
+					{{ _("This week your page was viewed {0} times and {1} person tapped to contact you.").format("<b>" ~ week.views ~ "</b>", "<b>" ~ week.leads ~ "</b>") }}
+					{% else %}
 					{{ _("This week your page was viewed {0} times and {1} people tapped to contact you.").format("<b>" ~ week.views ~ "</b>", "<b>" ~ week.leads ~ "</b>") }}
+					{% endif %}
 					{% elif has_profile %}
 					{{ _("Your page is live. Share it on WhatsApp to get your first visitors this week.") }}
 					{% else %}
