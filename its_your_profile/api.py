@@ -207,6 +207,9 @@ def read_website(url: str):
 			except Exception:
 				pass  # the homepage alone is still useful
 	except Exception:
+		if frappe.utils.cint(quiet):
+			frappe.clear_messages()
+			return {"links": [], "map_url": None, "failed": True}
 		frappe.throw(_("Could not open {0}. Please check the website address.").format(url))
 
 	soups = [BeautifulSoup(html, "html.parser") for html in pages]
@@ -242,9 +245,11 @@ def read_website(url: str):
 
 
 @frappe.whitelist(methods=["POST"])
-def read_website_links(url: str):
+def read_website_links(url: str, quiet: int = 0):
 	"""Fetch a website (homepage + contact page) and return its profile links, so the form's
-	Profile Links table fills in before Save. No AI involved, so it answers in seconds."""
+	Profile Links table fills in before Save. No AI involved, so it answers in seconds.
+	quiet=1 (2026-11-17, the LinkedIn look-up on Save): a website that can't be opened gives an
+	empty list instead of an error message."""
 	from bs4 import BeautifulSoup
 
 	from its_your_profile.its_your_profile.doctype.business_profile.business_profile import clean_url
@@ -253,8 +258,8 @@ def read_website_links(url: str):
 	if frappe.session.user == "Guest":
 		frappe.throw(_("Please log in"), frappe.PermissionError)
 
-	url = clean_url(url, _("Website URL"))
 	try:
+		url = clean_url(url, _("Website URL"))
 		pages = [fetch(url)]
 		if contact_url := find_contact_page(pages[0], url):
 			try:
@@ -262,6 +267,9 @@ def read_website_links(url: str):
 			except Exception:
 				pass  # the homepage alone is still useful
 	except Exception:
+		if frappe.utils.cint(quiet):
+			frappe.clear_messages()
+			return {"links": [], "map_url": None, "failed": True}
 		frappe.throw(_("Could not open {0}. Please check the website address.").format(url))
 
 	soups = [BeautifulSoup(html, "html.parser") for html in pages]

@@ -126,9 +126,11 @@ frappe.ready(function () {
 		if (field) field.$wrapper.closest(".form-section").hide();
 	});
 
+	// 2026-11-17: a page that already exists (it has a name) is never shown as "new", even if Frappe says so
+	const is_new_page = !!web_form.is_new && !(web_form.doc && web_form.doc.name);
 	const decorate = () => {
 		const head = document.querySelector(".web-form-head");
-		if (head && web_form.is_new && !head.querySelector(".iyp-steps")) {
+		if (head && is_new_page && !head.querySelector(".iyp-steps")) {
 			const step = web_form.is_new ? 0 : 1;
 			const labels = [__("Scan your card"), __("Check the details"), __("Go live & get found")];
 			const steps = document.createElement("div");
@@ -169,7 +171,7 @@ frappe.ready(function () {
 		label_attach("visiting_card", __("📷 Upload your visiting card photo"));
 		label_attach("visiting_card_back", __("＋ Add the back side (optional)"));
 		label_attach("company_logo", __("＋ Upload your logo"));
-		if (web_form.is_new) $(".web-form-footer .submit-btn").text(__("✨ Create my page"));
+		if (is_new_page) $(".web-form-footer .submit-btn").text(__("✨ Create my page"));
 
 		// Sections rise in one after another as they come into view
 		const sections = document.querySelectorAll(".web-form-wrapper .form-section");
@@ -222,8 +224,12 @@ frappe.ready(function () {
 				read_links(web_form.get_value("website_url"));
 			});
 	};
-	web_form.on("visiting_card", (field, file_url) => read_card(file_url));
-	web_form.on("visiting_card_back", (field, file_url) => read_card(file_url));
+	// 2026-11-17: only listen to fields this form has. The visiting card fields were removed from the
+	// form, and web_form.on() on a missing field threw "Cannot read properties of undefined (reading
+	// 'df')", which stopped the rest of this script (links, LinkedIn check, scan polling).
+	const on_field = (fieldname, handler) => web_form.fields_dict[fieldname] && web_form.on(fieldname, handler);
+	on_field("visiting_card", (field, file_url) => read_card(file_url));
+	on_field("visiting_card_back", (field, file_url) => read_card(file_url));
 
 	// Frappe's Upload → crop window has no rotate button, but its Cropper (window.cropper) can rotate;
 	// add ↺ ↻ buttons there, as on the desk form. The turn is kept when Crop is clicked.
@@ -365,14 +371,98 @@ frappe.ready(function () {
 		if (url !== current) web_form.set_value("google_maps_url", url);
 	};
 	["company_name", "address_line", "city", "state", "pincode"].forEach((f) =>
-		web_form.on(f, update_maps_url)
+		on_field(f, update_maps_url)
 	);
+
+	// CHANGE NOTE 2026-11-17: our own editor for the Profile Links table. Frappe v16's table in web
+	// forms did not show the saved rows on the edit page (only newly added ones), and its "Editing
+	// Row" panel opened empty and out of place, so links could not be added or changed. Frappe's table
+	// stays on the page, hidden, and keeps the data: this editor edits the same row objects
+	// (field.df.data), so Save, add_links() and the LinkedIn check work exactly as before.
+	const PLATFORMS = ["LinkedIn", "Facebook", "Google Profile", "BNI", "Other"];
+	const links_field = web_form.fields_dict.profile_links;
+	const link_rows = () => {
+		if (!links_field) return [];
+		if (!Array.isArray(links_field.df.data)) links_field.df.data = (links_field.grid.get_data() || []).slice();
+		return links_field.df.data;
+	};
+	let render_links = () => {};
+	if (links_field) {
+		const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+		const box = document.createElement("div");
+		box.className = "iyp-links";
+		box.innerHTML = `
+			<div class="iyp-links-label">${__("Profile Links")}</div>
+			<p class="iyp-links-help">${__("LinkedIn, Facebook, Google Profile, BNI or any other page. LinkedIn is required.")}</p>
+			<div class="iyp-links-list"></div>
+			<div class="iyp-links-actions">
+				<button type="button" class="iyp-links-add">＋ ${__("Add link")}</button>
+			</div>`;
+		links_field.$wrapper.addClass("iyp-links-grid-hidden").after(box);
+		const list = box.querySelector(".iyp-links-list");
+
+		// Frappe's (hidden) table reads field.df.data when the form is saved; no need to redraw it
+		const changed = () => web_form.make_form_dirty && web_form.make_form_dirty();
+		render_links = () => {
+			const rows = link_rows();
+			rows.forEach((r, i) => (r.idx = i + 1));
+			list.innerHTML = rows.length
+				? rows
+						.map(
+							(r, i) => `
+				<div class="iyp-link-row" data-i="${i}">
+					<select class="iyp-link-platform" aria-label="${__("Platform")}">
+						<option value="">${__("Choose…")}</option>
+						${PLATFORMS.map((p) => `<option value="${p}"${r.platform === p ? " selected" : ""}>${__(p)}</option>`).join("")}
+					</select>
+					<input class="iyp-link-label" type="text" value="${esc(r.label)}" placeholder="${__("Name (optional)")}" aria-label="${__("Name")}">
+					<input class="iyp-link-url" type="url" value="${esc(r.url)}" placeholder="https://…" aria-label="${__("Link")}">
+					<button type="button" class="iyp-link-del" title="${__("Remove")}" aria-label="${__("Remove")}">✕</button>
+				</div>`
+						)
+						.join("")
+				: `<div class="iyp-links-empty">${__("No links yet. Links on the visiting card are added by themselves; to add one more, click “Add link”.")}</div>`;
+		};
+		list.addEventListener("input", (e) => {
+			const row_el = e.target.closest(".iyp-link-row");
+			if (!row_el) return;
+			const row = link_rows()[+row_el.dataset.i];
+			if (!row) return;
+			if (e.target.classList.contains("iyp-link-label")) row.label = e.target.value;
+			if (e.target.classList.contains("iyp-link-url")) row.url = e.target.value.trim();
+			web_form.make_form_dirty && web_form.make_form_dirty();
+		});
+		list.addEventListener("change", (e) => {
+			const row_el = e.target.closest(".iyp-link-row");
+			if (!row_el || !e.target.classList.contains("iyp-link-platform")) return;
+			const row = link_rows()[+row_el.dataset.i];
+			if (row) row.platform = e.target.value;
+			changed();
+		});
+		list.addEventListener("click", (e) => {
+			const del = e.target.closest(".iyp-link-del");
+			if (!del) return;
+			link_rows().splice(+del.closest(".iyp-link-row").dataset.i, 1);
+			render_links();
+			changed();
+		});
+		box.querySelector(".iyp-links-add").addEventListener("click", () => {
+			const rows = link_rows();
+			const has_linkedin = rows.some((r) => r.platform === "LinkedIn");
+			rows.push({ idx: rows.length + 1, __islocal: true, platform: has_linkedin ? "" : "LinkedIn", label: "", url: "" });
+			render_links();
+			changed();
+			const last = list.querySelector(".iyp-link-row:last-child .iyp-link-url");
+			if (last) last.focus();
+		});
+		render_links();
+	}
 
 	// Add links to the Profile Links table, skipping platforms (and URLs) it already has
 	const add_links = (links) => {
 		const field = web_form.fields_dict.profile_links;
 		if (!field || !links.length) return 0;
-		const rows = (field.df.data = field.grid.get_data() || []);
+		const rows = link_rows();
 		const key = (r) => `${r.platform}|${r.label || ""}`;
 		const clean = (u) => (u || "").replace(/\/+$/, "").toLowerCase();
 		const have = new Set(rows.map(key));
@@ -385,7 +475,7 @@ frappe.ready(function () {
 			have.add(key(link));
 			added++;
 		});
-		field.grid.refresh();
+		render_links();
 		return added;
 	};
 
@@ -421,20 +511,74 @@ frappe.ready(function () {
 				});
 			});
 	};
-	web_form.on("website_url", (field, url) => read_links(url));
+	on_field("website_url", (field, url) => read_links(url));
+
+	// CHANGE NOTE 2026-11-17: no LinkedIn link yet when Save is clicked? First look for it on the
+	// company's own website (homepage + contact page), add what is found, then save as usual. Only if
+	// the website has none (or can't be opened) does the "LinkedIn is required" message below appear.
+	let linkedin_looked_up = false;
+	const save_form = web_form.save.bind(web_form);
+	web_form.save = () => {
+		const has_linkedin = link_rows().some((r) => r.platform === "LinkedIn" && (r.url || "").trim());
+		const site = (web_form.get_value("website_url") || "").trim();
+		if (has_linkedin || !site || linkedin_looked_up) return save_form();
+		linkedin_looked_up = true;
+		frappe
+			.call({
+				method: "its_your_profile.api.read_website_links",
+				args: { url: site, quiet: 1 },
+				freeze: true,
+				freeze_message: __("Looking for your LinkedIn page on your website..."),
+			})
+			.then(({ message }) => {
+				const added = add_links((message && message.links) || []);
+				if (added) {
+					frappe.show_alert({ message: __("Added {0} links from your website.", [added]), indicator: "green" });
+				}
+			})
+			.catch(() => {})
+			.finally(() => save_form());
+		return false;
+	};
 
 	// CHANGE NOTE 2026-11-07: LinkedIn is compulsory. Save is blocked until the Profile Links table
 	// has a LinkedIn row with a link (usually filled in automatically from the card, the website or
 	// a web search).
 	web_form.validate = () => {
-		const rows = (web_form.fields_dict.profile_links && web_form.fields_dict.profile_links.grid.get_data()) || [];
+		// 2026-11-17: empty link lines (no link typed) are dropped instead of failing with
+		// "Row #2: Value missing for Link"
+		const rows = link_rows();
+		for (let i = rows.length - 1; i >= 0; i--) {
+			if (!(rows[i].url || "").trim()) rows.splice(i, 1);
+		}
+		render_links();
+
+		const no_platform = rows.find((r) => !r.platform);
+		if (no_platform) {
+			frappe.msgprint({
+				title: __("Choose a platform"),
+				indicator: "orange",
+				message: __("Please choose the platform (LinkedIn, Facebook, ...) for {0}", [frappe.utils.escape_html(no_platform.url)]),
+			});
+			return false;
+		}
+		const other = rows.find((r) => r.platform === "Other" && !(r.label || "").trim());
+		if (other) {
+			frappe.msgprint({
+				title: __("Name the link"),
+				indicator: "orange",
+				message: __("Please type a name for the “Other” link {0} (for example: Instagram, YouTube).", [frappe.utils.escape_html(other.url)]),
+			});
+			return false;
+		}
+
 		const linkedin = rows.find((r) => r.platform === "LinkedIn" && (r.url || "").trim());
 		if (linkedin) return true;
 		frappe.msgprint({
 			title: __("LinkedIn is required"),
 			indicator: "orange",
 			message: __(
-				"Please add your LinkedIn page under <b>Links</b>: click <b>Add Row</b>, choose <b>LinkedIn</b> and paste the link (for example https://www.linkedin.com/company/your-company)."
+				"We could not find a LinkedIn page on your website. Please add it under <b>Links</b>: click <b>Add link</b>, choose <b>LinkedIn</b> and paste the link (for example https://www.linkedin.com/company/your-company)."
 			),
 		});
 		return false;

@@ -64,7 +64,7 @@ def frappe_page_routes() -> set[str]:
 
 
 def keep_desk_private():
-	"""before_request hook: send non-staff visitors of /desk or /app to the home page."""
+	"""before_request hook: send guests at /desk or /app to the login page, other non-staff home."""
 	request = getattr(frappe.local, "request", None)
 	if not request:
 		return
@@ -129,5 +129,13 @@ def keep_desk_private():
 	if user != "Guest" and frappe.get_cached_value("User", user, "user_type") == "System User":
 		return
 
+	# 2026-11-17: staff who are not logged in yet were sent to the home page and could not reach the
+	# Desk at all. Guests now get our own login page, which returns them to the Desk address afterwards;
+	# logged-in business owners (Website Users) still go to the home page.
 	# Werkzeug exceptions carrying a response are sent as they are by Frappe's request handler
+	if user == "Guest" and request.method == "GET":
+		from urllib.parse import quote
+
+		target = request.full_path.rstrip("?") if request.query_string else path
+		raise HTTPException(response=redirect("/login?redirect-to=" + quote(target, safe="/"), code=302))
 	raise HTTPException(response=redirect("/", code=302))

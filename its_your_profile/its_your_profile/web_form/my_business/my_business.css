@@ -458,3 +458,56 @@ body::after { width: 300px; height: 300px; right: -110px; top: 60px; background:
 [data-iyp-theme="dark"] .web-list-container .web-list-table tbody tr:hover td { background: #1B1736; }
 [data-iyp-theme="dark"] .web-list-container .web-list-header, [data-iyp-theme="dark"] .web-list-container { border-color: #332C5A !important; }
 [data-iyp-theme="dark"] .web-list-container .no-result { color: #A9A4C8 !important; }
+
+/* ---------- Profile Links: our own editor (2026-11-17) ----------
+   Frappe's table stays on the page (it holds the data for Save) but is hidden; see my_business.js. */
+.web-form-wrapper .iyp-links-grid-hidden { display: none !important; }
+.iyp-links { margin: 4px 0 12px; }
+.iyp-links-label { color: var(--iyp-ink); font-weight: 600; font-size: 14px; margin-bottom: 2px; }
+.iyp-links-help { color: var(--iyp-faint); font-size: 13px; margin: 0 0 10px; }
+.iyp-links-list { display: flex; flex-direction: column; gap: 10px; }
+.iyp-link-row {
+	display: grid; grid-template-columns: 170px 1fr 1.6fr 40px; gap: 8px; align-items: center;
+	padding: 10px; border: 1px solid var(--iyp-border); border-radius: 14px; background: #FBFAFE;
+	animation: iyp-rise .35s ease both;
+}
+.iyp-link-row select, .iyp-link-row input {
+	width: 100%; min-height: 42px; padding: 0 12px; font: inherit; font-size: 14px; color: var(--iyp-ink);
+	background: #fff; border: 1px solid var(--iyp-border); border-radius: 12px; outline: none;
+	transition: border-color .2s ease, box-shadow .2s ease;
+}
+.iyp-link-row select:focus, .iyp-link-row input:focus { border-color: var(--iyp-indigo); box-shadow: 0 0 0 4px rgba(107, 85, 214, .16); }
+.iyp-link-del {
+	width: 40px; height: 40px; border: 1px solid var(--iyp-border); border-radius: 12px; background: #fff;
+	color: #B42318; font-size: 15px; cursor: pointer; transition: background .2s ease, border-color .2s ease;
+}
+.iyp-link-del:hover { background: #FEECEB; border-color: #F5B5AF; }
+.iyp-links-empty { padding: 14px; text-align: center; color: var(--iyp-faint); font-size: 14px; border: 1px dashed var(--iyp-border); border-radius: 14px; }
+.iyp-links-add {
+	margin-top: 10px; padding: 9px 16px; font: inherit; font-size: 14px; font-weight: 700; color: var(--iyp-indigo);
+	background: #F3EEFF; border: 1px dashed #B9A9F0; border-radius: 12px; cursor: pointer; transition: background .2s ease, transform .15s ease;
+}
+.iyp-links-add:hover { background: #E9E1FF; transform: translateY(-1px); }
+@media (max-width: 576px) {
+	.iyp-link-row { grid-template-columns: 1fr 40px; }
+	.iyp-link-row .iyp-link-platform { grid-column: 1; grid-row: 1; }
+	.iyp-link-row .iyp-link-del { grid-column: 2; grid-row: 1; }
+	.iyp-link-row .iyp-link-label, .iyp-link-row .iyp-link-url { grid-column: 1 / -1; }
+}
+[data-iyp-theme="dark"] .iyp-links-label { color: #F0EEFA; }
+[data-iyp-theme="dark"] .iyp-links-help, [data-iyp-theme="dark"] .iyp-links-empty { color: #A9A4C8; border-color: #332C5A; }
+[data-iyp-theme="dark"] .iyp-link-row { background: #141029; border-color: #332C5A; }
+[data-iyp-theme="dark"] .iyp-link-row select, [data-iyp-theme="dark"] .iyp-link-row input,
+[data-iyp-theme="dark"] .iyp-link-del { background: #1B1736; color: #F0EEFA; border-color: #3D3566; }
+[data-iyp-theme="dark"] .iyp-link-del { color: #FF8A80; }
+[data-iyp-theme="dark"] .iyp-link-del:hover { background: #3A1F2A; }
+[data-iyp-theme="dark"] .iyp-links-add { background: #2B2740; color: #CBBEFF; border-color: #574C99; }
+.iyp-links-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.iyp-links-actions .iyp-links-add { margin-top: 0; }
+.iyp-links-find {
+	padding: 9px 16px; font: inherit; font-size: 14px; font-weight: 700; color: #0E5A35;
+	background: var(--iyp-mint, #E3F7EC); border: 1px solid #A8E2C3; border-radius: 12px; cursor: pointer;
+	transition: filter .2s ease, transform .15s ease;
+}
+.iyp-links-find:hover { filter: brightness(.97); transform: translateY(-1px); }
+[data-iyp-theme="dark"] .iyp-links-find { background: #15372A; color: #8FDCB0; border-color: #24604A; }
