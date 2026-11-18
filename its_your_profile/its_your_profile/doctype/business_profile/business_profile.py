@@ -162,6 +162,7 @@ class BusinessProfile(WebsiteGenerator):
 		self.set_google_maps_url()
 		self.keep_welcome_fields()
 		self.make_logo_public()
+		self.track_faqs_cleared()
 
 		if self.company_name:
 			self.set_route()
@@ -227,6 +228,15 @@ class BusinessProfile(WebsiteGenerator):
 		file.save(ignore_permissions=True)
 		self.company_logo = file.file_url
 
+	def track_faqs_cleared(self):
+		"""2026-11-18: owners edit their FAQs on "My information". When someone removes every FAQ on
+		purpose, the AI must not quietly write new ones on the next save (the page then shows the basic
+		questions built from its facts). Adding a FAQ again, or the desk's Write FAQs Again, resets it."""
+		if self.faqs:
+			self.faqs_cleared = 0
+		elif not self.is_new() and (before := self.get_doc_before_save()) and before.faqs:
+			self.faqs_cleared = 1
+
 	def validate_urls(self):
 		for fieldname in ("website_url", "google_maps_url"):
 			self.set(fieldname, clean_url(self.get(fieldname), self.meta.get_label(fieldname)))
@@ -287,7 +297,7 @@ class BusinessProfile(WebsiteGenerator):
 		# FAQs for AI search, once the page is live. A new website is read first: its summary and
 		# services make better FAQs, and that job's save brings us back here.
 		website_pending = self.website_url and self.has_value_changed("website_url")
-		if self.published and self.company_name and not self.faqs and not website_pending:
+		if self.published and self.company_name and not self.faqs and not self.get("faqs_cleared") and not website_pending:
 			frappe.enqueue(
 				"its_your_profile.tasks.write_faqs",
 				queue="long",

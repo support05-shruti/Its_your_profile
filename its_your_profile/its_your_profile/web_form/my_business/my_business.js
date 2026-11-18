@@ -442,9 +442,20 @@ frappe.ready(function () {
 		list.addEventListener("click", (e) => {
 			const del = e.target.closest(".iyp-link-del");
 			if (!del) return;
-			link_rows().splice(+del.closest(".iyp-link-row").dataset.i, 1);
-			render_links();
-			changed();
+			const i = +del.closest(".iyp-link-row").dataset.i;
+			const row = link_rows()[i] || {};
+			const what = [row.platform, row.url].filter(Boolean).join(" · ");
+			// 2026-11-18: ask before removing; a link with nothing typed in goes straight away
+			const remove = () => {
+				link_rows().splice(i, 1);
+				render_links();
+				changed();
+			};
+			if (!(row.url || "").trim() && !(row.label || "").trim()) return remove();
+			frappe.confirm(
+				__("Do you really want to delete this link?") + (what ? `<br><b>${esc(what)}</b>` : ""),
+				remove
+			);
 		});
 		box.querySelector(".iyp-links-add").addEventListener("click", () => {
 			const rows = link_rows();
@@ -456,6 +467,88 @@ frappe.ready(function () {
 			if (last) last.focus();
 		});
 		render_links();
+	}
+
+	// CHANGE NOTE 2026-11-18: owners add, change and remove their own FAQs here (question + answer),
+	// built like the Links editor above: Frappe's FAQs table is hidden and keeps the data
+	// (field.df.data) for Save. Empty when the AI hasn't written any yet; the page then shows basic
+	// questions made from its facts.
+	const faqs_field = web_form.fields_dict.faqs;
+	const faq_rows = () => {
+		if (!faqs_field) return [];
+		if (!Array.isArray(faqs_field.df.data)) faqs_field.df.data = (faqs_field.grid.get_data() || []).slice();
+		return faqs_field.df.data;
+	};
+	let render_faqs = () => {};
+	if (faqs_field) {
+		const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+		const box = document.createElement("div");
+		box.className = "iyp-links iyp-faqs";
+		box.innerHTML = `
+			<div class="iyp-links-label">${__("Questions & answers")}</div>
+			<p class="iyp-links-help">${__("Questions your customers ask, with your answers. Shown on your page and read by Google and AI search.")}</p>
+			<div class="iyp-faq-list"></div>
+			<div class="iyp-links-actions">
+				<button type="button" class="iyp-links-add iyp-faq-add">＋ ${__("Add question")}</button>
+			</div>`;
+		faqs_field.$wrapper.addClass("iyp-links-grid-hidden").after(box);
+		const list = box.querySelector(".iyp-faq-list");
+		const dirty = () => web_form.make_form_dirty && web_form.make_form_dirty();
+
+		render_faqs = () => {
+			const rows = faq_rows();
+			rows.forEach((r, i) => (r.idx = i + 1));
+			list.innerHTML = rows.length
+				? rows
+						.map(
+							(r, i) => `
+				<div class="iyp-faq-row" data-i="${i}">
+					<div class="iyp-faq-num">${i + 1}</div>
+					<div class="iyp-faq-fields">
+						<input class="iyp-faq-q" type="text" value="${esc(r.question)}" placeholder="${__("Question, e.g. Do you deliver outside Pune?")}" aria-label="${__("Question")}">
+						<textarea class="iyp-faq-a" rows="2" placeholder="${__("Your answer")}" aria-label="${__("Answer")}">${esc(r.answer)}</textarea>
+					</div>
+					<button type="button" class="iyp-link-del" title="${__("Remove")}" aria-label="${__("Remove")}">✕</button>
+				</div>`
+						)
+						.join("")
+				: `<div class="iyp-links-empty">${__("No questions yet. Click “Add question” to add one.")}</div>`;
+		};
+		list.addEventListener("input", (e) => {
+			const row_el = e.target.closest(".iyp-faq-row");
+			const row = row_el && faq_rows()[+row_el.dataset.i];
+			if (!row) return;
+			if (e.target.classList.contains("iyp-faq-q")) row.question = e.target.value;
+			if (e.target.classList.contains("iyp-faq-a")) row.answer = e.target.value;
+			dirty();
+		});
+		list.addEventListener("click", (e) => {
+			const del = e.target.closest(".iyp-link-del");
+			if (!del) return;
+			const i = +del.closest(".iyp-faq-row").dataset.i;
+			const row = faq_rows()[i] || {};
+			// 2026-11-18: ask before removing; an empty question goes straight away
+			const remove = () => {
+				faq_rows().splice(i, 1);
+				render_faqs();
+				dirty();
+			};
+			if (!(row.question || "").trim() && !(row.answer || "").trim()) return remove();
+			frappe.confirm(
+				__("Do you really want to delete this question?") +
+					((row.question || "").trim() ? `<br><b>${esc(row.question.trim())}</b>` : ""),
+				remove
+			);
+		});
+		box.querySelector(".iyp-faq-add").addEventListener("click", () => {
+			const rows = faq_rows();
+			rows.push({ idx: rows.length + 1, __islocal: true, question: "", answer: "" });
+			render_faqs();
+			dirty();
+			const last = list.querySelector(".iyp-faq-row:last-child .iyp-faq-q");
+			if (last) last.focus();
+		});
+		render_faqs();
 	}
 
 	// Add links to the Profile Links table, skipping platforms (and URLs) it already has
@@ -552,6 +645,26 @@ frappe.ready(function () {
 			if (!(rows[i].url || "").trim()) rows.splice(i, 1);
 		}
 		render_links();
+
+		// FAQs: drop empty ones; a question without an answer (or the other way round) is pointed out
+		const faqs = faq_rows();
+		for (let i = faqs.length - 1; i >= 0; i--) {
+			faqs[i].question = (faqs[i].question || "").trim();
+			faqs[i].answer = (faqs[i].answer || "").trim();
+			if (!faqs[i].question && !faqs[i].answer) faqs.splice(i, 1);
+		}
+		render_faqs();
+		const half = faqs.find((r) => !r.question || !r.answer);
+		if (half) {
+			frappe.msgprint({
+				title: __("Finish the question"),
+				indicator: "orange",
+				message: half.question
+					? __("Please type the answer for “{0}”, or remove it with ✕.", [frappe.utils.escape_html(half.question)])
+					: __("Please type the question for the answer “{0}”, or remove it with ✕.", [frappe.utils.escape_html(half.answer)]),
+			});
+			return false;
+		}
 
 		const no_platform = rows.find((r) => !r.platform);
 		if (no_platform) {

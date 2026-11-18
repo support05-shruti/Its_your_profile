@@ -474,7 +474,8 @@ def write_faqs(profile: str, replace: bool = False):
 	"""Have the AI write FAQs from the profile's facts. Leaves FAQs someone already wrote alone
 	unless `replace` (the desk's Write FAQs Again button)."""
 	doc = frappe.get_doc("Business Profile", profile)
-	if (doc.faqs and not replace) or not doc.company_name:
+	# 2026-11-18: also not when the owner removed every FAQ on purpose (faqs_cleared)
+	if ((doc.faqs or doc.get("faqs_cleared")) and not replace) or not doc.company_name:
 		return
 
 	try:
@@ -485,7 +486,7 @@ def write_faqs(profile: str, replace: bool = False):
 
 		# The AI call is slow; reload so edits saved meanwhile aren't overwritten
 		doc = frappe.get_doc("Business Profile", profile)
-		if doc.faqs and not replace:
+		if (doc.faqs or doc.get("faqs_cleared")) and not replace:
 			return
 		doc.set("faqs", [{"question": f.question.strip(), "answer": f.answer.strip()} for f in faqs])
 		doc.save(ignore_permissions=True)

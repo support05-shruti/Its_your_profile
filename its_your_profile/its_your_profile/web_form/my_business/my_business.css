@@ -511,3 +511,31 @@ body::after { width: 300px; height: 300px; right: -110px; top: 60px; background:
 }
 .iyp-links-find:hover { filter: brightness(.97); transform: translateY(-1px); }
 [data-iyp-theme="dark"] .iyp-links-find { background: #15372A; color: #8FDCB0; border-color: #24604A; }
+
+/* ---------- FAQs editor (2026-11-18), same look as the Links editor ---------- */
+.iyp-faq-list { display: flex; flex-direction: column; gap: 10px; }
+.iyp-faq-row {
+	display: grid; grid-template-columns: 30px 1fr 40px; gap: 10px; align-items: start;
+	padding: 12px; border: 1px solid var(--iyp-border); border-radius: 14px; background: #FBFAFE;
+	animation: iyp-rise .35s ease both;
+}
+.iyp-faq-num {
+	width: 28px; height: 28px; margin-top: 7px; border-radius: 50%; display: grid; place-items: center;
+	font-size: 13px; font-weight: 700; color: #fff; background: var(--iyp-indigo);
+}
+.iyp-faq-fields { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.iyp-faq-row input, .iyp-faq-row textarea {
+	width: 100%; padding: 10px 12px; font: inherit; font-size: 14px; color: var(--iyp-ink);
+	background: #fff; border: 1px solid var(--iyp-border); border-radius: 12px; outline: none; resize: vertical;
+	transition: border-color .2s ease, box-shadow .2s ease;
+}
+.iyp-faq-row input { min-height: 42px; font-weight: 600; }
+.iyp-faq-row textarea { min-height: 64px; line-height: 1.5; }
+.iyp-faq-row input:focus, .iyp-faq-row textarea:focus { border-color: var(--iyp-indigo); box-shadow: 0 0 0 4px rgba(107, 85, 214, .16); }
+@media (max-width: 576px) {
+	.iyp-faq-row { grid-template-columns: 1fr 40px; }
+	.iyp-faq-num { display: none; }
+}
+[data-iyp-theme="dark"] .iyp-faq-row { background: #141029; border-color: #332C5A; }
+[data-iyp-theme="dark"] .iyp-faq-row input, [data-iyp-theme="dark"] .iyp-faq-row textarea { background: #1B1736; color: #F0EEFA; border-color: #3D3566; }
+[data-iyp-theme="dark"] .iyp-faq-num { background: #6B55D6; }

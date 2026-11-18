@@ -43,7 +43,7 @@
  ],
  "login_required": 1,
  "max_attachment_size": 10,
- "modified": "2026-11-12 12:00:00.000000",
+ "modified": "2026-11-18 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Its Your Profile",
  "name": "my-business",
@@ -213,6 +213,19 @@
    "fieldtype": "Table",
    "label": "Profile Links",
    "options": "Business Profile Link",
+   "reqd": 0
+  },
+  {
+   "fieldname": "faq_section",
+   "fieldtype": "Section Break",
+   "label": "FAQs"
+  },
+  {
+   "description": "Questions your customers ask, with your answers. Shown on your page and read by Google and AI search.",
+   "fieldname": "faqs",
+   "fieldtype": "Table",
+   "label": "FAQs",
+   "options": "Business Profile FAQ",
    "reqd": 0
   }
  ]

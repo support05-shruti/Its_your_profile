@@ -10,8 +10,35 @@
 	function add() {
 		fixLogo();
 		fixSignupButton();
+		guardSignup();
 		addThemeSwitch();
 		countPageView();
+	}
+
+	// 2026-11-18: robots were signing up with made-up names and other people's emails, sending them
+	// "Welcome" emails. The server (signup_guard.py) only accepts a sign-up that carries "iyp_human",
+	// which is added here once a person has typed or tapped on the page.
+	function guardSignup() {
+		if (!document.querySelector(".form-signup")) return;
+		var human = false;
+		["keydown", "pointerdown", "touchstart"].forEach(function (type) {
+			document.addEventListener(type, function () { human = true; }, { passive: true, capture: true });
+		});
+		var tries = 0;
+		(function wrap() {
+			var login = window.login;
+			if (!login || typeof login.call !== "function") {
+				if (++tries < 50) setTimeout(wrap, 100);
+				return;
+			}
+			if (login.call.__iyp) return;
+			var call = login.call;
+			login.call = function (args) {
+				if (args && args.cmd === "frappe.core.doctype.user.user.sign_up" && human) args.iyp_human = "iyp-1";
+				return call.apply(this, arguments);
+			};
+			login.call.__iyp = true;
+		})();
 	}
 
 	// 2026-11-16: count views of the site's own pages (home, terms, directory...) for the staff

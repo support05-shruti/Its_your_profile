@@ -40,6 +40,7 @@
   "ai_section",
   "ai_summary",
   "faqs",
+  "faqs_cleared",
   "card_section",
   "visiting_card",
   "visiting_card_preview",
@@ -365,6 +366,15 @@
    "fieldtype": "Table",
    "label": "FAQs",
    "options": "Business Profile FAQ"
+  },
+  {
+   "default": "0",
+   "description": "Ticked when the owner removed every FAQ: the AI then leaves the FAQs empty. Cleared when a FAQ is added again.",
+   "fieldname": "faqs_cleared",
+   "fieldtype": "Check",
+   "hidden": 1,
+   "label": "FAQs Removed by Owner",
+   "read_only": 1
   }
  ],
  "grid_page_length": 50,
@@ -372,7 +382,7 @@
  "index_web_pages_for_search": 1,
  "is_published_field": "published",
  "links": [],
- "modified": "2026-11-07 18:00:00.000000",
+ "modified": "2026-11-18 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Its Your Profile",
  "name": "Business Profile",
