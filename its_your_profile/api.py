@@ -404,3 +404,25 @@ def get_scan_status(name: str):
 	if owner != frappe.session.user and not frappe.has_permission("Business Profile", "read", name):
 		frappe.throw(_("Not permitted"), frappe.PermissionError)
 	return status
+
+
+@frappe.whitelist(methods=["POST"])
+def delete_business(name: str):
+	"""Delete a business page from the dashboard (2026-11-18). Staff may delete any page, an owner
+	only their own. Its visit counts, events and enquiries go with it; the page address stops working."""
+	user = frappe.session.user
+	if user == "Guest":
+		frappe.throw(_("Please log in"), frappe.PermissionError)
+
+	owner = frappe.db.get_value("Business Profile", name, "owner")
+	if not owner:
+		frappe.throw(_("Business Profile not found"), frappe.DoesNotExistError)
+	is_staff = frappe.get_cached_value("User", user, "user_type") == "System User"
+	if not is_staff and owner != user:
+		frappe.throw(_("You can only delete your own business page."), frappe.PermissionError)
+
+	for doctype in ("Profile Visit", "Profile Event", "Business Enquiry"):
+		if frappe.db.table_exists(doctype):
+			frappe.db.delete(doctype, {"business_profile": name})
+	frappe.delete_doc("Business Profile", name, ignore_permissions=True, delete_permanently=False)
+	return {"ok": True}
