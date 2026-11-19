@@ -80,6 +80,15 @@ def identify(
 			)
 	return {"name": name, "first_name": person["first_name"], "email": email}
 
+def refuse(reason: str, message: str | None = None):
+	"""Log why Google sign-in was refused (Error Log, title 'Google One Tap refused'), then stop."""
+	try:
+		frappe.log_error(title="Google One Tap refused", message=reason)
+		frappe.db.commit()  # the throw below rolls the request back
+	except Exception:
+		pass
+	frappe.throw(message or _("Google sign-in failed. Please try again."))
+
 
 VISIT_GAP_MINUTES = 30  # page changes within this time are the same visit
 
@@ -116,25 +125,29 @@ def verify(credential: str, expected_client_id: str) -> dict:
 	"""Check the ID token with Google: made for OUR client, by Google, not expired, email verified."""
 	if not credential or len(credential) > 4096:
 		frappe.throw(_("Google sign-in failed. Please try again."))
+	# 2026-11-19: every refusal below is written to Error Log ("Google One Tap refused") with the reason,
+	# never the token, so a failing sign-in can be traced from Desk
 	try:
 		response = requests.get(TOKENINFO, params={"id_token": credential}, timeout=8)
-	except requests.RequestException:
-		frappe.throw(_("Could not reach Google. Please try again."))
+	except requests.RequestException as e:
+		refuse(f"Could not reach Google: {e}", _("Could not reach Google. Please try again."))
 	if response.status_code != 200:
-		frappe.throw(_("Google sign-in failed. Please try again."))
+		refuse(f"Google tokeninfo answered {response.status_code}: {response.text[:300]}")
 	info = response.json()
 
-	if info.get("aud") != expected_client_id or info.get("iss") not in GOOGLE_ISSUERS:
-		frappe.throw(_("Google sign-in failed. Please try again."))
+	if info.get("aud") != expected_client_id:
+		refuse(f"Token is for client {info.get('aud')!r}, Settings has {expected_client_id!r}")
+	if info.get("iss") not in GOOGLE_ISSUERS:
+		refuse(f"Unexpected issuer {info.get('iss')!r}")
 	if str(info.get("email_verified")).lower() != "true":
-		frappe.throw(_("Please use a Google account with a verified email."))
+		refuse("Email not verified", _("Please use a Google account with a verified email."))
 	try:
 		# 2026-11-19: real Unix time. now_datetime() is India time without a zone, and .timestamp()
 		# read it as the server's UTC: 5½ hours ahead, so every Google token looked expired
 		if int(info.get("exp", 0)) < time.time():
-			frappe.throw(_("Google sign-in expired. Please try again."))
+			refuse(f"Token expired: exp {info.get('exp')}, server time {int(time.time())}", _("Google sign-in expired. Please try again."))
 	except (TypeError, ValueError):
-		frappe.throw(_("Google sign-in failed. Please try again."))
+		refuse(f"Bad exp value {info.get('exp')!r}")
 
 	email = validate_email_address((info.get("email") or "").strip().lower())
 	if not email:
