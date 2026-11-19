@@ -96,6 +96,16 @@ def track(profile: str, event: str, referrer: str | None = None, utm: str | None
 	if not frappe.db.exists("Business Profile", {"name": profile, "published": 1}):
 		return
 	source = source_of(referrer, utm)
+
+	# 2026-11-19: a visitor logged in to It's Your Profile is known by name, like LinkedIn
+	user = frappe.session.user
+	if user != "Guest":
+		if user == frappe.db.get_value("Business Profile", profile, "owner"):
+			return  # owners looking at their own page are not visitors
+		if event == "View":
+			log_logged_in_view(profile, user, source, referrer)
+			return
+
 	visit = log(profile, event, visitor="Person", source=source, referrer=referrer)
 	notify_visit(profile, event, source)
 	# 2026-11-19: "Someone from Infosys, Pune" — the visitor's organisation, looked up in the background
@@ -168,6 +178,27 @@ def log_known_visit(profile, name, email, source=None, referrer=None):
 			"referrer": (referrer or "")[:500] or None,
 		}
 	).insert(ignore_permissions=True)
+
+
+def log_logged_in_view(profile, user, source, referrer):
+	"""'👤 Shruti Palande (shruti@…) viewed your page' for a visitor logged in to our site.
+	Counted as a View (the week's numbers), with their name, like a Google One Tap visitor."""
+	name = frappe.utils.get_fullname(user) or user
+	frappe.get_doc(
+		{
+			"doctype": "Profile Visit",
+			"business_profile": profile,
+			"event": "View",
+			"visitor": "Known Person",
+			"visitor_name": name,
+			"visitor_email": user,
+			"source": source,
+			"referrer": (referrer or "")[:500] or None,
+		}
+	).insert(ignore_permissions=True)
+	came_from = "" if source in ("Direct", "It's Your Profile") else f" · came from {source}"
+	esc = frappe.utils.escape_html
+	notify_owner(profile, f"👤 {esc(name)} ({esc(user)}) viewed your page{came_from}", f"Known:{user}", VIEW_ALERT_GAP)
 
 
 def notify_visit(profile, event, source):

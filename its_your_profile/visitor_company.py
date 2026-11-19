@@ -25,7 +25,10 @@ NOT_A_VISITOR_COMPANY = re.compile(
 	r"jio|airtel|bharti|bsnl|mtnl|vodafone|idea cellular|\bvi\b|hathway|atria|act fibernet|excitel|"
 	r"tata (communications|teleservices|play|sky)|vsnl|tikona|spectra|you broadband|alliance broadband|"
 	r"gtpl|den networks|siti|asianet|railtel|sify|netplus|fiber|fibre|broadband|telecom|telelink|"
-	r"\bisp\b|internet service|cable|wireless|mobile|cellular|"
+	r"\bisp\b|internet|cable|wireless|mobile|cellular|"
+	# 2026-11-19: small local providers ("Teleglobal Communications, Lonavla") showed as companies
+	r"communication|\btele|network|infocom|datacom|netcom|\bnet\b|online|web services|"
+	r"\bwifi|wi-fi|\bdigital (india|network)|connect|"
 	r"amazon|aws|google|microsoft|azure|digitalocean|cloudflare|akamai|fastly|ovh|hetzner|linode|"
 	r"vultr|oracle cloud|alibaba|tencent|contabo|leaseweb|hosting|datacenter|data center|"
 	r"\bvpn\b|proxy|m247|zscaler|private customer",
@@ -95,7 +98,8 @@ def company_for_ip(ip: str) -> dict | None:
 	key = f"iyp_ip_company:{ip}"
 	cached = frappe.cache.get_value(key)
 	if cached is not None:
-		return cached or None
+		# Checked again: answers cached before the provider list grew may name a provider
+		return cached if cached and is_company(cached.get("company")) else None
 
 	try:
 		token = frappe.conf.get("ipinfo_token")
@@ -113,6 +117,11 @@ def company_for_ip(ip: str) -> dict | None:
 	found = clean_company(data)
 	frappe.cache.set_value(key, found or {}, expires_in_sec=CACHE_SECONDS)
 	return found
+
+
+def is_company(name: str | None) -> bool:
+	"""False for internet providers and cloud servers, whose name says nothing about the visitor."""
+	return bool(name) and not NOT_A_VISITOR_COMPANY.search(name)
 
 
 def clean_company(data: dict) -> dict | None:

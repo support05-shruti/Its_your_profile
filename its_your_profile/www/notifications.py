@@ -12,6 +12,7 @@ from frappe.utils import add_days, format_date, getdate, now_datetime, pretty_da
 
 from its_your_profile.portal import redirect
 from its_your_profile.tracking import AI_SOURCES, ALERTS, LEADS
+from its_your_profile.visitor_company import is_company
 
 no_cache = 1
 
@@ -310,7 +311,8 @@ def describe_visit(visit, companies=None):
 	else:
 		icon, did = ALERTS.get(visit.event, ("👀", "visited your page"))
 		kind = "lead" if visit.event in LEADS else ("ai" if visit.source in AI_SOURCES else "view")
-		if visit.get("visitor_company"):
+		# Checked again here, so names saved before the provider list grew are hidden too
+		if is_company(visit.get("visitor_company")):
 			# 2026-11-19: "Someone from Infosys, Pune viewed your page" (visitor_company.py)
 			org = visit.visitor_company + (f", {visit.visitor_city}" if visit.get("visitor_city") else "")
 			icon = "🏢" if visit.event == "View" else icon
