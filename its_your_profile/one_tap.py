@@ -11,6 +11,8 @@ Google only allows it on https domains (and localhost), so it works on itsyourpr
 an office IP address like 192.168.1.30.
 """
 
+import time
+
 import frappe
 import requests
 from frappe import _
@@ -127,7 +129,9 @@ def verify(credential: str, expected_client_id: str) -> dict:
 	if str(info.get("email_verified")).lower() != "true":
 		frappe.throw(_("Please use a Google account with a verified email."))
 	try:
-		if int(info.get("exp", 0)) < now_datetime().timestamp():
+		# 2026-11-19: real Unix time. now_datetime() is India time without a zone, and .timestamp()
+		# read it as the server's UTC: 5½ hours ahead, so every Google token looked expired
+		if int(info.get("exp", 0)) < time.time():
 			frappe.throw(_("Google sign-in expired. Please try again."))
 	except (TypeError, ValueError):
 		frappe.throw(_("Google sign-in failed. Please try again."))
