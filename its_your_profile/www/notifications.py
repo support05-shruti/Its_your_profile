@@ -63,11 +63,15 @@ def get_context(context):
 	names = [p.name for p in profiles]
 	companies = {p.name: p.company_name for p in profiles} if len(profiles) > 1 else {}
 	last_seen = frappe.cache.hget(SEEN_KEY, user)
+	visit_fields = ["event", "visitor", "visitor_name", "visitor_email", "source", "crawler", "creation", "business_profile"]
+	# 2026-11-19: the visitor's organisation (visitor_company.py); the columns exist after `bench migrate`
+	if frappe.db.has_column("Profile Visit", "visitor_company"):
+		visit_fields += ["visitor_company", "visitor_city"]
 	visits = (
 		frappe.get_all(
 			"Profile Visit",
 			filters={"business_profile": ("in", names)},
-			fields=["event", "visitor", "visitor_name", "visitor_email", "source", "crawler", "creation", "business_profile"],
+			fields=visit_fields,
 			order_by="creation desc",
 			limit_page_length=LIMIT,
 		)
@@ -306,7 +310,13 @@ def describe_visit(visit, companies=None):
 	else:
 		icon, did = ALERTS.get(visit.event, ("👀", "visited your page"))
 		kind = "lead" if visit.event in LEADS else ("ai" if visit.source in AI_SOURCES else "view")
-		text = _("Someone {0}").format(_(did))
+		if visit.get("visitor_company"):
+			# 2026-11-19: "Someone from Infosys, Pune viewed your page" (visitor_company.py)
+			org = visit.visitor_company + (f", {visit.visitor_city}" if visit.get("visitor_city") else "")
+			icon = "🏢" if visit.event == "View" else icon
+			text = _("Someone from {0} {1}").format(org, _(did))
+		else:
+			text = _("Someone {0}").format(_(did))
 		if visit.source and visit.source not in ("Direct", "It's Your Profile"):
 			text += " · " + _("from {0}").format(visit.source)
 	if companies and companies.get(visit.business_profile):
@@ -317,5 +327,5 @@ def describe_visit(visit, companies=None):
 # The dashboard draws line icons (an SVG sprite in notifications.html) instead of the alert emoji
 GLYPHS = {
 	"👀": "eye", "📞": "phone", "💬": "chat", "✉️": "mail", "📍": "pin", "🌐": "globe",
-	"📇": "user", "🔗": "link", "🤖": "bot", "🔎": "search",
+	"📇": "user", "🔗": "link", "🤖": "bot", "🔎": "search", "🏢": "building",
 }

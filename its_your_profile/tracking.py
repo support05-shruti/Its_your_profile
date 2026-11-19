@@ -96,8 +96,12 @@ def track(profile: str, event: str, referrer: str | None = None, utm: str | None
 	if not frappe.db.exists("Business Profile", {"name": profile, "published": 1}):
 		return
 	source = source_of(referrer, utm)
-	log(profile, event, visitor="Person", source=source, referrer=referrer)
+	visit = log(profile, event, visitor="Person", source=source, referrer=referrer)
 	notify_visit(profile, event, source)
+	# 2026-11-19: "Someone from Infosys, Pune" — the visitor's organisation, looked up in the background
+	from its_your_profile.visitor_company import queue_lookup
+
+	queue_lookup(visit.name)
 
 
 def log_crawler_visit(profile: str | None = None):
@@ -122,7 +126,7 @@ def log_crawler_visit(profile: str | None = None):
 
 
 def log(profile, event, visitor, source=None, crawler=None, referrer=None, path=None):
-	frappe.get_doc(
+	return frappe.get_doc(
 		{
 			"doctype": "Profile Visit",
 			"business_profile": profile,
