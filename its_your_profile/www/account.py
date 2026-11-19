@@ -19,4 +19,11 @@ def get_context(context):
 		redirect("/login?redirect-to=/account")
 
 	name = frappe.db.get_value("Business Profile", {"owner": user}, "name", order_by="creation desc")
+
+	# 2026-11-19: staff (Milind, Administrator...) often own no page themselves: the pages they scan
+	# can be created under another staff login. "My information" then sent them to the home page.
+	# Staff now get the newest business, the same one the Dashboard shows first.
+	if not name and frappe.get_cached_value("User", user, "user_type") == "System User":
+		name = frappe.db.get_value("Business Profile", {}, "name", order_by="creation desc")
+
 	redirect(f"/my-business/{name}/edit" if name else "/#start")

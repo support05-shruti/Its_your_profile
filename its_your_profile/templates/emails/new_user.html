@@ -1,0 +1,9 @@
+{#- Replaces Frappe's "Welcome to ..." sign-up email (2026-11-18, design B). Same args as Frappe's:
+    first_name, user, link, site_url, app_name. -#}
+{% from "templates/emails/iyp_email.html" import iyp_email, iyp_button, iyp_box, iyp_link_copy %}
+{% call iyp_email(_("Get found by"), _("AI and Google"), _("You got this email because someone signed up with this address. Not you? You can ignore it.")) %}
+	<p style="margin:0 0 16px;">{{ _("Hi {0}, welcome to It's Your Profile! One last step: set your password.").format(first_name | e) }}</p>
+	{{ iyp_button(link, _("Complete my registration")) }}
+	{{ iyp_box(_("Your login ID"), user | e) }}
+	{{ iyp_link_copy(link) }}
+{% endcall %}

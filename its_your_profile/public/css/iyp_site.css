@@ -311,3 +311,20 @@ body[data-path="update-password"] .es-button[data-variant="solid"], body[data-pa
 [data-iyp-theme="dark"] .iyp-theme-fab:hover { border-color: #463E7A; }
 [data-iyp-theme="dark"] .iyp-theme-fab .iyp-sun { display: block; }
 [data-iyp-theme="dark"] .iyp-theme-fab .iyp-moon { display: none; }
+
+/* Sign-up captcha (2026-11-19): a 5-character code (letters + numbers) to type in, shown beside the box */
+.iyp-captcha-row { display: flex; gap: 8px; width: 100%; align-items: stretch; }
+.iyp-captcha-row .form-control { flex: 1; min-width: 0; letter-spacing: .2em; font-weight: 700; text-transform: uppercase; }
+.iyp-captcha .iyp-captcha-q {
+	flex: none; display: grid; place-items: center; min-width: 108px; padding: 0 12px; border-radius: 10px;
+	font-family: "Courier New", monospace; font-size: 20px; font-weight: 800; letter-spacing: .28em; font-style: italic;
+	color: #3B2E7E; background: repeating-linear-gradient(-45deg, #F3EEFF 0 6px, #E9E1FF 6px 12px);
+	border: 1px dashed #B9A9F0; user-select: none; -webkit-user-select: none;
+}
+.iyp-captcha-new {
+	flex: none; width: 42px; border: 1px solid #D6D1E6; border-radius: 10px; background: #fff;
+	color: #3B2E7E; font-size: 18px; cursor: pointer;
+}
+.iyp-captcha-new:hover { background: #F3EEFF; }
+[data-iyp-theme="dark"] .iyp-captcha .iyp-captcha-q { color: #E3DBFF; background: repeating-linear-gradient(-45deg, #2B2740 0 6px, #241F3A 6px 12px); border-color: #574C99; }
+[data-iyp-theme="dark"] .iyp-captcha-new { background: #1B1736; border-color: #3D3566; color: #CBBEFF; }

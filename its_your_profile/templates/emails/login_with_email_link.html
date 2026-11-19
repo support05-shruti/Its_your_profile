@@ -1,0 +1,7 @@
+{#- Replaces Frappe's "Login with email link" email (2026-11-18, design B). Args: link, minutes. -#}
+{% from "templates/emails/iyp_email.html" import iyp_email, iyp_button, iyp_link_copy %}
+{% call iyp_email(_("Your login"), _("link"), _("Didn't ask for this? You can ignore this email. Your account is safe.")) %}
+	<p style="margin:0 0 16px;">{{ _("Click the button below to log in to It's Your Profile.") }} {% if minutes == 1 %}{{ _("The link works for 1 minute.") }}{% elif minutes %}{{ _("The link works for {0} minutes.").format(minutes) }}{% endif %}</p>
+	{{ iyp_button(link or "#", _("Log me in")) }}
+	{{ iyp_link_copy(link or "#") }}
+{% endcall %}

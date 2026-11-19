@@ -19,11 +19,52 @@
 	// "Welcome" emails. The server (signup_guard.py) only accepts a sign-up that carries "iyp_human",
 	// which is added here once a person has typed or tapped on the page.
 	function guardSignup() {
-		if (!document.querySelector(".form-signup")) return;
+		var form = document.querySelector(".form-signup");
+		if (!form) return;
 		var human = false;
 		["keydown", "pointerdown", "touchstart"].forEach(function (type) {
 			document.addEventListener(type, function () { human = true; }, { passive: true, capture: true });
 		});
+
+		// 2026-11-19: captcha. A 5-character code of letters and numbers from the server
+		// (signup_guard.new_captcha) to type in; it is checked there when the account is created
+		// (capital or small letters both fine), and each code works only once.
+		var email = document.getElementById("signup_email");
+		var group = email && email.closest(".form-group");
+		var captcha = { id: "" };
+		if (group && !document.getElementById("iyp_captcha_answer")) {
+			var box = document.createElement("div");
+			box.className = "form-group flex flex-col items-start gap-1.5 mb-0 iyp-captcha";
+			box.innerHTML =
+				'<label class="text-base text-ink-gray-5 w-full mb-0" for="iyp_captcha_answer">Type this code</label>' +
+				'<div class="iyp-captcha-row">' +
+				'<b class="iyp-captcha-q" aria-live="polite">…</b>' +
+				'<input type="text" id="iyp_captcha_answer" class="form-control" autocapitalize="characters" autocorrect="off" spellcheck="false" autocomplete="off" maxlength="5" placeholder="Code" required>' +
+				'<button type="button" class="iyp-captcha-new" title="New code" aria-label="New code">↻</button>' +
+				"</div>" +
+				'<p class="field-error text-base text-ink-red-8 mb-0"></p>';
+			group.parentNode.insertBefore(box, group.nextSibling);
+		}
+		var question = form.querySelector(".iyp-captcha-q");
+		var answer = document.getElementById("iyp_captcha_answer");
+		function loadCaptcha() {
+			if (!question) return;
+			question.textContent = "…";
+			if (answer) answer.value = "";
+			var headers = { "Content-Type": "application/x-www-form-urlencoded", "Accept": "application/json" };
+			if (window.frappe && frappe.csrf_token) headers["X-Frappe-CSRF-Token"] = frappe.csrf_token;
+			fetch("/api/method/its_your_profile.signup_guard.new_captcha", { method: "POST", headers: headers, credentials: "same-origin" })
+				.then(function (r) { return r.json(); })
+				.then(function (r) {
+					captcha.id = (r.message && r.message.id) || "";
+					question.textContent = (r.message && r.message.question) || "?";
+				})
+				.catch(function () { question.textContent = "?"; });
+		}
+		var refresh = form.querySelector(".iyp-captcha-new");
+		if (refresh) refresh.addEventListener("click", loadCaptcha);
+		loadCaptcha();
+
 		var tries = 0;
 		(function wrap() {
 			var login = window.login;
@@ -34,7 +75,19 @@
 			if (login.call.__iyp) return;
 			var call = login.call;
 			login.call = function (args) {
-				if (args && args.cmd === "frappe.core.doctype.user.user.sign_up" && human) args.iyp_human = "iyp-1";
+				if (args && args.cmd === "frappe.core.doctype.user.user.sign_up") {
+					var value = answer ? answer.value.trim() : "";
+					if (answer && !value) {
+						if (login.show_field_error) login.show_field_error("iyp_captcha_answer", "Please type the code shown.");
+						answer.focus();
+						return;
+					}
+					if (human) args.iyp_human = "iyp-1";
+					args.iyp_captcha_id = captcha.id;
+					args.iyp_captcha_answer = value;
+					// Each question works once: show a new one for the next try
+					setTimeout(loadCaptcha, 1500);
+				}
 				return call.apply(this, arguments);
 			};
 			login.call.__iyp = true;

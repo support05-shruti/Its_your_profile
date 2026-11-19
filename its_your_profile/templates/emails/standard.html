@@ -1,0 +1,21 @@
+{#- 2026-11-18: emails built with templates/emails/iyp_email.html (data-iyp-email) carry their own
+    design and footer, so they are sent as they are: no Frappe card around them and no
+    "Sent via ERPNext". Every other email gets Frappe's own standard.html unchanged. -#}
+{% if 'data-iyp-email' in (content or "") -%}
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+	<meta name="viewport" content="width=device-width" />
+	<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+	<meta name="color-scheme" content="light" />
+	<meta name="supported-color-schemes" content="light" />
+	<title>{{ subject or "" }}</title>
+</head>
+<body style="margin:0;padding:0;background:#F6F4FB;">
+	{{ content }}
+	<div class="print-html">{{ print_html or "" }}</div>
+</body>
+</html>
+{%- else -%}
+{% include "frappe/templates/emails/standard.html" %}
+{%- endif %}
