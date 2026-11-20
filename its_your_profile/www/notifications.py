@@ -127,8 +127,20 @@ def get_context(context):
 			# Page completeness is advice for an owner about their own page, not for the staff overview
 			"strength": page_strength(profiles[0].name) if profiles and not is_staff else None,
 			"today": format_date(getdate(), "EEEE, d MMMM"),
+			# 2026-11-20: Refer & earn (referrals.py); staff see the top referrers instead
+			**referral_context(user, is_staff),
 		}
 	)
+
+
+def referral_context(user, is_staff):
+	if not frappe.db.table_exists("Referral Code"):
+		return {"referral": None, "referrers": None}  # before `bench migrate`
+	from its_your_profile import referrals
+
+	if is_staff:
+		return {"referral": None, "referrers": referrals.staff_list()}
+	return {"referral": referrals.dashboard(user), "referrers": None}
 
 
 def get_site_people():

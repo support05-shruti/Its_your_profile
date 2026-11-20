@@ -241,6 +241,23 @@
 	.d-meter { height: 6px; margin: 10px 0 0; border-radius: 3px; background: var(--line-soft); overflow: hidden; }
 	.d-meter i { display: block; height: 100%; width: var(--p); border-radius: 3px; background: var(--brand); }
 	.d-meter-note { margin: 10px 0 0; font-size: .84rem; line-height: 1.5; color: var(--muted); }
+	/* Refer & earn (2026-11-20) */
+	.d-ref-card { margin-top: 16px; }
+	.d-ref-lead, .d-ref-big { margin: -6px 0 14px; font-size: .9rem; line-height: 1.5; color: var(--muted); }
+	.d-ref-big { color: var(--ok); font-weight: 600; }
+	.d-ref-card .d-meter i { background: var(--accent); }
+	.d-ref-code { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin: 16px 0 6px; padding: 10px 14px; border: 1px dashed var(--line-strong); border-radius: 12px; background: var(--brand-soft); }
+	.d-ref-code span { font-size: .82rem; color: var(--muted); }
+	.d-ref-code b { font-size: 1.15rem; letter-spacing: .08em; color: var(--brand); }
+	.d-ref-link { font-size: .8rem; color: var(--faint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+	.d-ref-acts { display: flex; gap: 8px; margin-top: 12px; }
+	.d-ref-acts .d-btn { flex: 1; }
+	.d-ref-free { margin: 12px 0 0; font-size: .84rem; color: var(--muted); }
+	.d-ref-list { list-style: none; margin: 0; padding: 0; }
+	.d-ref-list li { display: flex; justify-content: space-between; gap: 10px; padding: 9px 0; border-top: 1px solid var(--line-soft); font-size: .9rem; }
+	.d-ref-list li:first-child { border-top: 0; }
+	.d-ref-list small { margin-left: 6px; color: var(--faint); }
+	.d-ref-card h2 small a { color: var(--brand) !important; text-decoration: none; }
 	.d-tips { list-style: none; margin: 14px 0 0; padding: 0; border-top: 1px solid var(--line-soft); }
 	.d-tips a { display: flex; align-items: center; gap: 10px; padding: 11px 0; border-bottom: 1px solid var(--line-soft); font-size: .88rem; color: var(--text) !important; text-decoration: none !important; }
 	.d-tips li:last-child a { border-bottom: 0; padding-bottom: 0; }
@@ -265,7 +282,7 @@
 		.d-main, .d-side { display: contents; }
 		.d-side { position: static; }
 		/* On one column: greeting, numbers, main business, completeness, chart, activity, others */
-		.d-hello { order: 1; } .d-stats, .d-leads-card, .d-people-card { order: 2; } .d-side > .d-biz { order: 3; } .d-str-card { order: 4; } .d-chart-card { order: 5; } .d-act-card { order: 6; } .d-more { order: 7; }
+		.d-hello { order: 1; } .d-stats, .d-leads-card, .d-people-card { order: 2; } .d-side > .d-biz { order: 3; } .d-str-card, .d-ref-card { order: 4; } .d-chart-card { order: 5; } .d-act-card { order: 6; } .d-more { order: 7; }
 	}
 	@media (max-width: 640px) {
 		.d-head-row { padding: 8px 14px; }
@@ -609,6 +626,53 @@
 			{% endif %}
 		</section>
 		{% endif %}
+
+		{% if referral %}
+		<!-- Refer & earn (2026-11-20, referrals.py) -->
+		<section class="d-card d-ref-card" id="refer">
+			<h2>🎁 {{ _("Refer & earn") }}</h2>
+			{% if referral.rewarded %}
+			<p class="d-ref-big">🎉 {{ _("You earned 6 more months free!") }}</p>
+			{% else %}
+			<p class="d-ref-lead">{{ _("Bring {0} businesses to It's Your Profile and get {1} more months free.").format("<b>" ~ referral.goal ~ "</b>", "<b>6</b>") }}</p>
+			{% endif %}
+			<div class="d-meter-head">
+				<b class="num">{{ referral.joined }} / {{ referral.goal }}</b>
+				<span>{% if referral.rewarded %}{{ _("Reward given") }}{% else %}{{ _("{0} more to go").format(referral.left) }}{% endif %}</span>
+			</div>
+			<div class="d-meter" role="progressbar" aria-valuenow="{{ referral.percent }}" aria-valuemin="0" aria-valuemax="100"><i style="--p: {{ referral.percent }}%"></i></div>
+			<p class="d-meter-note">
+				{{ _("A business counts once it signs up with your link or code and makes its page.") }}
+				{% if referral.waiting %}<br>{{ _("{0} signed up but haven't made their page yet.").format(referral.waiting) }}{% endif %}
+			</p>
+			<div class="d-ref-code">
+				<span>{{ _("Your code") }}</span>
+				<b class="num">{{ referral.code }}</b>
+			</div>
+			<div class="d-ref-link" title="{{ referral.link | e }}">{{ referral.link }}</div>
+			<div class="d-ref-acts">
+				<button type="button" class="d-btn" data-ref-copy="{{ referral.link | e }}"><svg class="i" aria-hidden="true"><use href="#i-link"/></svg>{{ _("Copy link") }}</button>
+				<a class="d-btn wa" href="https://wa.me/?text={{ referral.share_text | urlencode }}" target="_blank" rel="noopener"><svg class="i" aria-hidden="true"><use href="#i-chat"/></svg>{{ _("WhatsApp") }}</a>
+			</div>
+			<p class="d-ref-free">{{ _("Your free period runs until {0}.").format("<b>" ~ referral.free_until ~ "</b>") }}</p>
+		</section>
+		{% endif %}
+
+		{% if referrers is not none %}
+		<!-- Staff: top referrers (2026-11-20) -->
+		<section class="d-card d-ref-card" id="referrers">
+			<h2>🎁 {{ _("Top referrers") }}<small><a href="/app/referral">{{ _("All referrals") }}</a></small></h2>
+			{% if referrers %}
+			<ul class="d-ref-list">
+				{% for r in referrers %}
+				<li><span>{{ (r.full_name or r.user) | e }} <small>{{ r.code | e }}</small></span><b class="num">{{ r.businesses_joined }}{% if r.reward_given %} 🎉{% endif %}</b></li>
+				{% endfor %}
+			</ul>
+			{% else %}
+			<p class="d-meter-note">{{ _("No business has joined through a referral link yet.") }}</p>
+			{% endif %}
+		</section>
+		{% endif %}
 	</aside>
 
 	{% if profiles | length > 1 %}
@@ -711,6 +775,16 @@
 	document.querySelectorAll("[data-copy]").forEach(function (btn) {
 		btn.addEventListener("click", function () {
 			var url = location.origin + btn.getAttribute("data-copy");
+			var done = function () { toast({{ _("Link copied") | tojson }}); };
+			if (navigator.clipboard) navigator.clipboard.writeText(url).then(done, function () { prompt("", url); });
+			else prompt("", url);
+		});
+	});
+
+	// Refer & earn: copy the referral link (2026-11-20)
+	document.querySelectorAll("[data-ref-copy]").forEach(function (btn) {
+		btn.addEventListener("click", function () {
+			var url = btn.getAttribute("data-ref-copy");
 			var done = function () { toast({{ _("Link copied") | tojson }}); };
 			if (navigator.clipboard) navigator.clipboard.writeText(url).then(done, function () { prompt("", url); });
 			else prompt("", url);

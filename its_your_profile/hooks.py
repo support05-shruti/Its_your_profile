@@ -78,7 +78,7 @@ website_context = {
 # _ASSET_VERSION (2026-11-12): Frappe links these files with no version, so phones kept old copies
 # for days (the dashboard stayed half white in dark mode). Change this number whenever
 # iyp_site.css, iyp_footer.js or iyp_share.js change, and every browser downloads the new files.
-_ASSET_VERSION = "20261119c"
+_ASSET_VERSION = "20261120a"
 web_include_js = [
 	f"/assets/its_your_profile/js/iyp_footer.js?v={_ASSET_VERSION}",
 	f"/assets/its_your_profile/js/iyp_share.js?v={_ASSET_VERSION}",
@@ -143,7 +143,7 @@ website_generators = ["Business Profile"]
 page_renderer = ["its_your_profile.llms_txt.CrawlerTextPage"]
 
 # Visit logs never stop a Business Profile from being deleted
-ignore_links_on_delete = ["Profile Visit", "Business Enquiry"]
+ignore_links_on_delete = ["Profile Visit", "Business Enquiry", "Referral"]
 
 # automatically load and sync documents of this doctype from downstream apps
 # importable_doctypes = [doctype_1]
@@ -222,7 +222,16 @@ ignore_links_on_delete = ["Profile Visit", "Business Enquiry"]
 # 2026-11-18: refuse robot sign-ups (see signup_guard.py)
 doc_events = {
 	"User": {
-		"before_insert": "its_your_profile.signup_guard.check_new_user",
+		"before_insert": [
+			"its_your_profile.signup_guard.check_new_user",
+			"its_your_profile.referrals.check_typed_code",
+		],
+		# 2026-11-20: Refer & earn, who brought this person (referrals.py)
+		"after_insert": "its_your_profile.referrals.record_signup",
+	},
+	"Business Profile": {
+		# 2026-11-20: a referred person's first page counts for their referrer
+		"after_insert": "its_your_profile.referrals.count_page",
 	},
 }
 

@@ -103,7 +103,16 @@ def track(profile: str, event: str, referrer: str | None = None, utm: str | None
 		if user == frappe.db.get_value("Business Profile", profile, "owner"):
 			return  # owners looking at their own page are not visitors
 		if event == "View":
-			log_logged_in_view(profile, user, source, referrer)
+			log_named_view(profile, frappe.utils.get_fullname(user) or user, user, source, referrer)
+			return
+	elif event == "View":
+		# 2026-11-19: tapped "Continue with Google" on an earlier visit (one_tap.remembered_visitor)
+		from its_your_profile.one_tap import remembered_visitor, save_site_visitor
+
+		person = remembered_visitor()
+		if person:
+			log_named_view(profile, person["name"], person["email"], source, referrer)
+			save_site_visitor(person["name"], person["email"], "/" + (frappe.db.get_value("Business Profile", profile, "route") or ""), source)
 			return
 
 	visit = log(profile, event, visitor="Person", source=source, referrer=referrer)
@@ -180,10 +189,10 @@ def log_known_visit(profile, name, email, source=None, referrer=None):
 	).insert(ignore_permissions=True)
 
 
-def log_logged_in_view(profile, user, source, referrer):
-	"""'👤 Shruti Palande (shruti@…) viewed your page' for a visitor logged in to our site.
-	Counted as a View (the week's numbers), with their name, like a Google One Tap visitor."""
-	name = frappe.utils.get_fullname(user) or user
+def log_named_view(profile, name, email, source, referrer):
+	"""'👤 Shruti Palande (shruti@…) viewed your page' for a visitor logged in to our site, or one who
+	shared their name with Google earlier on this device. Counted as a View (the week's numbers)."""
+	user = email
 	frappe.get_doc(
 		{
 			"doctype": "Profile Visit",

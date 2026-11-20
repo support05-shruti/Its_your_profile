@@ -1,0 +1,94 @@
+{
+ "actions": [],
+ "autoname": "hash",
+ "creation": "2026-11-20 12:00:00.000000",
+ "description": "A person who signed up through someone's referral link or code. It counts for the referrer once they make their business page. Written by its_your_profile.referrals.",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "referrer",
+  "referral_code",
+  "new_user",
+  "column_break_main",
+  "status",
+  "business_profile",
+  "counted_on"
+ ],
+ "fields": [
+  {
+   "fieldname": "referrer",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Referred By",
+   "options": "User",
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "referral_code",
+   "fieldtype": "Link",
+   "label": "Referral Code",
+   "options": "Referral Code",
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "new_user",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "New Member",
+   "options": "User",
+   "read_only": 1,
+   "unique": 1
+  },
+  {
+   "fieldname": "column_break_main",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "Signed Up",
+   "description": "Counts for the referrer only at \"Page Created\"",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Status",
+   "options": "Signed Up\nPage Created",
+   "read_only": 1
+  },
+  {
+   "fieldname": "business_profile",
+   "fieldtype": "Link",
+   "label": "Business Page",
+   "options": "Business Profile",
+   "read_only": 1
+  },
+  {
+   "fieldname": "counted_on",
+   "fieldtype": "Datetime",
+   "label": "Counted On",
+   "read_only": 1
+  }
+ ],
+ "in_create": 1,
+ "links": [],
+ "modified": "2026-11-20 12:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Its Your Profile",
+ "name": "Referral",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "delete": 1,
+   "export": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager"
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
+}

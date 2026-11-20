@@ -11,6 +11,9 @@ Google only allows it on https domains (and localhost), so it works on itsyourpr
 an office IP address like 192.168.1.30.
 """
 
+import base64
+import hashlib
+import hmac
 import time
 
 import frappe
@@ -62,6 +65,7 @@ def identify(
 	path = "/" + (path or "").strip().lstrip("/")[:200]
 
 	save_site_visitor(name, email, path, source)
+	remember_visitor(email)
 
 	if profile and frappe.db.exists("Business Profile", {"name": profile, "published": 1}):
 		since = add_to_date(now_datetime(), hours=-REPEAT_GAP_HOURS)
@@ -79,6 +83,49 @@ def identify(
 				KNOWN_ALERT_GAP,
 			)
 	return {"name": name, "first_name": person["first_name"], "email": email}
+
+# 2026-11-19: a visitor who tapped Continue once is remembered on that device, so later visits show
+# their name too (tracking.track reads it). A signed cookie: it holds their email and a signature
+# made with the site's secret key, so nobody can fake someone else's name by editing it.
+VISITOR_COOKIE = "iyp_visitor"
+VISITOR_COOKIE_DAYS = 365
+
+
+def _signature(email: str) -> str:
+	from frappe.utils.password import get_encryption_key
+
+	return hmac.new(get_encryption_key().encode(), email.encode(), hashlib.sha256).hexdigest()[:32]
+
+
+def remember_visitor(email: str):
+	try:
+		value = base64.urlsafe_b64encode(email.encode()).decode().rstrip("=") + "." + _signature(email)
+		frappe.local.cookie_manager.set_cookie(
+			VISITOR_COOKIE,
+			value,
+			expires=add_to_date(now_datetime(), days=VISITOR_COOKIE_DAYS),
+			httponly=True,
+		)
+	except Exception:
+		frappe.log_error("Google One Tap: could not remember the visitor")
+
+
+def remembered_visitor() -> dict | None:
+	"""{'name', 'email'} of the visitor who shared their name earlier on this device, else None."""
+	try:
+		value = (frappe.request.cookies.get(VISITOR_COOKIE) or "") if frappe.request else ""
+		encoded, _dot, signature = value.partition(".")
+		if not encoded or not signature:
+			return None
+		email = base64.urlsafe_b64decode(encoded + "=" * (-len(encoded) % 4)).decode()
+		if not hmac.compare_digest(signature, _signature(email)):
+			return None
+		name = frappe.db.get_value("Site Visitor", {"email": email}, "full_name")
+		# Removed from Site Visitor by staff: no longer named
+		return {"name": name or email.split("@")[0], "email": email} if name is not None else None
+	except Exception:
+		return None
+
 
 def refuse(reason: str, message: str | None = None):
 	"""Log why Google sign-in was refused (Error Log, title 'Google One Tap refused'), then stop."""

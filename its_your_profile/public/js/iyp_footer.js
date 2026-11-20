@@ -8,11 +8,24 @@
 	window.__iypCredit = true;
 
 	function add() {
+		keepReferralCode();
 		fixLogo();
 		fixSignupButton();
 		guardSignup();
 		addThemeSwitch();
 		countPageView();
+	}
+
+	// 2026-11-20: Refer & earn. A link like itsyourprofile.com/?ref=SHRUTI7K keeps the code for 30 days, so
+	// the sign-up form can fill it in and the server can credit the owner who shared it (referrals.py).
+	var REF_COOKIE = "iyp_ref";
+	function referralCode() {
+		var match = document.cookie.match(/(?:^|;\s*)iyp_ref=([A-Za-z0-9]{3,20})/);
+		return match ? match[1].toUpperCase() : "";
+	}
+	function keepReferralCode() {
+		var code = (new URLSearchParams(location.search).get("ref") || "").replace(/[^A-Za-z0-9]/g, "").toUpperCase().slice(0, 20);
+		if (code.length >= 3) document.cookie = REF_COOKIE + "=" + code + "; max-age=" + 30 * 24 * 3600 + "; path=/; samesite=lax";
 	}
 
 	// 2026-11-18: robots were signing up with made-up names and other people's emails, sending them
@@ -45,6 +58,17 @@
 				'<p class="field-error text-base text-ink-red-8 mb-0"></p>';
 			group.parentNode.insertBefore(box, group.nextSibling);
 		}
+		// 2026-11-20: "Referral code (optional)", filled in from a referral link (keepReferralCode)
+		if (group && !document.getElementById("iyp_ref_code")) {
+			var refBox = document.createElement("div");
+			refBox.className = "form-group flex flex-col items-start gap-1.5 mb-0 iyp-ref";
+			refBox.innerHTML =
+				'<label class="text-base text-ink-gray-5 w-full mb-0" for="iyp_ref_code">Referral code (optional)</label>' +
+				'<input type="text" id="iyp_ref_code" class="form-control" autocapitalize="characters" autocorrect="off" spellcheck="false" autocomplete="off" maxlength="20" placeholder="e.g. SHRUTI7K">';
+			group.parentNode.insertBefore(refBox, group.nextSibling);
+			refBox.querySelector("input").value = referralCode();
+		}
+		var refInput = document.getElementById("iyp_ref_code");
 		var question = form.querySelector(".iyp-captcha-q");
 		var answer = document.getElementById("iyp_captcha_answer");
 		function loadCaptcha() {
@@ -85,6 +109,8 @@
 					if (human) args.iyp_human = "iyp-1";
 					args.iyp_captcha_id = captcha.id;
 					args.iyp_captcha_answer = value;
+					var ref = refInput ? refInput.value.replace(/[^A-Za-z0-9]/g, "").toUpperCase() : "";
+					if (ref) args.iyp_ref = ref;
 					// Each question works once: show a new one for the next try
 					setTimeout(loadCaptcha, 1500);
 				}

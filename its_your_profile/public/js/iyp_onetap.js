@@ -53,9 +53,17 @@
 		document.dispatchEvent(event);
 	}
 
-	// Already shared their name earlier in this tab: fill forms, no box again
+	// Already shared their name earlier on this device (2026-11-19: kept in localStorage, not only this
+	// tab; the server remembers them too, see one_tap.remember_visitor): fill forms, no box again
+	function keep(value) {
+		try {
+			if (value === undefined) return localStorage.getItem(KNOWN) || sessionStorage.getItem(KNOWN);
+			localStorage.setItem(KNOWN, value);
+		} catch (e) { store(KNOWN, value); }
+		return null;
+	}
 	var known = null;
-	try { known = JSON.parse(store(KNOWN) || "null"); } catch (e) { known = null; }
+	try { known = JSON.parse(keep() || "null"); } catch (e) { known = null; }
 
 	function profileId() {
 		var page = document.querySelector("[data-iyp-profile]");
@@ -73,7 +81,7 @@
 		}).then(function (r) { return r.ok ? r.json() : null; }).then(function (data) {
 			var person = data && data.message;
 			if (!person) return;
-			store(KNOWN, JSON.stringify(person));
+			keep(JSON.stringify(person));
 			announce(person);
 		}).catch(function () {});
 	}
@@ -103,7 +111,8 @@
 				if (wrap) wrap.hidden = false;
 			} catch (e) { /* button could not be drawn */ }
 		});
-		if (popupClosed) return;
+		// Known on this device already: the server names their visits, no pop-up needed
+		if (popupClosed || known) return;
 		google.accounts.id.prompt(function (n) {
 			if (n && n.isSkippedMoment && n.isSkippedMoment()) store(CLOSED, "1");
 		});

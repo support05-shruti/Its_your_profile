@@ -56,7 +56,14 @@ FAQS = (
 	(
 		"Is it really free?",
 		"Yes. Every feature is free for your first 6 months. You don't need a credit card or any payment details. "
-		"We will tell you about plans well before the free period ends, and nothing is charged unless you choose a plan.",
+		"After that it is ₹1,200 + GST, paid one time, for life: no monthly fees. We will remind you well before "
+		"the free period ends.",
+	),
+	(
+		"How does Refer & earn work?",
+		"Every business gets its own referral link and code on its dashboard. When 12 businesses sign up with it "
+		"and make their page, you get 6 more months free. A business that only signs up, without making a page, "
+		"does not count.",
 	),
 	(
 		"Do I need my own website?",
