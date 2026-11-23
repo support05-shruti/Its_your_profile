@@ -202,6 +202,9 @@
 	.d-site-from b { color: var(--ink); font-weight: 600; }
 	.d-site-total { margin: 10px 0 4px; padding-bottom: 10px; border-bottom: 1px solid var(--line-soft); font-size: .82rem; color: var(--faint); }
 	.d-person { display: flex; align-items: flex-start; gap: 12px; padding: 12px 2px; border-bottom: 1px solid var(--line-soft); }
+	/* New registrations (2026-11-23): its own scroll, so 100 sign-ups don't make the page endless */
+	.d-reg-card .d-list { max-height: 520px; overflow-y: auto; margin-top: 6px; }
+	.d-reg-card .d-lead-meta a { color: var(--brand, #3B2E7E); font-weight: 600; }
 	.d-list .d-person:last-child { border-bottom: 0; padding-bottom: 2px; }
 	.d-person-av { width: 32px; height: 32px; flex: none; border-radius: 50%; display: grid; place-items: center; background: var(--ok-soft); color: var(--ok); font-size: .85rem; font-weight: 700; }
 	.d-person-body { flex: 1; min-width: 0; }
@@ -502,6 +505,43 @@
 				<b>{{ _("No names yet") }}</b>
 				<p>{{ _("When a visitor taps \"Continue with Google\" on any page of the site, their name and email show here.") }}</p>
 			</div>
+			{% endif %}
+		</section>
+		{% endif %}
+
+		{% if registrations %}
+		<!-- New registrations (2026-11-23, staff only): everyone who signed up, newest first -->
+		<section class="d-card d-people-card d-reg-card" id="registrations">
+			<h2>{{ _("New registrations") }}<small><a href="/app/user?user_type=Website%20User">{{ _("All in desk") }}</a></small></h2>
+			<div class="d-site-nums">
+				<div><b class="num">{{ registrations.today }}</b><span>{{ _("Today") }}</span></div>
+				<div><b class="num">{{ registrations.this_week }}</b><span>{{ _("Last 7 days") }}</span></div>
+				<div><b class="num">{{ registrations.total }}</b><span>{{ _("Total") }}</span></div>
+			</div>
+			<p class="d-site-total">{{ _("{0} of {1} have made their business page").format(registrations.with_page, registrations.total) }}</p>
+			{% if registrations.rows %}
+			<ul class="d-list">
+				{% for u in registrations.rows %}
+				<li class="d-person">
+					<span class="d-person-av" aria-hidden="true">{{ u.initial | e }}</span>
+					<div class="d-person-body">
+						<div class="d-person-top"><b>{{ (u.full_name or u.email) | e }}</b><a href="mailto:{{ u.email | e }}">{{ u.email | e }}</a></div>
+						<p class="d-lead-meta">
+							<span title="{{ u.date }}">{{ _("Joined {0}").format(u.when) }}</span>
+							{% if u.page_url %}<span>✅ <a href="{{ u.page_url | e }}" target="_blank" rel="noopener">{{ u.page_name | e }}</a></span>
+							{% elif u.page_name %}<span>📝 {{ u.page_name | e }} · {{ _("not published") }}</span>
+							{% else %}<span>⏳ {{ _("No page yet") }}</span>{% endif %}
+							{% if u.referred_by %}<span>🎁 {{ _("Referred by {0}").format(u.referred_by | e) }}</span>{% endif %}
+							<span>{{ _("Last login {0}").format(u.last_seen) if u.last_seen else _("Never logged in") }}</span>
+							{% if not u.enabled %}<span>🚫 {{ _("Disabled") }}</span>{% endif %}
+						</p>
+					</div>
+				</li>
+				{% endfor %}
+			</ul>
+			{% if registrations.total > registrations.shown %}<p class="d-site-total"><a href="/app/user?user_type=Website%20User">{{ _("Showing the newest {0}. See all {1} in the desk").format(registrations.shown, registrations.total) }} →</a></p>{% endif %}
+			{% else %}
+			<div class="d-empty"><b>{{ _("No registrations yet") }}</b></div>
 			{% endif %}
 		</section>
 		{% endif %}

@@ -116,6 +116,8 @@ def get_context(context):
 			"leads": leads,
 			# 2026-11-16: everyone who tapped "Continue with Google" anywhere on the site (staff only)
 			"people": get_site_people() if is_staff else None,
+			# 2026-11-23: everyone who signed up, newest first (staff only)
+			"registrations": get_new_registrations() if is_staff else None,
 			"new_leads": sum(1 for lead in leads if lead.status == "New"),
 			"has_profile": bool(profiles),
 			"profiles": profiles,
@@ -177,6 +179,58 @@ def get_site_people():
 		total=frappe.db.count("Site Visitor"),
 		this_week=frappe.db.count("Site Visitor", {"last_seen": (">=", week_ago)}),
 		new_this_week=frappe.db.count("Site Visitor", {"first_seen": (">=", week_ago)}),
+	)
+
+
+def get_new_registrations():
+	"""2026-11-23 (staff only): everyone who signed up on the website, newest first: when, whether
+	they made their business page yet, who referred them, and when they last logged in."""
+	users = frappe.get_all(
+		"User",
+		filters={"user_type": "Website User", "name": ("not in", ("Guest", "Administrator"))},
+		fields=["name", "full_name", "email", "creation", "last_login", "enabled"],
+		order_by="creation desc",
+		limit_page_length=LIMIT,
+	)
+	names = [u.name for u in users]
+	pages, referrals = {}, {}
+	if names:
+		for p in frappe.get_all(
+			"Business Profile",
+			filters={"owner": ("in", names)},
+			fields=["owner", "company_name", "route", "published"],
+			order_by="creation asc",
+		):
+			pages.setdefault(p.owner, p)
+		if frappe.db.table_exists("Referral"):
+			for r in frappe.get_all(
+				"Referral", filters={"new_user": ("in", names)}, fields=["new_user", "referrer", "referral_code"]
+			):
+				referrals[r.new_user] = r
+	for u in users:
+		u.when = pretty_date(u.creation)
+		u.date = format_date(u.creation)
+		u.initial = (u.full_name or u.email or "?")[0].upper()
+		u.last_seen = pretty_date(u.last_login) if u.last_login else None
+		page = pages.get(u.name)
+		u.page_name = page.company_name if page else None
+		u.page_url = "/" + page.route if page and page.published and page.route else None
+		ref = referrals.get(u.name)
+		u.referred_by = (frappe.utils.get_fullname(ref.referrer) + f" ({ref.referral_code})") if ref else None
+	week_ago = add_days(now_datetime(), -WEEK)
+	base = {"user_type": "Website User", "name": ("not in", ("Guest", "Administrator"))}
+	total = frappe.db.count("User", base)
+	with_page = frappe.db.sql(
+		"""select count(distinct bp.owner) from `tabBusiness Profile` bp
+		join `tabUser` u on u.name = bp.owner where u.user_type = 'Website User'"""
+	)[0][0]
+	return frappe._dict(
+		rows=users,
+		total=total,
+		this_week=frappe.db.count("User", {**base, "creation": (">=", week_ago)}),
+		today=frappe.db.count("User", {**base, "creation": (">=", getdate())}),
+		with_page=with_page,
+		shown=len(users),
 	)
 
 
