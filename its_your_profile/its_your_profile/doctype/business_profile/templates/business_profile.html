@@ -949,6 +949,8 @@
 	}
 	function eventFor(el) {
 		if (el.matches("[data-save]")) return "Save Contact";
+		// 2026-11-23: copying the number or email counts like tapping it
+		if (el.matches(".iyp-copy[data-copy]")) return (el.getAttribute("data-copy") || "").indexOf("@") > 0 ? "Email" : "Call";
 		if (el.id === "iyp-share") return "Share";
 		var href = el.getAttribute("href") || "";
 		if (href.indexOf("tel:") === 0) return "Call";

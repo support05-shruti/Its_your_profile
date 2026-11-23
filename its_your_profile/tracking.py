@@ -102,22 +102,23 @@ def track(profile: str, event: str, referrer: str | None = None, utm: str | None
 	source = source_of(referrer, utm)
 
 	# 2026-11-19: a visitor logged in to It's Your Profile is known by name, like LinkedIn
+	# 2026-11-23: and so is a visitor who shared their name before (Google or the View more form),
+	# for EVERY button, not only the page view: "👤 Rahul Sharma (rahul@…) tapped Call"
 	user = frappe.session.user
+	person = None
 	if user != "Guest":
 		if user == frappe.db.get_value("Business Profile", profile, "owner"):
 			return  # owners looking at their own page are not visitors
-		if event == "View":
-			log_named_view(profile, frappe.utils.get_fullname(user) or user, user, source, referrer)
-			return
-	elif event == "View":
-		# 2026-11-19: tapped "Continue with Google" on an earlier visit (one_tap.remembered_visitor)
+		person = {"name": frappe.utils.get_fullname(user) or user, "email": user}
+	else:
 		from its_your_profile.one_tap import remembered_visitor, save_site_visitor
 
 		person = remembered_visitor()
-		if person:
-			log_named_view(profile, person["name"], person["email"], source, referrer)
+		if person and event == "View":
 			save_site_visitor(person["name"], person["email"], "/" + (frappe.db.get_value("Business Profile", profile, "route") or ""), source)
-			return
+	if person:
+		log_named_view(profile, person["name"], person["email"], source, referrer, event)
+		return
 
 	visit = log(profile, event, visitor="Person", source=source, referrer=referrer)
 	notify_visit(profile, event, source)
@@ -193,15 +194,16 @@ def log_known_visit(profile, name, email, source=None, referrer=None):
 	).insert(ignore_permissions=True)
 
 
-def log_named_view(profile, name, email, source, referrer):
+def log_named_view(profile, name, email, source, referrer, event="View"):
 	"""'👤 Shruti Palande (shruti@…) viewed your page' for a visitor logged in to our site, or one who
-	shared their name with Google earlier on this device. Counted as a View (the week's numbers)."""
+	shared their name earlier on this device. Counted as a View (the week's numbers).
+	2026-11-23: also their taps, with the same name: '👤 Shruti Palande (shruti@…) tapped Call'."""
 	user = email
 	frappe.get_doc(
 		{
 			"doctype": "Profile Visit",
 			"business_profile": profile,
-			"event": "View",
+			"event": event,
 			"visitor": "Known Person",
 			"visitor_name": name,
 			"visitor_email": user,
@@ -211,7 +213,11 @@ def log_named_view(profile, name, email, source, referrer):
 	).insert(ignore_permissions=True)
 	came_from = "" if source in ("Direct", "It's Your Profile") else f" · came from {source}"
 	esc = frappe.utils.escape_html
-	notify_owner(profile, f"👤 {esc(name)} ({esc(user)}) viewed your page{came_from}", f"Known:{user}", VIEW_ALERT_GAP)
+	_icon, action = ALERTS.get(event, ("👀", "viewed your page"))
+	gap = VIEW_ALERT_GAP if event == "View" else TAP_ALERT_GAP
+	# Views keep the key one_tap.py uses, so a sign-in and the next view don't alert twice
+	key = f"Known:{user}" if event == "View" else f"Known:{event}:{user}"
+	notify_owner(profile, f"👤 {esc(name)} ({esc(user)}) {action}{came_from}", key, gap)
 
 
 def notify_visit(profile, event, source):

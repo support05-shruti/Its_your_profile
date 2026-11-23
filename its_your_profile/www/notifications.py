@@ -311,7 +311,13 @@ def describe_visit(visit, companies=None):
 		who = visit.visitor_name or _("Someone")
 		if visit.visitor_email:
 			who += f" ({visit.visitor_email})"
-		text = _("{0} viewed your page").format(who)
+		# 2026-11-23: known visitors' taps carry their name too ("Rahul Sharma tapped Call")
+		if visit.event in ALERTS and visit.event != "View":
+			text = f"{who} {_(ALERTS[visit.event][1])}"
+			if visit.event in LEADS:
+				kind = "lead"
+		else:
+			text = _("{0} viewed your page").format(who)
 		if visit.source and visit.source not in ("Direct", "It's Your Profile"):
 			text += " · " + _("from {0}").format(visit.source)
 		if companies and companies.get(visit.business_profile):

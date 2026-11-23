@@ -220,6 +220,24 @@ def explain(profile: str | None = None, start: str | None = None, end: str | Non
 	return out
 
 
+def find_profile(value: str) -> str:
+	"""The Business Profile's ID from its ID, its page address (iyp-26-11-00003, business/iyp-…,
+	or the full URL) or its company name (SoftWorld). 2026-11-23: the page address is what staff see."""
+	value = (value or "").strip()
+	if frappe.db.exists("Business Profile", value):
+		return value
+	route = value.split("://", 1)[-1].split("/", 1)[-1] if "://" in value else value
+	route = route.strip("/")
+	for candidate in (route, f"business/{route}"):
+		name = frappe.db.get_value("Business Profile", {"route": candidate}, "name")
+		if name:
+			return name
+	name = frappe.db.get_value("Business Profile", {"company_name": ("like", f"%{value}%")}, "name")
+	if name:
+		return name
+	frappe.throw(_("No business found for {0}. Use its page address, e.g. iyp-26-11-00003.").format(value))
+
+
 @frappe.whitelist(methods=["GET", "POST"])
 def test_report(to: str | None = None, profile: str | None = None):
 	"""Staff only (2026-11-23): open in the browser while logged in as staff,
@@ -230,7 +248,7 @@ def test_report(to: str | None = None, profile: str | None = None):
 	to = to or frappe.db.get_value("User", frappe.session.user, "email")
 	if not validate_email_address(to or ""):
 		frappe.throw(_("Add ?to=your@email.com to the address."))
-	result = explain(profile=profile, to=to)
+	result = explain(profile=find_profile(profile) if profile else None, to=to)
 	return {k: (str(v) if not isinstance(v, (str, int, bool, type(None))) else v) for k, v in result.items()}
 
 
