@@ -9,6 +9,8 @@
 <meta property="og:image" content="{{ share_image | e }}">
 <meta property="og:url" content="{{ home_url | e }}">
 <link rel="canonical" href="{{ home_url | e }}">
+{#- Google Search Console ownership (2026-11-23). Keep it: Google re-checks it, and removing it loses Search Console access -#}
+<meta name="google-site-verification" content="wN2YIqNVziheM16JxCebLzyL49YauYGwMshf8jgsh18" />
 <link rel="apple-touch-icon" href="/assets/its_your_profile/images/iyp-favicon.png">
 {#- Android (2026-11-06): address bar in our colours, and "Add to Home screen" installs the site like an app -#}
 <meta name="theme-color" content="#F3F0FB" media="(prefers-color-scheme: light)">
@@ -439,6 +441,8 @@
 		</div>
 	</section>
 	<script type="application/ld+json">{{ faq_schema | tojson }}</script>
+	{% for item in site_schema %}<script type="application/ld+json">{{ item | tojson }}</script>
+	{% endfor %}
 
 	<!-- Directory search: backend users only (2026-11-06), as the directory is private on the live site -->
 	{% if is_backend_user %}

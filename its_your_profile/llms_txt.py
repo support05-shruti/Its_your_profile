@@ -193,7 +193,8 @@ def get_sitemap_xml() -> str:
 
 	from frappe.www.sitemap import get_context as frappe_sitemap
 
-	links = []
+	# The home page first: Frappe leaves it out, and it is the page Google should find for the brand (2026-11-23)
+	links = [{"loc": frappe.utils.get_url("/").rstrip("/") + "/", "lastmod": frappe.utils.today()}]
 	for link in frappe_sitemap(frappe._dict())["links"]:
 		route = link["loc"].split("://", 1)[-1].split("/", 1)[-1].strip("/")
 		settings = SETTINGS_PAGES.get(route)

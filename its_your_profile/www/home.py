@@ -122,6 +122,32 @@ def get_context(context):
 			{"@type": "Question", "name": f["q"], "acceptedAnswer": {"@type": "Answer", "text": f["a"]}} for f in faqs
 		],
 	}
+	# Brand for Google (2026-11-23): the site name shown in results, and who runs it,
+	# so a search for "its your profile" / "itsyourprofile.com" finds this site
+	home_url = frappe.utils.get_url("/")
+	context.site_schema = [
+		{
+			"@context": "https://schema.org",
+			"@type": "WebSite",
+			"name": "It's Your Profile",
+			"alternateName": ["Its Your Profile", "ItsYourProfile", "itsyourprofile.com"],
+			"url": home_url,
+		},
+		{
+			"@context": "https://schema.org",
+			"@type": "Organization",
+			"name": "It's Your Profile",
+			"alternateName": "itsyourprofile.com",
+			"url": home_url,
+			"logo": frappe.utils.get_url("/assets/its_your_profile/images/iyp-logo.png"),
+			"description": "Turns visiting cards into business pages that AI assistants and search engines can find.",
+			"parentOrganization": {
+				"@type": "Organization",
+				"name": "SoftWorld Solutions Pvt. Ltd.",
+				"url": "https://softworld.co.in",
+			},
+		},
+	]
 	context.update(
 		{
 			"title": "It's Your Profile · Get found by AI",
