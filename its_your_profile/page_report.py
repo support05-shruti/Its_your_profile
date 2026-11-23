@@ -220,6 +220,20 @@ def explain(profile: str | None = None, start: str | None = None, end: str | Non
 	return out
 
 
+@frappe.whitelist(methods=["GET", "POST"])
+def test_report(to: str | None = None, profile: str | None = None):
+	"""Staff only (2026-11-23): open in the browser while logged in as staff,
+	/api/method/its_your_profile.page_report.test_report?to=me@example.com
+	Sends a test report now and shows why a report would or wouldn't go (the System Console is
+	switched off on these sites, so this replaces running explain() there)."""
+	frappe.only_for(("System Manager", "Administrator"))
+	to = to or frappe.db.get_value("User", frappe.session.user, "email")
+	if not validate_email_address(to or ""):
+		frappe.throw(_("Add ?to=your@email.com to the address."))
+	result = explain(profile=profile, to=to)
+	return {k: (str(v) if not isinstance(v, (str, int, bool, type(None))) else v) for k, v in result.items()}
+
+
 def send_report(profile: str, start: str, end: str):
 	"""One business's report. Problems go to the Error Log and never stop the others."""
 	start_d, end_d = getdate(start), getdate(end)
@@ -258,8 +272,11 @@ def send_report(profile: str, start: str, end: str):
 		frappe.sendmail(
 			recipients=[to],
 			sender=frappe.db.get_value("Email Account", account, "email_id") if account else None,
-			subject=(_("Daily page report for {0}") if daily else _("Weekly page report for {0}")).format(
-				doc.company_name or profile
+			# The period in the subject: each report is its own email, so Gmail doesn't fold it into
+			# one conversation and hide the numbers and chart as "repeated" (2026-11-23)
+			subject=(_("Daily page report for {0} · {1}") if daily else _("Weekly page report for {0} · {1}")).format(
+				doc.company_name or profile,
+				format_date(start_d, "d MMM") if daily else f"{format_date(start_d, 'd MMM')} – {format_date(add_days(end_d, -1), 'd MMM')}",
 			),
 			template="page_report",
 			args={
