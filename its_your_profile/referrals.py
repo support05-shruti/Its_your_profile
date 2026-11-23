@@ -7,7 +7,8 @@ row records who brought them ("Signed Up"). It counts for the referrer only once
 business page ("Page Created"), so fake sign-ups earn nothing.
 
 12 businesses → 6 more months free, given once, automatically (REFERRALS_FOR_REWARD).
-Everyone's free period is 6 months from sign-up (FREE_MONTHS); no payment is taken yet.
+Everyone's free period is 3 months from sign-up (FREE_MONTHS; was 6 until 2026-11-23); no payment
+is taken yet. After it: ₹1,200 + GST for 10 years.
 """
 
 import re
@@ -17,7 +18,7 @@ import frappe
 from frappe import _
 from frappe.utils import add_months, escape_html, getdate, now_datetime, today
 
-FREE_MONTHS = 6
+FREE_MONTHS = 3  # 2026-11-23: was 6
 REFERRALS_FOR_REWARD = 12
 REWARD_MONTHS = 6
 CODE_COOKIE = "iyp_ref"
@@ -130,7 +131,7 @@ def tell_reward(user: str):
 	try:
 		frappe.sendmail(
 			recipients=[user],
-			subject=_("You've earned 6 months free on It's Your Profile"),
+			subject=_("You've earned 6 more months free on It's Your Profile"),
 			message=f"<p>{escape_html(message)}</p><p>{_('Thank you for sharing It’s Your Profile.')}</p>",
 		)
 	except Exception:
@@ -138,7 +139,7 @@ def tell_reward(user: str):
 
 
 def free_until(user: str):
-	"""Last day of the free period: 6 months from sign-up, +6 when the referral reward was given."""
+	"""Last day of the free period: 3 months from sign-up, +6 when the referral reward was given."""
 	joined = frappe.db.get_value("User", user, "creation")
 	months = FREE_MONTHS + (REWARD_MONTHS if frappe.db.get_value("Referral Code", {"user": user}, "reward_given") else 0)
 	return add_months(getdate(joined), months)
@@ -164,7 +165,7 @@ def dashboard(user: str) -> dict:
 		free_until=frappe.utils.format_date(free_until(user)),
 		share_text=_(
 			"I made my business page on It's Your Profile, so Google and AI assistants can find us. "
-			"Make yours free for 6 months: {0}"
+			"Make yours free for 3 months: {0}"
 		).format(link),
 	)
 

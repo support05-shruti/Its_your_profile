@@ -399,21 +399,21 @@
 		</div>
 	</section>
 
-	<!-- Pricing (2026-11-06): launch offer, everything free for the first 6 months -->
+	<!-- Pricing (2026-11-23): free for the first 3 months, then ₹1,200 + GST for 10 years -->
 	<section id="pricing" class="iyp-wrap iyp-pricing">
 		<div class="iyp-price-card iyp-reveal">
 			<div class="iyp-price-copy">
 				<span class="iyp-price-badge">✨ {{ _("Launch offer") }}</span>
-				<h2>{{ _("Free for your first") }} <em class="iyp-orange-em">{{ _("6 months") }}</em></h2>
-				<p>{{ _("We've only just opened our doors, and we'd love you to grow with us. Create your page today and use every feature free for six whole months. No card, no payment details, no catch.") }}</p>
+				<h2>{{ _("Free for your first") }} <em class="iyp-orange-em">{{ _("3 months") }}</em></h2>
+				<p>{{ _("We've only just opened our doors, and we'd love you to grow with us. Create your page today and use every feature free for three whole months. No card, no payment details, no catch.") }}</p>
 				<p class="iyp-price-thanks">{{ _("It's our way of saying thank you for being one of our first businesses.") }} 💜</p>
 				{#- 2026-11-20: the price after the free period, and Refer & earn (referrals.py) -#}
-				<p>{{ _("After that, just {0} + GST, one time, for life. No monthly fees.").format("<b>₹1,200</b>") }}</p>
+				<p>{{ _("After that, just {0} + GST for {1}, paid once. No monthly fees.").format("<b>₹1,200</b>", "<b>" ~ _("10 years") ~ "</b>") }}</p>
 				<p>🎁 {{ _("Refer & earn: bring {0} businesses with your referral link and get {1} more months free.").format("<b>12</b>", "<b>6</b>") }}</p>
 			</div>
 			<div class="iyp-price-box">
 				<span class="iyp-price-amount">₹0</span>
-				<span class="iyp-price-period">{{ _("for 6 months") }}</span>
+				<span class="iyp-price-period">{{ _("for 3 months") }}</span>
 				<ul>
 					<li>{{ _("Your own business page") }}</li>
 					<li>{{ _("Ready for ChatGPT, Gemini & Claude") }}</li>
@@ -421,8 +421,8 @@
 					<li>{{ _("QR code for your cards") }}</li>
 					<li>{{ _("Listed in the directory") }}</li>
 				</ul>
-				<a class="iyp-btn iyp-btn-primary" href="#start">{{ _("Start my free 6 months") }}</a>
-				<small>{{ _("Then ₹1,200 + GST, one time, for life. We'll remind you before your free period ends.") }}</small>
+				<a class="iyp-btn iyp-btn-primary" href="#start">{{ _("Start my free 3 months") }}</a>
+				<small>{{ _("Then ₹1,200 + GST for 10 years, paid once. We'll remind you before your free period ends.") }}</small>
 			</div>
 		</div>
 	</section>

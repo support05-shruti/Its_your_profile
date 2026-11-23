@@ -5,7 +5,7 @@ from frappe.utils import getdate, format_date
 sitemap = 1
 
 # Change this date whenever the terms in terms.html change
-LAST_UPDATED = "2026-11-07"
+LAST_UPDATED = "2026-11-23"  # free period 3 months; ₹1,200 + GST for 10 years
 
 
 def get_context(context):

@@ -55,8 +55,8 @@ FAQS = (
 	),
 	(
 		"Is it really free?",
-		"Yes. Every feature is free for your first 6 months. You don't need a credit card or any payment details. "
-		"After that it is ₹1,200 + GST, paid one time, for life: no monthly fees. We will remind you well before "
+		"Yes. Every feature is free for your first 3 months. You don't need a credit card or any payment details. "
+		"After that it is ₹1,200 + GST for 10 years, paid once: no monthly fees. We will remind you well before "
 		"the free period ends.",
 	),
 	(

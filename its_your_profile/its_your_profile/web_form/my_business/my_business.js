@@ -146,7 +146,7 @@ frappe.ready(function () {
 			});
 			const perks = document.createElement("div");
 			perks.className = "iyp-perks";
-			[__("⚡ Ready in a minute"), __("🤖 AI fills in the details"), __("🎁 Free for 6 months")].forEach((text, i) => {
+			[__("⚡ Ready in a minute"), __("🤖 AI fills in the details"), __("🎁 Free for 3 months")].forEach((text, i) => {
 				const el = document.createElement("span");
 				el.style.setProperty("--i", i);
 				el.textContent = text;
