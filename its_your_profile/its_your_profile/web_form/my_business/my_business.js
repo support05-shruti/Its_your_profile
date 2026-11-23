@@ -731,7 +731,36 @@ frappe.ready(function () {
 		}, POLL_MS);
 	};
 
+	// 2026-11-23: show the logo we already have (uploaded, from the card or the website) as a
+	// picture, not only as a file name, and update it when a new one is uploaded or removed
+	const show_logo = () => {
+		const field = web_form.fields_dict.company_logo;
+		if (!field) return;
+		const wrap = field.$wrapper.get(0);
+		const url = web_form.get_value("company_logo") || (web_form.doc && web_form.doc.company_logo) || "";
+		let box = wrap.querySelector(".iyp-logo-preview");
+		if (!/^(\/files\/|\/private\/files\/|https?:\/\/)/.test(url)) {
+			if (box) box.remove();
+			return;
+		}
+		if (!box) {
+			box = document.createElement("div");
+			box.className = "iyp-logo-preview";
+			box.innerHTML = `<img alt=""><span>${__("Your current logo")}</span>`;
+			box.querySelector("img").addEventListener("error", () => box.remove());
+			(wrap.querySelector(".control-input-wrapper") || wrap).prepend(box);
+		}
+		const img = box.querySelector("img");
+		if (img.getAttribute("src") !== url) img.setAttribute("src", url);
+	};
+	on_field("company_logo", () => setTimeout(show_logo, 50));
+
 	// The form may finish loading before this script runs, so check now as well as on after_load
-	web_form.after_load = watch_scan;
+	web_form.after_load = () => {
+		watch_scan();
+		show_logo();
+	};
 	watch_scan();
+	show_logo();
+	setTimeout(show_logo, 800);
 });

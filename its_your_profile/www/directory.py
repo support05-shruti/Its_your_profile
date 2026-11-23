@@ -15,6 +15,7 @@ from frappe import _
 from frappe.utils import get_url, strip_html
 
 from its_your_profile.its_your_profile.doctype.business_profile.business_profile import (
+	add_country_plus,
 	readable_on_white,
 	whatsapp_number,
 )
@@ -88,7 +89,7 @@ def get_context(context):
 		b.place = ", ".join(x for x in (b.city, b.state) if x)
 		b.person = " · ".join(x for x in (b.contact_person, b.designation) if x)
 		# Phone only when the owner keeps it public (2026-11-07)
-		b.call = re.split(r"[/,]", b.phone)[0].strip() if b.phone and not b.hide_phone else None
+		b.call = add_country_plus(re.split(r"[/,]", b.phone)[0].strip()) if b.phone and not b.hide_phone else None
 		b.wa = whatsapp_number(b.call) if b.call else None
 		site = (b.website_url or "").strip()
 		b.site_href = site if site.startswith(("http://", "https://")) else ("https://" + site if site else None)

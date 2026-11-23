@@ -527,6 +527,33 @@
 	.iyp-gsi-or { display: flex; align-items: center; gap: 10px; margin: 14px 0 0; font-size: .78rem; color: var(--muted); }
 	.iyp-gsi-or::before, .iyp-gsi-or::after { content: ""; flex: 1; height: 1px; background: var(--line); }
 	[data-iyp-theme="dark"] .iyp-gsi-done { background: #10291F; color: #5FD39A; }
+
+	/* 2026-11-23: "View more" gate. While locked, contact details and the rest are hidden and the
+	   page is one column; the gate box asks for Google or name + email ID. */
+	.iyp-gate { display: none; }
+	.iyp.iyp-locked .iyp-gate { display: block; }
+	.iyp.iyp-locked [data-iyp-lock] { display: none !important; }
+	.iyp.iyp-locked .iyp-grid { grid-template-columns: minmax(0, 1fr); max-width: 760px; margin-left: auto; margin-right: auto; }
+	.iyp-gate { position: relative; text-align: center; padding: 28px 24px 24px; border: 2px dashed #C9BDF5; background: linear-gradient(180deg, #FBFAFF 0%, #FFFFFF 100%); }
+	.iyp-gate-lock { display: inline-grid; place-items: center; width: 52px; height: 52px; margin: 0 auto 10px; border-radius: 50%; background: #F1EDFC; font-size: 24px; }
+	.iyp-gate .iyp-gate-title { justify-content: center; margin: 0 0 6px; font-size: 1.35rem; }
+	.iyp-gate-lead { max-width: 460px; margin: 0 auto 14px; color: var(--ink-2); font-size: .95rem; line-height: 1.55; }
+	.iyp-gate-lead b { color: var(--ink); }
+	.iyp-gate-teaser { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin: 0 0 18px; }
+	.iyp-gate-teaser span { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 999px; background: #F4F2FA; color: var(--muted); font-size: .8rem; font-weight: 600; filter: blur(.2px); }
+	.iyp-gate-teaser span::after { content: "🔒"; font-size: .7rem; opacity: .7; }
+	.iyp-gate-teaser .iyp-i { width: 14px; height: 14px; }
+	.iyp-gate .iyp-gsi { max-width: 380px; margin: 0 auto 4px; }
+	.iyp-gate-form { display: grid; gap: 12px; max-width: 380px; margin: 14px auto 0; text-align: left; }
+	.iyp-gate-form input { width: 100%; }
+	.iyp-req { color: #D9480F; font-weight: 700; }
+	.iyp-gate-send { width: 100%; justify-content: center; font-size: 1rem; }
+	.iyp-gate-form .iyp-enq-note { text-align: center; }
+	.iyp-gate-form.is-sending .iyp-gate-send { opacity: .7; pointer-events: none; }
+	@media (max-width: 640px) { .iyp-gate { padding: 22px 16px 18px; } .iyp-gate .iyp-gate-title { font-size: 1.15rem; } }
+	[data-iyp-theme="dark"] .iyp-gate { background: linear-gradient(180deg, #1A1638 0%, #15122B 100%); border-color: #4F4690; }
+	[data-iyp-theme="dark"] .iyp-gate-lock { background: #2A2450; }
+	[data-iyp-theme="dark"] .iyp-gate-teaser span { background: #221D42; color: #B8B2D6; }
 	/* ---------- Dark mode (2026-11-12) ----------
 	   Follows the visitor's light/dark choice (<html data-iyp-theme>, set in <head> on every page).
 	   The business's own colour stays; text in that colour is lightened so it reads on dark.
@@ -580,7 +607,19 @@
 	}
 </style>
 
-<article class="iyp" data-iyp-profile="{{ doc.name | e }}">
+<article class="iyp{% if gate_details %} iyp-locked{% endif %}" data-iyp-profile="{{ doc.name | e }}">
+	{% if gate_details %}
+	{#- 2026-11-23: shared their name on this device before (One Tap or the View more form): open at once -#}
+	<script>
+	(function () {
+		try {
+			if (localStorage.getItem("iyp_onetap_known") || sessionStorage.getItem("iyp_onetap_known")) {
+				document.currentScript.parentNode.classList.remove("iyp-locked");
+			}
+		} catch (e) { /* storage blocked: the gate stays */ }
+	})();
+	</script>
+	{% endif %}
 	<div class="iyp-progress" aria-hidden="true"></div>
 	<div class="iyp-cover" aria-hidden="true"></div>
 	<header class="iyp-id">
@@ -607,7 +646,7 @@
 		</div>
 		{% if tagline %}<p class="iyp-tagline">{{ tagline | e }}</p>{% endif %}
 
-		<div class="iyp-actions">
+		<div class="iyp-actions" data-iyp-lock>
 			{% if phone_numbers %}<a class="iyp-btn iyp-btn-primary" href="tel:{{ phone_numbers[0] | e }}">{{ icon("phone") }}{{ _("Call Now") }}</a>{% endif %}
 			{% if whatsapp_number %}<a class="iyp-btn iyp-btn-wa" href="https://wa.me/{{ whatsapp_number }}{{ wa_text }}" target="_blank" rel="noopener">{{ icon("whatsapp") }}WhatsApp</a>{% endif %}
 			{% if email %}<a class="iyp-btn iyp-btn-outline" href="mailto:{{ email | e }}">{{ icon("mail") }}{{ _("Email") }}</a>{% endif %}
@@ -662,8 +701,41 @@
 			</section>
 			{% endif %}
 
+			{#- 2026-11-23: "View more". Visitors we don't know yet see the above; contact details, map, FAQs
+			    and the rest open after "Continue with Google" or their name + email (both compulsory).
+			    Only in the page when gate_details (one_tap.details_gate_needed); robots never get it. -#}
+			{% if gate_details %}
+			<section class="iyp-card iyp-gate" id="view-more">
+				<span class="iyp-gate-lock" aria-hidden="true">🔒</span>
+				<h2 class="iyp-gate-title">{{ _("Want to view more information?") }}</h2>
+				<p class="iyp-gate-lead">{{ _("Please give your name and email ID to see the full details of {0}.").format("<b>" ~ (company_name | e) ~ "</b>") }}</p>
+				<div class="iyp-gate-teaser" aria-hidden="true">
+					{% if phone_numbers %}<span>{{ icon("phone") }}{{ _("Phone") }}</span>{% endif %}
+					{% if whatsapp_number %}<span>{{ icon("whatsapp") }}WhatsApp</span>{% endif %}
+					{% if email %}<span>{{ icon("mail") }}{{ _("Email") }}</span>{% endif %}
+					{% if address_line or city %}<span>{{ icon("pin") }}{{ _("Address & map") }}</span>{% endif %}
+					{% if website_url %}<span>{{ icon("globe") }}{{ _("Website") }}</span>{% endif %}
+					<span>{{ icon("link") }}LinkedIn</span>
+				</div>
+				<div class="iyp-gsi" data-iyp-gsi-wrap hidden>
+					<div class="iyp-gsi-btn" data-iyp-gsi-button data-iyp-gsi-text="signup_with"></div>
+					<div class="iyp-gsi-or"><span>{{ _("or enter your details") }}</span></div>
+				</div>
+				<form class="iyp-gate-form" novalidate>
+					<label class="iyp-enq-trap" aria-hidden="true">Website<input type="text" name="company_website" tabindex="-1" autocomplete="off"></label>
+					<label class="iyp-field"><span>{{ _("Your name") }} <b class="iyp-req" aria-hidden="true">*</b></span>
+						<input type="text" name="name" maxlength="80" autocomplete="name" placeholder="{{ _('e.g. Rahul Sharma') }}" required></label>
+					<label class="iyp-field"><span>{{ _("Your email ID") }} <b class="iyp-req" aria-hidden="true">*</b></span>
+						<input type="email" name="email" maxlength="120" autocomplete="email" inputmode="email" placeholder="{{ _('e.g. rahul@gmail.com') }}" required></label>
+					<p class="iyp-enq-error" role="alert" hidden></p>
+					<button class="iyp-btn iyp-btn-primary iyp-gate-send" type="submit">{{ _("View more") }} <span aria-hidden="true">▾</span></button>
+					<p class="iyp-enq-note">{{ _("Your details go only to {0}. We never show them publicly.").format(company_name | e) }} <a href="/terms#privacy" target="_blank" rel="noopener">{{ _("Privacy") }}</a></p>
+				</form>
+			</section>
+			{% endif %}
+
 			{% if faq_items %}
-			<section class="iyp-card iyp-reveal" id="faq">
+			<section class="iyp-card iyp-reveal" id="faq" data-iyp-lock>
 				<h2><span class="iyp-h-icon">{{ icon("sparkles") }}</span>{{ _("Frequently Asked Questions") }}</h2>
 				{#- 2026-11-07: every answer is open (no click needed), so visitors and AI read them all -#}
 				<div class="iyp-faq">
@@ -678,7 +750,7 @@
 			{% endif %}
 
 			{% if card_images %}
-			<section class="iyp-card iyp-reveal">
+			<section class="iyp-card iyp-reveal" data-iyp-lock>
 				<h2><span class="iyp-h-icon">{{ icon("card") }}</span>{{ _("Visiting Card") }}</h2>
 				{% if card_images | length > 1 %}
 				<div class="iyp-flip" role="button" tabindex="0" aria-label="{{ _('Flip visiting card') }}">
@@ -697,7 +769,7 @@
 			{% endif %}
 
 			{% if map_embed_url %}
-			<section class="iyp-card iyp-reveal">
+			<section class="iyp-card iyp-reveal" data-iyp-lock>
 				<h2><span class="iyp-h-icon">{{ icon("pin") }}</span>{{ _("Location") }}</h2>
 				<div class="iyp-addr">
 					{% if address_line or city %}<p>{{ address | e }}</p>{% endif %}
@@ -710,7 +782,7 @@
 			{% endif %}
 		</div>
 
-		<aside class="iyp-side">
+		<aside class="iyp-side" data-iyp-lock>
 			<section class="iyp-card iyp-reveal">
 				<h2><span class="iyp-h-icon">{{ icon("phone") }}</span>{{ _("Contact") }}</h2>
 				{% if contact_person %}
@@ -828,7 +900,7 @@
 	{#- 2026-11-07: the "Is your business easy for AI to find?" banner was removed from business
 	    pages (it now sits on the My Business Profile form, see my_business.js) -#}
 
-	<nav class="iyp-bar" aria-label="{{ _('Quick actions') }}">
+	<nav class="iyp-bar" data-iyp-lock aria-label="{{ _('Quick actions') }}">
 		{% if phone_numbers %}<a class="call" href="tel:{{ phone_numbers[0] | e }}">{{ icon("phone") }}{{ _("Call") }}</a>{% endif %}
 		{% if whatsapp_number %}<a class="wa" href="https://wa.me/{{ whatsapp_number }}{{ wa_text }}" target="_blank" rel="noopener">{{ icon("whatsapp") }}WhatsApp</a>{% endif %}
 		{% if google_maps_url %}<a href="{{ google_maps_url | e }}" target="_blank" rel="noopener">{{ icon("pin") }}{{ _("Directions") }}</a>{% endif %}
@@ -988,6 +1060,81 @@
 			toast({{ _("Thanks, {0}! {1} can see you visited.") | tojson }}.replace("{0}", person.first_name || "").replace("{1}", title));
 		}
 	});
+
+	// 2026-11-23: "View more" gate (only in the page for visitors we don't know yet). Opens after
+	// "Continue with Google" (iyp_onetap.js sends iyp:known) or the name + email ID form.
+	(function () {
+		var gate = document.getElementById("view-more");
+		if (!gate) return;
+		function unlock(scroll) {
+			if (!page.classList.contains("iyp-locked")) return;
+			page.classList.remove("iyp-locked");
+			// The newly shown cards fade in like the rest of the page
+			page.querySelectorAll("[data-iyp-lock].iyp-reveal, [data-iyp-lock] .iyp-reveal").forEach(function (el) { el.classList.add("in"); });
+			if (scroll) {
+				var target = document.querySelector(".iyp-actions") || document.querySelector(".iyp-side");
+				if (target) target.scrollIntoView({ behavior: "smooth", block: "center" });
+			}
+		}
+		document.addEventListener("iyp:known", function () { unlock(true); });
+
+		var form = gate.querySelector(".iyp-gate-form");
+		var errorBox = form.querySelector(".iyp-enq-error");
+		var nameInput = form.elements.name, emailInput = form.elements.email;
+		function gateMessage(data) {
+			// The server's own message, e.g. "Please enter a valid email address."
+			try {
+				var first = JSON.parse(JSON.parse((data && data._server_messages) || "[]")[0] || "{}");
+				var div = document.createElement("div");
+				div.innerHTML = first.message || "";
+				return div.textContent;
+			} catch (e) { return ""; }
+		}
+		function showError(text, field) {
+			errorBox.textContent = text;
+			errorBox.hidden = false;
+			if (field) field.focus();
+		}
+		form.addEventListener("submit", function (ev) {
+			ev.preventDefault();
+			errorBox.hidden = true;
+			var name = nameInput.value.trim(), email = emailInput.value.trim();
+			if (name.length < 2) return showError({{ _("Please enter your name.") | tojson }}, nameInput);
+			if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) return showError({{ _("Please enter a valid email ID.") | tojson }}, emailInput);
+			form.classList.add("is-sending");
+			var from = {};
+			try { from = JSON.parse(sessionStorage.getItem("iyp_onetap_from") || "{}") || {}; } catch (e) { from = {}; }
+			var headers = { "Content-Type": "application/x-www-form-urlencoded", "Accept": "application/json" };
+			if (window.frappe && frappe.csrf_token) headers["X-Frappe-CSRF-Token"] = frappe.csrf_token;
+			fetch("/api/method/its_your_profile.one_tap.share_details", {
+				method: "POST", credentials: "same-origin", headers: headers,
+				body: new URLSearchParams({
+					name: name, email: email, profile: page.getAttribute("data-iyp-profile") || "",
+					path: location.pathname, referrer: from.referrer || document.referrer || "",
+					utm: from.utm || new URLSearchParams(location.search).get("utm_source") || "",
+					company_website: form.elements.company_website.value
+				})
+			}).then(function (r) {
+				return r.json().catch(function () { return {}; }).then(function (data) { return { ok: r.ok, status: r.status, data: data }; });
+			}).then(function (res) {
+				form.classList.remove("is-sending");
+				if (!res.ok) {
+					var msg = res.status === 429 ? {{ _("Too many tries. Please wait a while and try again.") | tojson }}
+						: (gateMessage(res.data) || {{ _("Could not save your details. Please try again.") | tojson }});
+					return showError(msg);
+				}
+				var person = (res.data && res.data.message) || { name: name, first_name: name.split(" ")[0], email: email };
+				// Remembered on this device (the server also set its signed cookie): no gate next time
+				try { localStorage.setItem("iyp_onetap_known", JSON.stringify(person)); } catch (e) { /* storage blocked */ }
+				var event;
+				try { event = new CustomEvent("iyp:known", { detail: person }); } catch (e) { event = null; }
+				if (event) document.dispatchEvent(event); else unlock(true);
+			}).catch(function () {
+				form.classList.remove("is-sending");
+				showError({{ _("Could not save your details. Please check your internet and try again.") | tojson }});
+			});
+		});
+	})();
 
 	function toast(text) {
 		var t = document.getElementById("iyp-toast");

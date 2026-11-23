@@ -169,6 +169,11 @@ Write 4 to 6 questions a potential customer would ask an AI assistant about this
 with a short answer (one or two sentences).
 - Use ONLY the facts below. Never add prices, years, awards, clients, timings or claims that are
   not in them. Skip a question rather than guess its answer.
+- Never write that something is unknown, not listed, not provided or not specified: leave that
+  question out instead (2026-11-23).
+- When the owner's words or the summary name products, services, software, brands or
+  partnerships (a software name, a brand they sell or a company they partner with), use those
+  exact names in the questions and answers, so a customer searching for them finds this business.
 - Name the business in each question, e.g. "What services does Acme Tools offer?", and answer in
   the third person, starting with the business name where it reads naturally.
 - Cover what it does, where it is based or serves, its main products or services, and how to

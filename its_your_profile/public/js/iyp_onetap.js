@@ -18,7 +18,7 @@
 	// A logged-in user (cached guest page) never gets the box
 	if (/(^|;\s*)user_id=(?!Guest)/.test(document.cookie)) return;
 
-	var CLOSED = "iyp_onetap_closed", KNOWN = "iyp_onetap_known";
+	var KNOWN = "iyp_onetap_known";
 	function store(key, value) {
 		try {
 			if (value === undefined) return sessionStorage.getItem(key);
@@ -26,10 +26,10 @@
 		} catch (e) { /* storage blocked */ }
 		return null;
 	}
-	// Closed the pop-up earlier in this tab: no pop-up again, but the page's own button still works
-	var popupClosed = !!store(CLOSED);
+	// 2026-11-23: the pop-up is asked on EVERY page visit until the visitor shares their name (Google
+	// or the "View more" form). Closing it no longer hides it for the rest of the tab. Google itself
+	// may still wait a while after someone closes it several times; that we can't change.
 	var buttons = document.querySelectorAll("[data-iyp-gsi-button]");
-	if (popupClosed && !buttons.length) return;
 
 	// Where the visitor first came from in this tab (Google, WhatsApp, ChatGPT...)
 	var firstVisit = null;
@@ -104,7 +104,8 @@
 			try {
 				google.accounts.id.renderButton(box, {
 					type: "standard", theme: document.documentElement.getAttribute("data-iyp-theme") === "dark" ? "filled_black" : "outline",
-					size: "large", text: "continue_with", shape: "pill", logo_alignment: "left",
+					// 2026-11-23: a box can ask for its own words, e.g. "signup_with" on the View more gate
+					size: "large", text: box.getAttribute("data-iyp-gsi-text") || "continue_with", shape: "pill", logo_alignment: "left",
 					width: Math.min(360, Math.max(220, box.clientWidth || 300))
 				});
 				var wrap = box.closest("[data-iyp-gsi-wrap]");
@@ -112,10 +113,8 @@
 			} catch (e) { /* button could not be drawn */ }
 		});
 		// Known on this device already: the server names their visits, no pop-up needed
-		if (popupClosed || known) return;
-		google.accounts.id.prompt(function (n) {
-			if (n && n.isSkippedMoment && n.isSkippedMoment()) store(CLOSED, "1");
-		});
+		if (known) return;
+		google.accounts.id.prompt();
 	}
 
 	function load() {

@@ -30,6 +30,10 @@ CRAWLERS = (
 	("Claude-User", "Claude"),
 	("ClaudeBot", "Anthropic ClaudeBot"),
 	("Google-CloudVertexBot", "Google Gemini"),
+	# 2026-11-23: Google's fetchers that open a page because a person asked Gemini / NotebookLM
+	("Gemini-Deep-Research", "Google Gemini"),
+	("Google-NotebookLM", "NotebookLM"),
+	("meta-externalfetcher", "Meta AI"),
 	("Applebot", "Apple"),
 	("meta-externalagent", "Meta AI"),
 	("Amazonbot", "Amazon"),

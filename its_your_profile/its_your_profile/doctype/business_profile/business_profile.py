@@ -109,7 +109,16 @@ PHONE_SEPARATORS = re.compile(r"[\s\-().]")
 
 def clean_phone(phone):
 	"""'+91 20 2447-1409' → '+912024471409'. Keeps '+', and '/' or ',' between two numbers."""
-	return PHONE_SEPARATORS.sub("", phone or "") or None
+	return add_country_plus(PHONE_SEPARATORS.sub("", phone or "")) or None
+
+
+# 2026-11-23: '919225500544' (India code without '+') made the Call button dial a wrong local number
+INDIA_NO_PLUS = re.compile(r"(?<![+\d])(91[6-9]\d{9})(?!\d)")
+
+
+def add_country_plus(phone):
+	"""'919225500544' → '+919225500544'; numbers that already have '+' or are not Indian mobiles stay as they are."""
+	return INDIA_NO_PLUS.sub(r"+\1", phone or "")
 
 
 def whatsapp_number(phone):
@@ -442,7 +451,7 @@ class BusinessProfile(WebsiteGenerator):
 		context.map_embed_url = self.get_map_embed_url()
 		context.page_url = frappe.utils.get_url(self.route)
 		# Phone is public by default; "Keep my phone number private" hides it, with Call and WhatsApp
-		context.phone_numbers = [p for p in re.split(r"[/,]", self.public_phone or "") if p]
+		context.phone_numbers = [add_country_plus(p) for p in re.split(r"[/,]", self.public_phone or "") if p]
 		context.whatsapp_number = whatsapp_number(context.phone_numbers[0]) if context.phone_numbers else None
 		# Only public files can be shown to visitors. A private number is printed on the card too,
 		# so the card picture is not shown then.
@@ -463,6 +472,13 @@ class BusinessProfile(WebsiteGenerator):
 			and (not self.company_logo or bool(GENERATED_LOGO_NAME.match(self.company_logo or "")))
 		)
 		context.add_logo_url = f"/my-business/{self.name}/edit#logo"
+		# 2026-11-23: "View more" gate. A visitor we don't know yet sees the business's name, facts and
+		# services; contact details and the rest open after "Continue with Google" or name + email.
+		# Never for logged-in users, visitors who shared before (signed cookie), or robots: search
+		# engines and AI read the whole page as before.
+		from its_your_profile.one_tap import details_gate_needed
+
+		context.gate_details = details_gate_needed()
 		# Share preview: the card, else the logo, else (2026-11-12) the site's own logo, so a shared
 		# link never shows an empty picture
 		context.og_image = (

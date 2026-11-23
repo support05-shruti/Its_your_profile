@@ -14,6 +14,7 @@ an office IP address like 192.168.1.30.
 import base64
 import hashlib
 import hmac
+import re
 import time
 
 import frappe
@@ -83,6 +84,74 @@ def identify(
 				KNOWN_ALERT_GAP,
 			)
 	return {"name": name, "first_name": person["first_name"], "email": email}
+
+# 2026-11-23: "View more" on business pages. A visitor who doesn't want Google sign-in types their
+# name and email instead; both are compulsory before the contact details open.
+BOT_AGENT = re.compile(
+	r"bot|crawl|spider|slurp|preview|facebookexternalhit|whatsapp|telegram|skype|headless|lighthouse|python|curl|wget",
+	re.I,
+)
+NAME_OK = re.compile(r"^[^\d<>@{}\[\]\\/|=+*#$%^~`]{2,80}$")
+
+
+def details_gate_needed() -> bool:
+	"""True when this visitor must share their name before seeing a business's contact details."""
+	try:
+		if frappe.session.user != "Guest":
+			return False  # owners, staff and logged-in visitors are known already
+		agent = frappe.get_request_header("User-Agent") or ""
+		from its_your_profile.tracking import crawler_name
+
+		if not agent or crawler_name(agent) or BOT_AGENT.search(agent):
+			return False  # Google, Bing, ChatGPT... read the whole page, as before
+		return not remembered_visitor()
+	except Exception:
+		return False  # never lock a page because of an error
+
+
+@frappe.whitelist(allow_guest=True, methods=["POST"])
+@rate_limit(limit=20, seconds=60 * 60)
+def share_details(
+	name: str,
+	email: str,
+	profile: str | None = None,
+	path: str | None = None,
+	referrer: str | None = None,
+	utm: str | None = None,
+	company_website: str | None = None,
+):
+	"""The "View more" form: the visitor typed their name and email (not checked by Google)."""
+	if company_website:
+		return {"name": "", "first_name": "", "email": ""}  # the hidden trap field: a bot
+	name = " ".join((name or "").split())[:80]
+	email = (email or "").strip().lower()[:120]
+	if not NAME_OK.match(name):
+		frappe.throw(_("Please enter your name."))
+	if not validate_email_address(email):
+		frappe.throw(_("Please enter a valid email address."))
+
+	source = source_of(referrer, utm)
+	path = "/" + (path or "").strip().lstrip("/")[:200]
+	save_site_visitor(name, email, path, source)
+	remember_visitor(email)
+
+	if profile and frappe.db.exists("Business Profile", {"name": profile, "published": 1}):
+		since = add_to_date(now_datetime(), hours=-REPEAT_GAP_HOURS)
+		seen = frappe.db.exists(
+			"Profile Visit",
+			{"business_profile": profile, "visitor_email": email, "creation": (">=", since)},
+		)
+		if not seen:
+			log_known_visit(profile, name, email, source, referrer)
+			came_from = "" if source in ("Direct", "It's Your Profile") else f" · came from {source}"
+			notify_owner(
+				profile,
+				f"👤 {escape_html(name)} ({escape_html(email)}) viewed your page{came_from}",
+				f"Known:{email}",
+				KNOWN_ALERT_GAP,
+			)
+	return {"name": name, "first_name": name.split(" ")[0], "email": email}
+
 
 # 2026-11-19: a visitor who tapped Continue once is remembered on that device, so later visits show
 # their name too (tracking.track reads it). A signed cookie: it holds their email and a signature

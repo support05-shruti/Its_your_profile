@@ -78,7 +78,7 @@ website_context = {
 # _ASSET_VERSION (2026-11-12): Frappe links these files with no version, so phones kept old copies
 # for days (the dashboard stayed half white in dark mode). Change this number whenever
 # iyp_site.css, iyp_footer.js or iyp_share.js change, and every browser downloads the new files.
-_ASSET_VERSION = "20261120a"
+_ASSET_VERSION = "20261123b"
 web_include_js = [
 	f"/assets/its_your_profile/js/iyp_footer.js?v={_ASSET_VERSION}",
 	f"/assets/its_your_profile/js/iyp_share.js?v={_ASSET_VERSION}",
@@ -232,8 +232,17 @@ doc_events = {
 	"Business Profile": {
 		# 2026-11-20: a referred person's first page counts for their referrer
 		"after_insert": "its_your_profile.referrals.count_page",
+		# 2026-11-23: tell Bing (ChatGPT Search, Copilot) about a new or changed page (indexnow.py)
+		"on_update": [
+			"its_your_profile.indexnow.queue_profile",
+			# 2026-11-23: "You updated your details: before → now" to whoever saved My information
+			"its_your_profile.change_email.send_change_email",
+		],
 	},
 }
+
+# 2026-11-23: every deploy sends the full page list to Bing once (indexnow.py; live site only)
+after_migrate = ["its_your_profile.indexnow.submit_all"]
 
 # doc_events = {
 # 	"*": {

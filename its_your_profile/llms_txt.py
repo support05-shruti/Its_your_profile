@@ -83,7 +83,7 @@ class CrawlerTextPage(BaseRenderer):
 			)
 
 		# Every crawler fetches robots.txt; only the llms files say an AI read the directory
-		if self.path != "robots.txt":
+		if self.path in ("llms.txt", "llms-full.txt"):
 			log_crawler_visit()
 		return self.build_response(BUILDERS[self.path](), headers={"Cache-Control": "public, max-age=3600"})
 
@@ -191,6 +191,16 @@ def get_sitemap_xml() -> str:
 	Frappe lists /about and /contact even when disabled, and crawlers then hit dead pages."""
 	from xml.sax.saxutils import escape
 
+	links = sitemap_links()
+	urls = "".join(
+		f"\n\t<url>\n\t\t<loc>{escape(link['loc'])}</loc>\n\t\t<lastmod>{escape(str(link['lastmod']))}</lastmod>\n\t</url>"
+		for link in links
+	)
+	return f'<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">{urls}\n</urlset>\n'
+
+
+def sitemap_links() -> list:
+	"""Every public page as {"loc", "lastmod"}: for sitemap.xml and for IndexNow (indexnow.py)."""
 	from frappe.www.sitemap import get_context as frappe_sitemap
 
 	# The home page first: Frappe leaves it out, and it is the page Google should find for the brand (2026-11-23)
@@ -201,11 +211,13 @@ def get_sitemap_xml() -> str:
 		if settings and frappe.db.get_single_value(settings, "is_disabled"):
 			continue
 		links.append(link)
-	urls = "".join(
-		f"\n\t<url>\n\t\t<loc>{escape(link['loc'])}</loc>\n\t\t<lastmod>{escape(str(link['lastmod']))}</lastmod>\n\t</url>"
-		for link in links
-	)
-	return f'<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">{urls}\n</urlset>\n'
+	return links
+
+
+def get_indexnow_key() -> str:
+	from its_your_profile.indexnow import KEY
+
+	return KEY
 
 
 BUILDERS = {
@@ -213,4 +225,6 @@ BUILDERS = {
 	"llms-full.txt": get_llms_full_txt,
 	"robots.txt": get_robots_txt,
 	"sitemap.xml": get_sitemap_xml,
+	# 2026-11-23: IndexNow key file; Bing checks it before accepting our page list (indexnow.py)
+	"f6da6bbf57b2ce3d2ddb62a6baf9232a.txt": get_indexnow_key,
 }
