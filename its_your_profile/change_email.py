@@ -31,6 +31,7 @@ def send_change_email(doc, method=None):
 		from its_your_profile.its_your_profile.doctype.business_profile.business_profile import (
 			welcome_email_account,
 		)
+		from its_your_profile.page_report import email_link
 
 		account = welcome_email_account()
 		frappe.sendmail(
@@ -44,7 +45,7 @@ def send_change_email(doc, method=None):
 				"who": frappe.utils.get_fullname(frappe.session.user),
 				"when": frappe.utils.format_datetime(frappe.utils.now_datetime(), "dd-MM-yyyy hh:mm a"),
 				"page_url": frappe.utils.get_url(doc.route) if doc.route and doc.published else None,
-				"edit_url": frappe.utils.get_url(f"/my-business/{doc.name}/edit"),
+				"edit_url": email_link(f"/my-business/{doc.name}/edit", "change_it", campaign="change_email"),
 			},
 			reference_doctype=doc.doctype,
 			reference_name=doc.name,

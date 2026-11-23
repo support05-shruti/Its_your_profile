@@ -276,6 +276,9 @@ def crawler_name(user_agent: str | None) -> str | None:
 def source_of(referrer: str | None, utm: str | None = None) -> str:
 	"""'https://chatgpt.com/' → 'ChatGPT'. ChatGPT also adds ?utm_source=chatgpt.com to its links."""
 	utm = (utm or "").strip().lower()
+	# 2026-11-23: links in our own emails (page report, change email) carry utm_source=iyp_email
+	if utm == "iyp_email":
+		return "Our email"
 	for domain, name in SOURCE_DOMAINS:
 		if utm and (utm == domain or utm == name.lower()):
 			return name

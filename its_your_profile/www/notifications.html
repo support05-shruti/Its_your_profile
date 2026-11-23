@@ -507,7 +507,7 @@
 		{% endif %}
 
 		<!-- 7-day views chart -->
-		<section class="d-card d-chart-card">
+		<section class="d-card d-chart-card" id="views">
 			<h2>{{ _("Views this week") }}<small>{{ _("Last 7 days") }}</small></h2>
 			<div class="d-chart" role="img" aria-label="{{ _('Page views on each of the last 7 days') }}">
 				{% for d in chart %}
@@ -611,7 +611,7 @@
 
 		{% if strength %}
 		<!-- Page completeness -->
-		<section class="d-card d-str-card">
+		<section class="d-card d-str-card" id="completeness">
 			<h2>{{ _("Page completeness") }}</h2>
 			<div class="d-meter-head">
 				<b class="num">{{ strength.percent }}%</b>

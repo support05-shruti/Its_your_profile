@@ -1,0 +1,122 @@
+{#- Page report (2026-11-23, page_report.py): the owner's dashboard by email, daily (paid) or weekly.
+    Same order as /notifications: the three numbers, Views this week, Who visited your page, Page
+    completeness with every missing item. Email apps ignore page styles: tables and inline styles.
+    Args: doc, daily, period, now {views, leads, ai}, views_change, leads_change, ai_change, chart,
+    feed, more_visits, strength {percent}, tips [{text, url}], page_url, dashboard_url, views_url,
+    activity_url, paid. Links carry utm_source=iyp_email (page_report.email_link), like LinkedIn's. -#}
+{% from "templates/emails/iyp_email.html" import iyp_email, iyp_button %}
+{% macro delta(d) -%}
+{% if d %}<div style="margin-top:2px;font-size:12px;font-weight:700;color:{{ '#0E7A45' if d.startswith('▲') or d == _('New') else '#B42318' }};">{{ d }}</div>{% endif %}
+{%- endmacro %}
+{% macro card_title(text, right="", href="") -%}
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 12px;">
+	<tr>
+		<td style="font-size:16px;font-weight:800;color:#1E1838;">{{ text }}</td>
+		{% if href %}<td align="right" style="font-size:12px;"><a href="{{ href }}" style="color:#3B2E7E;font-weight:600;text-decoration:none;">{{ right or _("See all") }} &rarr;</a></td>
+		{% elif right %}<td align="right" style="font-size:12px;color:#8A85A0;">{{ right }}</td>{% endif %}
+	</tr>
+</table>
+{%- endmacro %}
+{% call iyp_email(_("Daily page report for") if daily else _("Weekly page report for"), doc.company_name | e,
+	_("You get this email every day because your plan is paid.") if daily else _("You get this email every Monday because you have a page on It's Your Profile.")) %}
+
+	{% if doc.company_logo and doc.company_logo.startswith("/files/") %}
+	<img src="{{ frappe.utils.get_url(doc.company_logo) | e }}" alt="" style="display:block;max-height:52px;max-width:160px;height:auto;margin:0 0 12px;">
+	{% endif %}
+	<p style="margin:0 0 14px;font-size:14px;color:#6B6585;">{{ _("Summary for {0}").format(period) }}</p>
+
+	{#- 1. The three numbers, like the dashboard -#}
+	<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 22px;border:1px solid #E6E2F2;border-radius:14px;border-collapse:separate;">
+		<tr>
+			<td width="33%" valign="top" style="padding:14px 12px;border-right:1px solid #EEEBF6;">
+				<div style="font-size:12px;color:#6B6585;">👁 {{ _("Page views") }}</div>
+				<div style="font-size:26px;font-weight:800;color:#1E1838;line-height:1.2;">{{ now.views }}</div>
+				{{ delta(views_change) }}
+			</td>
+			<td width="34%" valign="top" style="padding:14px 12px;border-right:1px solid #EEEBF6;">
+				<div style="font-size:12px;color:#6B6585;">📞 {{ _("Calls & chats") }}</div>
+				<div style="font-size:26px;font-weight:800;color:#1E1838;line-height:1.2;">{{ now.leads }}</div>
+				{{ delta(leads_change) }}
+			</td>
+			<td width="33%" valign="top" style="padding:14px 12px;">
+				<div style="font-size:12px;color:#6B6585;">🤖 {{ _("AI visits") }}</div>
+				<div style="font-size:26px;font-weight:800;color:#1E1838;line-height:1.2;">{{ now.ai }}</div>
+				{{ delta(ai_change) }}
+			</td>
+		</tr>
+	</table>
+
+	{#- 2. Views this week: bar chart (table cells, so every email app draws it) -#}
+	{{ card_title(_("Views this week"), _("Last 7 days"), views_url) }}
+	<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 24px;">
+		<tr>
+			{% for d in chart %}
+			<td align="center" valign="bottom" width="14%" style="padding:0 3px;height:120px;">
+				<div style="font-size:12px;color:#3F3A5E;margin:0 0 4px;">{{ d.views }}</div>
+				<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+					<tr><td height="{{ d.height }}" style="height:{{ d.height }}px;line-height:1px;font-size:1px;background:{{ '#C9BFEA' if d.views else '#EEEBF6' }};border-radius:6px 6px 0 0;">&nbsp;</td></tr>
+				</table>
+			</td>
+			{% endfor %}
+		</tr>
+		<tr>
+			{% for d in chart %}
+			<td align="center" style="padding:6px 0 0;border-top:1px solid #E6E2F2;font-size:12px;color:#6B6585;">{{ d.label }}</td>
+			{% endfor %}
+		</tr>
+	</table>
+
+	{#- 3. Who visited your page -#}
+	{{ card_title(_("Who visited your page"), _("See all"), activity_url) }}
+	{% if feed %}
+	<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 6px;">
+		{% for day in feed %}
+		<tr><td colspan="3" style="padding:10px 0 4px;font-size:12px;font-weight:700;color:#8A85A0;">{{ day.label }}</td></tr>
+		{% for item in day["items"] %}
+		<tr>
+			<td width="34" valign="top" style="padding:8px 0;border-bottom:1px solid #F1EEF8;font-size:18px;">{{ item.icon }}</td>
+			<td valign="top" style="padding:9px 8px;border-bottom:1px solid #F1EEF8;font-size:14px;color:#1E1838;">{{ item.subject | e }}</td>
+			<td align="right" valign="top" style="padding:10px 0;border-bottom:1px solid #F1EEF8;font-size:12px;color:#8A85A0;white-space:nowrap;">{{ item.time }}</td>
+		</tr>
+		{% endfor %}
+		{% endfor %}
+	</table>
+	{% if more_visits %}<p style="margin:0 0 20px;font-size:13px;"><a href="{{ activity_url }}" style="color:#3B2E7E;font-weight:600;">{{ _("and {0} more on your dashboard").format(more_visits) }} &rarr;</a></p>{% else %}<div style="height:16px;"></div>{% endif %}
+	{% else %}
+	<p style="margin:0 0 22px;font-size:14px;color:#6B6585;">{{ _("No visits in this period. Share your page on WhatsApp and LinkedIn to get more visitors.") }}</p>
+	{% endif %}
+
+	{#- 4. Page completeness, with everything still missing -#}
+	{% if strength %}
+	<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 22px;border:1px solid #E6E2F2;border-radius:14px;border-collapse:separate;">
+		<tr><td style="padding:16px 16px 14px;">
+			{{ card_title(_("Page completeness")) }}
+			<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+				<tr>
+					<td style="font-size:26px;font-weight:800;color:#1E1838;">{{ strength.percent }}%</td>
+					<td align="right" style="font-size:13px;color:#6B6585;">
+						{% if strength.percent >= 100 %}{{ _("Complete") }}{% elif strength.percent >= 70 %}{{ _("Nearly there") }}{% else %}{{ _("A few things missing") }}{% endif %}
+					</td>
+				</tr>
+			</table>
+			<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:8px 0 10px;background:#EEEBF6;border-radius:6px;">
+				<tr><td width="{{ [strength.percent, 2] | max }}%" height="8" style="height:8px;line-height:1px;font-size:1px;background:#3B2E7E;border-radius:6px;">&nbsp;</td>{% if strength.percent < 100 %}<td style="font-size:1px;">&nbsp;</td>{% endif %}</tr>
+			</table>
+			<p style="margin:0 0 6px;font-size:13px;color:#6B6585;">{{ _("Complete pages get more calls and are easier for AI to recommend.") }}</p>
+			{% if tips %}
+			<p style="margin:10px 0 4px;font-size:13px;font-weight:700;color:#1E1838;">{{ _("Still missing:") }}</p>
+			<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+				{% for tip in tips %}
+				<tr><td style="padding:9px 0;border-top:1px solid #F1EEF8;font-size:14px;">
+					<a href="{{ tip.url }}" style="color:#3B2E7E;text-decoration:none;font-weight:600;">＋ {{ tip.text }} &rarr;</a>
+				</td></tr>
+				{% endfor %}
+			</table>
+			{% endif %}
+		</td></tr>
+	</table>
+	{% endif %}
+
+	{{ iyp_button(dashboard_url, _("View my dashboard")) }}
+	<p style="margin:0;font-size:13px;color:#6B6585;">{{ _("Your page") }}: <a href="{{ page_url }}" style="color:#3B2E7E;">{{ page_url }}</a></p>
+{% endcall %}

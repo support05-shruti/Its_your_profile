@@ -280,6 +280,10 @@ scheduler_events = {
 		"0 10 1 * *": ["its_your_profile.monthly_report.send_monthly_reports"],
 		# CHANGE NOTE 2026-11-13: random entrepreneur quote email every 2 minutes (off unless quote_mailer_enabled)
 		"*/2 * * * *": ["its_your_profile.quote_mailer.mailer.send_random_quote"],
+		# 2026-11-23: page report email (page_report.py): paid businesses every day at 09:00,
+		# everyone else on Monday at 09:00
+		"0 9 * * *": ["its_your_profile.page_report.send_daily_reports"],
+		"5 9 * * 1": ["its_your_profile.page_report.send_weekly_reports"],
 	},
 }
 

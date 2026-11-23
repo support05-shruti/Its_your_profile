@@ -56,6 +56,10 @@
   "welcome_email_sent",
   "column_break_welcome",
   "welcome_email_sent_on",
+  "plan_section",
+  "paid_plan",
+  "column_break_plan",
+  "paid_until",
   "page_section",
   "published",
   "column_break_page",
@@ -119,6 +123,32 @@
    "fieldname": "welcome_section",
    "fieldtype": "Section Break",
    "label": "Welcome Email"
+  },
+  {
+   "description": "2026-11-23: tick when the business has paid (₹1,200 + GST for 10 years). Paid businesses get the page report email every day, others every Monday (page_report.py).",
+   "fieldname": "plan_section",
+   "fieldtype": "Section Break",
+   "label": "Plan"
+  },
+  {
+   "default": "0",
+   "fieldname": "paid_plan",
+   "fieldtype": "Check",
+   "in_standard_filter": 1,
+   "label": "Paid Plan",
+   "no_copy": 1
+  },
+  {
+   "fieldname": "column_break_plan",
+   "fieldtype": "Column Break"
+  },
+  {
+   "depends_on": "paid_plan",
+   "description": "Last day of the paid plan. Empty = no end date.",
+   "fieldname": "paid_until",
+   "fieldtype": "Date",
+   "label": "Paid Until",
+   "no_copy": 1
   },
   {
    "default": "0",
@@ -382,7 +412,7 @@
  "index_web_pages_for_search": 1,
  "is_published_field": "published",
  "links": [],
- "modified": "2026-11-18 12:00:00.000000",
+ "modified": "2026-11-23 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Its Your Profile",
  "name": "Business Profile",

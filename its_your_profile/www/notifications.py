@@ -255,8 +255,9 @@ STRENGTH_CHECKS = (  # tips are translated when the page is built, not at import
 )
 
 
-def page_strength(name):
-	"""How complete the owner's page is (0-100), and up to three tips for what to add next."""
+def page_strength(name, limit=3):
+	"""How complete the owner's page is (0-100), and up to `limit` tips for what to add next
+	(2026-11-23: limit=None gives every missing item, for the page report email)."""
 	doc = frappe.db.get_value(
 		"Business Profile", name, [field for field, _tip in STRENGTH_CHECKS] + ["ai_summary"], as_dict=True
 	)
@@ -277,7 +278,7 @@ def page_strength(name):
 	checks = [(bool(str(doc.get(field) or "").strip()), _(tip)) for field, tip in STRENGTH_CHECKS]
 	checks.insert(0, (bool(has_linkedin), _("Add your LinkedIn page (required)")))
 	done = sum(1 for ok, _tip in checks if ok)
-	return {"percent": round(done * 100 / len(checks)), "tips": [tip for ok, tip in checks if not ok][:3]}
+	return {"percent": round(done * 100 / len(checks)), "tips": [tip for ok, tip in checks if not ok][:limit]}
 
 
 def week_counts(names):
