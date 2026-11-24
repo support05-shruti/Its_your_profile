@@ -40,8 +40,9 @@
 	}
 
 	function announce(person) {
-		// The "Continue with Google" buttons become "Shared as …"
-		buttons.forEach(function (box) {
+		// The "Continue with Google" buttons become "Shared as …", only for a new answer: someone
+		// remembered from an earlier visit still gets the button, as they are asked again (2026-11-24)
+		if (person.fresh !== false) buttons.forEach(function (box) {
 			var wrap = box.closest("[data-iyp-gsi-wrap]") || box;
 			wrap.classList.add("is-known");
 			wrap.hidden = false;
@@ -91,7 +92,8 @@
 		google.accounts.id.initialize({
 			client_id: clientId,
 			callback: function (response) { send(response.credential); },
-			auto_select: true,          // people who said yes before are recognised on each page without a tap
+			// 2026-11-24: no silent sign-in; the visitor is asked ("Sign in as …") on every visit
+			auto_select: false,
 			cancel_on_tap_outside: true,
 			context: "use",
 			itp_support: true,
@@ -112,8 +114,11 @@
 				if (wrap) wrap.hidden = false;
 			} catch (e) { /* button could not be drawn */ }
 		});
-		// Known on this device already: the server names their visits, no pop-up needed
-		if (known) return;
+		// 2026-11-24: asked on every visit, also people known on this device already
+		// (the business page stays open for the rest of the visit once they answer)
+		var opened = false;
+		try { opened = !!sessionStorage.getItem("iyp_gate_open"); } catch (e) { opened = false; }
+		if (opened) return;
 		google.accounts.id.prompt();
 	}
 
@@ -125,7 +130,9 @@
 		document.head.appendChild(script);
 	}
 
-	if (known) announce(known);
+	// Remembered from an earlier visit: fills forms only (fresh: false), it does not open the
+	// business page's View more box; the visitor is asked again (2026-11-24)
+	if (known) announce(Object.assign({}, known, { fresh: false }));
 	// Let the visitor see the page first
 	setTimeout(load, known ? 0 : 2500);
 })();

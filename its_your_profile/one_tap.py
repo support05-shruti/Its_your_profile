@@ -43,7 +43,9 @@ def client_id() -> str | None:
 
 
 @frappe.whitelist(allow_guest=True, methods=["POST"])
-@rate_limit(limit=30, seconds=60 * 60)
+# 2026-11-24: per IP address. A whole room on one Wi-Fi (demos, events) shares one address, so
+# this is high enough for 100+ people while still stopping a script hammering it.
+@rate_limit(limit=200, seconds=60 * 60)
 def identify(
 	credential: str,
 	path: str | None = None,
@@ -104,13 +106,15 @@ def details_gate_needed() -> bool:
 
 		if not agent or crawler_name(agent) or BOT_AGENT.search(agent):
 			return False  # Google, Bing, ChatGPT... read the whole page, as before
-		return not remembered_visitor()
+		# 2026-11-24: asked on EVERY visit, also people who shared their name before (the page
+		# opens for the rest of that visit only: sessionStorage in business_profile.html)
+		return True
 	except Exception:
 		return False  # never lock a page because of an error
 
 
 @frappe.whitelist(allow_guest=True, methods=["POST"])
-@rate_limit(limit=20, seconds=60 * 60)
+@rate_limit(limit=200, seconds=60 * 60)  # 2026-11-24: room-sized, see identify()
 def share_details(
 	name: str,
 	email: str,

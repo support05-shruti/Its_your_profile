@@ -39,7 +39,7 @@ def captcha_key(captcha_id: str) -> str:
 
 
 @frappe.whitelist(allow_guest=True, methods=["POST"])
-@rate_limit(limit=40, seconds=10 * 60)
+@rate_limit(limit=200, seconds=10 * 60)  # 2026-11-24: per IP; was 40, room-sized for demos
 def new_captcha():
 	"""A 5-character code of letters and numbers to copy, e.g. "K7M4P" (2026-11-19). Look-alike
 	characters (0/O, 1/I/L, 5/S, 2/Z, 8/B) are left out, and capital or small letters both count. The

@@ -23,7 +23,7 @@ PHONE = re.compile(r"^\+?[0-9][0-9 \-()]{6,18}$")
 
 
 @frappe.whitelist(allow_guest=True, methods=["POST"])
-@rate_limit(limit=5, seconds=60 * 60)
+@rate_limit(limit=60, seconds=60 * 60)  # 2026-11-24: per IP; was 5, a demo room on one Wi-Fi shares it
 def submit(
 	profile: str,
 	kind: str,

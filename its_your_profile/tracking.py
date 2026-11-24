@@ -92,7 +92,8 @@ AI_CRAWL_ALERT_GAP = 24 * 60 * 60
 
 
 @frappe.whitelist(allow_guest=True, methods=["POST"])
-@rate_limit(limit=60, seconds=60)
+# 2026-11-24: per IP address; a room on one Wi-Fi shares it (was 60, too low for a demo hall)
+@rate_limit(limit=600, seconds=60)
 def track(profile: str, event: str, referrer: str | None = None, utm: str | None = None):
 	"""Called by the profile page's script for a page view or a button tap."""
 	if event not in EVENTS or not counts_as_visitor():
@@ -165,7 +166,7 @@ def log(profile, event, visitor, source=None, crawler=None, referrer=None, path=
 
 
 @frappe.whitelist(allow_guest=True, methods=["POST"])
-@rate_limit(limit=60, seconds=60)
+@rate_limit(limit=600, seconds=60)  # 2026-11-24: room-sized, see track()
 def track_page(path: str, referrer: str | None = None, utm: str | None = None):
 	"""2026-11-16: a view of one of the site's own pages (home, terms, directory...), not a business
 	page, so staff see how many people use It's Your Profile and where they come from. Sent by

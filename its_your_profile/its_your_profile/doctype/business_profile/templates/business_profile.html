@@ -609,11 +609,13 @@
 
 <article class="iyp{% if gate_details %} iyp-locked{% endif %}" data-iyp-profile="{{ doc.name | e }}">
 	{% if gate_details %}
-	{#- 2026-11-23: shared their name on this device before (One Tap or the View more form): open at once -#}
+	{#- 2026-11-24: asked on every visit. Once opened, the page stays open for the rest of THIS visit
+	    (this browser tab: sessionStorage), so a reload or the back button doesn't ask again. A new
+	    visit (the link opened again, a new tab, another day) asks again. -#}
 	<script>
 	(function () {
 		try {
-			if (localStorage.getItem("iyp_onetap_known") || sessionStorage.getItem("iyp_onetap_known")) {
+			if (sessionStorage.getItem("iyp_gate_open")) {
 				document.currentScript.parentNode.classList.remove("iyp-locked");
 			}
 		} catch (e) { /* storage blocked: the gate stays */ }
@@ -1071,6 +1073,7 @@
 		function unlock(scroll) {
 			if (!page.classList.contains("iyp-locked")) return;
 			page.classList.remove("iyp-locked");
+			try { sessionStorage.setItem("iyp_gate_open", "1"); } catch (e) { /* storage blocked */ }
 			// The newly shown cards fade in like the rest of the page
 			page.querySelectorAll("[data-iyp-lock].iyp-reveal, [data-iyp-lock] .iyp-reveal").forEach(function (el) { el.classList.add("in"); });
 			if (scroll) {
@@ -1078,11 +1081,24 @@
 				if (target) target.scrollIntoView({ behavior: "smooth", block: "center" });
 			}
 		}
-		document.addEventListener("iyp:known", function () { unlock(true); });
+		// 2026-11-24: only a NEW answer (a Google tap or the form now) opens the page; a name remembered
+		// from an earlier visit (iyp_onetap.js sends it with fresh: false) only fills the form below
+		document.addEventListener("iyp:known", function (e) {
+			if (e.detail && e.detail.fresh === false) return;
+			unlock(true);
+		});
 
 		var form = gate.querySelector(".iyp-gate-form");
 		var errorBox = form.querySelector(".iyp-enq-error");
 		var nameInput = form.elements.name, emailInput = form.elements.email;
+		// Asked again on every visit, but a returning visitor's details are already typed in: one tap
+		try {
+			var before = JSON.parse(localStorage.getItem("iyp_onetap_known") || "null");
+			if (before) {
+				if (!nameInput.value) nameInput.value = before.name || "";
+				if (!emailInput.value) emailInput.value = before.email || "";
+			}
+		} catch (e) { /* storage blocked */ }
 		function gateMessage(data) {
 			// The server's own message, e.g. "Please enter a valid email address."
 			try {
