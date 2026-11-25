@@ -608,20 +608,8 @@
 </style>
 
 <article class="iyp{% if gate_details %} iyp-locked{% endif %}" data-iyp-profile="{{ doc.name | e }}">
-	{% if gate_details %}
-	{#- 2026-11-24: asked on every visit. Once opened, the page stays open for the rest of THIS visit
-	    (this browser tab: sessionStorage), so a reload or the back button doesn't ask again. A new
-	    visit (the link opened again, a new tab, another day) asks again. -#}
-	<script>
-	(function () {
-		try {
-			if (sessionStorage.getItem("iyp_gate_open")) {
-				document.currentScript.parentNode.classList.remove("iyp-locked");
-			}
-		} catch (e) { /* storage blocked: the gate stays */ }
-	})();
-	</script>
-	{% endif %}
+	{#- 2026-11-24 (user's request, twice): the View more box asks EVERY time the page is opened,
+	    also on a reload, the back button or a returning visitor. Nothing is remembered to skip it. -#}
 	<div class="iyp-progress" aria-hidden="true"></div>
 	<div class="iyp-cover" aria-hidden="true"></div>
 	<header class="iyp-id">
@@ -1073,7 +1061,6 @@
 		function unlock(scroll) {
 			if (!page.classList.contains("iyp-locked")) return;
 			page.classList.remove("iyp-locked");
-			try { sessionStorage.setItem("iyp_gate_open", "1"); } catch (e) { /* storage blocked */ }
 			// The newly shown cards fade in like the rest of the page
 			page.querySelectorAll("[data-iyp-lock].iyp-reveal, [data-iyp-lock] .iyp-reveal").forEach(function (el) { el.classList.add("in"); });
 			if (scroll) {

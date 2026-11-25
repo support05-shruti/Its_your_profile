@@ -106,8 +106,7 @@ def details_gate_needed() -> bool:
 
 		if not agent or crawler_name(agent) or BOT_AGENT.search(agent):
 			return False  # Google, Bing, ChatGPT... read the whole page, as before
-		# 2026-11-24: asked on EVERY visit, also people who shared their name before (the page
-		# opens for the rest of that visit only: sessionStorage in business_profile.html)
+		# 2026-11-24: asked EVERY time the page is opened, also people who shared their name before
 		return True
 	except Exception:
 		return False  # never lock a page because of an error

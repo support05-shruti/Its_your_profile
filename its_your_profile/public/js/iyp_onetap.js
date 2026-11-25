@@ -114,11 +114,8 @@
 				if (wrap) wrap.hidden = false;
 			} catch (e) { /* button could not be drawn */ }
 		});
-		// 2026-11-24: asked on every visit, also people known on this device already
-		// (the business page stays open for the rest of the visit once they answer)
-		var opened = false;
-		try { opened = !!sessionStorage.getItem("iyp_gate_open"); } catch (e) { opened = false; }
-		if (opened) return;
+		// 2026-11-24: "Sign in as …" is asked every time any page of the website is opened,
+		// also for people known on this device already (user's request)
 		google.accounts.id.prompt();
 	}
 
