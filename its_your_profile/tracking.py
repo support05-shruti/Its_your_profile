@@ -176,7 +176,31 @@ def track_page(path: str, referrer: str | None = None, utm: str | None = None):
 	path = "/" + (path or "").strip().lstrip("/")[:140]
 	if path.startswith(("/business/", "/app", "/api", "/login", "/update-password")):
 		return
+	# 2026-11-25: someone who shared their name before (Google or the pop-up) is saved by name
+	from its_your_profile.one_tap import remembered_visitor
+
+	person = remembered_visitor()
+	if person:
+		log_site_known(person["name"], person["email"], path, source_of(referrer, utm), referrer, "View")
+		return
 	log(None, "View", visitor="Person", source=source_of(referrer, utm), referrer=referrer, path=path)
+
+
+def log_site_known(name, email, path, source=None, referrer=None, event="View"):
+	"""2026-11-25: a named visit to one of the site's own pages (home, directory...), so the Profile
+	Visit list shows who it was. "Signed In" when they share their name in the pop-up."""
+	frappe.get_doc(
+		{
+			"doctype": "Profile Visit",
+			"event": event,
+			"visitor": "Known Person",
+			"visitor_name": name,
+			"visitor_email": email,
+			"source": source,
+			"referrer": (referrer or "")[:500] or None,
+			"path": path,
+		}
+	).insert(ignore_permissions=True)
 
 
 def log_known_visit(profile, name, email, source=None, referrer=None):

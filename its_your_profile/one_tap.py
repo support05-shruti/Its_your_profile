@@ -23,7 +23,7 @@ from frappe import _
 from frappe.rate_limiter import rate_limit
 from frappe.utils import add_to_date, escape_html, now_datetime, validate_email_address
 
-from its_your_profile.tracking import log_known_visit, notify_owner, source_of
+from its_your_profile.tracking import log_known_visit, log_site_known, notify_owner, source_of
 
 GOOGLE_ISSUERS = ("accounts.google.com", "https://accounts.google.com")
 TOKENINFO = "https://oauth2.googleapis.com/tokeninfo"
@@ -85,6 +85,9 @@ def identify(
 				f"Known:{email}",
 				KNOWN_ALERT_GAP,
 			)
+	else:
+		# 2026-11-25: on the home page, directory etc. the Profile Visit list shows who signed in
+		log_site_known(name, email, path, source, referrer, "Signed In")
 	return {"name": name, "first_name": person["first_name"], "email": email}
 
 # 2026-11-23: "View more" on business pages. A visitor who doesn't want Google sign-in types their
@@ -153,6 +156,9 @@ def share_details(
 				f"Known:{email}",
 				KNOWN_ALERT_GAP,
 			)
+	else:
+		# 2026-11-25: on the home page, directory etc. the Profile Visit list shows who signed in
+		log_site_known(name, email, path, source, referrer, "Signed In")
 	return {"name": name, "first_name": name.split(" ")[0], "email": email}
 
 

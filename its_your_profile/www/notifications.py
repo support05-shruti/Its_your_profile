@@ -163,10 +163,10 @@ def get_site_people():
 		row.found_on = row.source if row.source and row.source not in ("Direct", "It's Your Profile") else None
 		row.page_label = page_label(row.last_page)
 	# Views of the site's own pages (home, terms...), from iyp_footer.js → tracking.track_page
-	site_views = {"business_profile": ("is", "not set"), "event": "View", "visitor": "Person", "creation": (">=", week_ago)}
+	site_views = {"business_profile": ("is", "not set"), "event": "View", "visitor": ("in", ("Person", "Known Person")), "creation": (">=", week_ago)}
 	sources = frappe.db.sql(
 		"""select source, count(*) as visits from `tabProfile Visit`
-		where ifnull(business_profile, '') = '' and event = 'View' and visitor = 'Person' and creation >= %(since)s
+		where ifnull(business_profile, '') = '' and event = 'View' and visitor in ('Person', 'Known Person') and creation >= %(since)s
 		group by source order by visits desc limit 4""",
 		{"since": week_ago},
 		as_dict=True,
