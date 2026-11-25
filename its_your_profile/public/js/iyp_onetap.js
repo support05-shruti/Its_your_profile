@@ -32,9 +32,11 @@
 	// 2026-11-25: a pop-up at the start of every page (user's request): "Sign in with Google" for
 	// 10 seconds; closing it (×) asks for the visitor's name and email instead. Also reaches visitors
 	// Google's own pop-up can't (not signed in to Google in this browser, incognito, paused by Google).
-	// Shown on every page open, also for returning visitors.
+	// Shown every time the home page is opened, also for returning visitors.
+	// 2026-11-25 (later): only on the website's front page, not on every page (user's request)
 	var pop = (function () {
 		if (!document.body) return null;
+		if (!/^\/(home\/?)?$/.test(location.pathname)) return null;
 		var SHOW_SECONDS = 10;
 		var css = document.createElement("style");
 		css.textContent =
