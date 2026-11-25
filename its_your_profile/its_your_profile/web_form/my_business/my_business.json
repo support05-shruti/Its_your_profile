@@ -43,7 +43,7 @@
  ],
  "login_required": 1,
  "max_attachment_size": 10,
- "modified": "2026-11-18 12:00:00.000000",
+ "modified": "2026-11-25 14:30:00.000000",
  "modified_by": "Administrator",
  "module": "Its Your Profile",
  "name": "my-business",
@@ -112,6 +112,51 @@
    "fieldname": "established_year",
    "fieldtype": "Int",
    "label": "Established Year",
+   "reqd": 0
+  },
+  {
+   "fieldname": "registration_section",
+   "fieldtype": "Section Break",
+   "label": "Registration Details"
+  },
+  {
+   "fieldname": "iyp_id",
+   "fieldtype": "Data",
+   "label": "IYP ID",
+   "read_only": 1,
+   "reqd": 0,
+   "description": "Your page's own ID on It's Your Profile. People can search this ID to find you."
+  },
+  {
+   "fieldname": "gstin",
+   "fieldtype": "Data",
+   "label": "GST Number (GSTIN)",
+   "reqd": 0,
+   "description": "15 characters, e.g. 27ABCDE1234F1Z5"
+  },
+  {
+   "fieldname": "cin",
+   "fieldtype": "Data",
+   "label": "CIN (Company Identification Number)",
+   "reqd": 0,
+   "description": "21 characters, for registered companies, e.g. U72200MH2013PTC123456"
+  },
+  {
+   "fieldname": "column_break_registration",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "Udyam Registration Number (e.g. UDYAM-MH-26-0012345) or old Udyog Aadhaar (e.g. MH26E0012345)",
+   "fieldname": "udyam",
+   "fieldtype": "Data",
+   "label": "Udyam Registration Number (or Udyog Aadhaar)",
+   "reqd": 0
+  },
+  {
+   "description": "10-character PAN, e.g. ABCDE1234F. Filled from your GST number if left empty",
+   "fieldname": "pan",
+   "fieldtype": "Data",
+   "label": "PAN Number",
    "reqd": 0
   },
   {

@@ -60,6 +60,48 @@ def make_profile_route(when):
 	return f"business/iyp-{when:%y}-{when.month:02d}-{number}"
 
 
+def iyp_id_from_route(route):
+	"""2026-11-25: the page's own ID, from its address: business/iyp-26-11-00003 → IYP-26-11-00003."""
+	last = (route or "").rstrip("/").rsplit("/", 1)[-1]
+	return last.upper() if last.lower().startswith("iyp-") else None
+
+
+# 2026-11-25: GST and CIN on the page, so people (and Google / AI) can find a business by them
+GSTIN = re.compile(r"^\d{2}[A-Z]{5}\d{4}[A-Z][1-9A-Z]Z[0-9A-Z]$")
+CIN = re.compile(r"^[LU]\d{5}[A-Z]{2}\d{4}[A-Z]{3}\d{6}$")
+# PAN, e.g. ABCDE1234F; characters 3-12 of a GSTIN are the business's PAN
+PAN = re.compile(r"^[A-Z]{5}\d{4}[A-Z]$")
+
+
+def clean_reg_number(value, pattern, message):
+	"""' 27abcde1234f1z5 ' → '27ABCDE1234F1Z5'; empty stays empty; a wrong format is refused."""
+	value = re.sub(r"[\s\-.]", "", value or "").upper()
+	if value and not pattern.match(value):
+		frappe.throw(message)
+	return value or None
+
+
+# Udyam (MSME) number, UDYAM-MH-26-0012345, or the older Udyog Aadhaar, MH26E0012345
+UDYAM = re.compile(r"^UDYAM([A-Z]{2})(\d{2})(\d{7})$")
+UDYOG_AADHAAR = re.compile(r"^[A-Z]{2}\d{2}[A-Z]\d{7}$")
+
+
+def clean_udyam(value):
+	"""'udyam mh 26 0012345' → 'UDYAM-MH-26-0012345'; 'mh26e0012345' → 'MH26E0012345'."""
+	value = re.sub(r"[\s\-./]", "", value or "").upper()
+	if not value:
+		return None
+	if match := UDYAM.match(value):
+		return "UDYAM-{}-{}-{}".format(*match.groups())
+	if UDYOG_AADHAAR.match(value):
+		return value
+	frappe.throw(
+		frappe._(
+			"Please enter a valid Udyam number, e.g. UDYAM-MH-26-0012345, or Udyog Aadhaar, e.g. MH26E0012345, or leave it empty."
+		)
+	)
+
+
 # Maps links we build from the address start with this; a map found on the website replaces them
 MAPS_SEARCH_PREFIX = "https://www.google.com/maps/search/?api=1&query="
 MAP_EMBED = re.compile(r"^https://(www\.|maps\.)?google\.[a-z.]+/maps/embed", re.I)
@@ -173,8 +215,26 @@ class BusinessProfile(WebsiteGenerator):
 		self.make_logo_public()
 		self.track_faqs_cleared()
 
+		self.gstin = clean_reg_number(
+			self.get("gstin"),
+			GSTIN,
+			frappe._("Please enter a valid 15-character GST number, e.g. 27ABCDE1234F1Z5, or leave it empty."),
+		)
+		self.cin = clean_reg_number(
+			self.get("cin"),
+			CIN,
+			frappe._("Please enter a valid 21-character CIN, e.g. U72200MH2013PTC123456, or leave it empty."),
+		)
+		self.udyam = clean_udyam(self.get("udyam"))
+		self.pan = clean_reg_number(
+			self.get("pan"),
+			PAN,
+			frappe._("Please enter a valid 10-character PAN, e.g. ABCDE1234F, or leave it empty."),
+		) or (self.gstin[2:12] if self.gstin else None)
+
 		if self.company_name:
 			self.set_route()
+		self.iyp_id = iyp_id_from_route(self.route)
 
 		new_sides = [
 			self.get(side)
@@ -493,6 +553,7 @@ class BusinessProfile(WebsiteGenerator):
 		)
 		context.vcard = json.dumps(self.get_vcard(context.phone_numbers)).replace("</", "<\\/")
 		context.services = self.get_services()
+		context.reg_numbers = self.get_reg_numbers()
 		context.faq_items = self.get_page_faqs()
 		context.markdown_url = frappe.utils.get_url(self.route + ".md")
 		# Shown when there is no AI summary yet, so every page has a plain factual description
@@ -566,6 +627,7 @@ class BusinessProfile(WebsiteGenerator):
 
 		facts = [
 			("Profile page", page_url),
+			*self.get_reg_numbers(),
 			("Business type", self.business_nature),
 			("Established", self.established_year),
 			("Team size", self.employee_range and f"{self.employee_range} people"),
@@ -592,6 +654,17 @@ class BusinessProfile(WebsiteGenerator):
 			lines += ["", f"{h2} Elsewhere online", ""]
 			lines += [f"- {row.label or row.platform}: {row.url}" for row in links]
 		return "\n".join(lines).rstrip() + "\n"
+
+	def get_reg_numbers(self):
+		"""2026-11-25: [(label, value)] for the page, its structured data and its .md version."""
+		numbers = [
+			("IYP ID", self.get("iyp_id") or iyp_id_from_route(self.route)),
+			("GSTIN", self.get("gstin")),
+			("CIN", self.get("cin")),
+			("Udyam" if (self.get("udyam") or "").startswith("UDYAM") else "Udyog Aadhaar", self.get("udyam")),
+			("PAN", self.get("pan")),
+		]
+		return [(label, value) for label, value in numbers if value]
 
 	def get_page_faqs(self):
 		"""The FAQs shown to everyone on the page, in its structured data and its .md version
@@ -687,6 +760,12 @@ class BusinessProfile(WebsiteGenerator):
 			"email": self.email,
 			"foundingDate": str(self.established_year) if self.established_year else None,
 			"numberOfEmployees": self.employee_range,
+			# 2026-11-25: searchable registration numbers (IYP ID, GSTIN, CIN)
+			"taxID": self.get("gstin"),
+			"identifier": [
+				{"@type": "PropertyValue", "propertyID": label, "value": value}
+				for label, value in self.get_reg_numbers()
+			],
 			"hasMap": self.google_maps_url,
 			"knowsAbout": services,
 			"areaServed": {"@type": "City", "name": self.city} if self.city else None,

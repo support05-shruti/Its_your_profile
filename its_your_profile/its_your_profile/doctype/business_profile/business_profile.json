@@ -18,6 +18,13 @@
   "employee_range",
   "established_year",
   "company_logo",
+  "registration_section",
+  "iyp_id",
+  "gstin",
+  "cin",
+  "column_break_registration",
+  "udyam",
+  "pan",
   "contact_section",
   "contact_person",
   "designation",
@@ -227,6 +234,52 @@
    "label": "Company Logo"
   },
   {
+   "fieldname": "registration_section",
+   "fieldtype": "Section Break",
+   "label": "Registration Details"
+  },
+  {
+   "description": "Your page's own ID on It's Your Profile. Set automatically.",
+   "fieldname": "iyp_id",
+   "fieldtype": "Data",
+   "in_list_view": 0,
+   "label": "IYP ID",
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "description": "15 characters, e.g. 27ABCDE1234F1Z5. Shown on your public page.",
+   "fieldname": "gstin",
+   "fieldtype": "Data",
+   "label": "GST Number (GSTIN)",
+   "search_index": 1
+  },
+  {
+   "description": "21 characters, for registered companies, e.g. U72200MH2013PTC123456. Shown on your public page.",
+   "fieldname": "cin",
+   "fieldtype": "Data",
+   "label": "CIN (Company Identification Number)",
+   "search_index": 1
+  },
+  {
+   "fieldname": "column_break_registration",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "Udyam Registration Number (e.g. UDYAM-MH-26-0012345) or old Udyog Aadhaar (e.g. MH26E0012345). Shown on your public page.",
+   "fieldname": "udyam",
+   "fieldtype": "Data",
+   "label": "Udyam Registration Number (or Udyog Aadhaar)",
+   "search_index": 1
+  },
+  {
+   "description": "10-character PAN, e.g. ABCDE1234F. Filled from your GST number if left empty. Shown on your public page.",
+   "fieldname": "pan",
+   "fieldtype": "Data",
+   "label": "PAN Number",
+   "search_index": 1
+  },
+  {
    "fieldname": "contact_section",
    "fieldtype": "Section Break",
    "label": "Contact"
@@ -412,7 +465,7 @@
  "index_web_pages_for_search": 1,
  "is_published_field": "published",
  "links": [],
- "modified": "2026-11-23 12:00:00.000000",
+ "modified": "2026-11-25 14:30:00.000000",
  "modified_by": "Administrator",
  "module": "Its Your Profile",
  "name": "Business Profile",
@@ -434,7 +487,7 @@
  "route": "business",
  "row_format": "Dynamic",
  "rows_threshold_for_grid_search": 20,
- "search_fields": "city,business_nature",
+ "search_fields": "city,business_nature,iyp_id,gstin,cin,udyam,pan",
  "show_title_field_in_link": 1,
  "sort_field": "creation",
  "sort_order": "DESC",

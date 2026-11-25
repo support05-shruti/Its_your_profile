@@ -122,7 +122,7 @@
 			{% if nature %}<input type="hidden" name="nature" value="{{ nature | e }}">{% endif %}
 			<label>
 				{{ icon("search") }}
-				<input type="search" name="q" value="{{ q | e }}" placeholder="{{ _('Search name, product, service or city') }}" aria-label="{{ _('Search') }}">
+				<input type="search" name="q" value="{{ q | e }}" placeholder="{{ _('Search name, product, city, GST, CIN, Udyam, PAN or IYP ID') }}" aria-label="{{ _('Search') }}">
 			</label>
 			<select name="city" aria-label="{{ _('City') }}">
 				<option value="">{{ _("All cities") }}</option>

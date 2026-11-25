@@ -189,6 +189,10 @@
 	.iyp-fact b { display: block; font-size: 1.15rem; font-weight: 800; letter-spacing: -.01em; color: var(--ink); line-height: 1.2; overflow-wrap: break-word; word-break: normal; hyphens: auto; }
 	.iyp-fact > div, .iyp-fact > span:last-child { min-width: 0; }
 	.iyp-fact span { font-size: .78rem; color: var(--muted); }
+	.iyp-regs { display: flex; flex-wrap: wrap; gap: 8px 10px; margin: 14px 0 0; padding: 0; }
+	.iyp-reg { display: inline-flex; align-items: baseline; gap: 6px; padding: 6px 12px; border: 1px solid var(--line); border-radius: 999px; font-size: .8rem; min-width: 0; max-width: 100%; }
+	.iyp-reg dt { margin: 0; font-weight: 700; color: var(--muted); }
+	.iyp-reg dd { margin: 0; font-weight: 700; color: var(--ink); letter-spacing: .02em; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
 
 	/* Layout */
 	.iyp-grid { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 24px; margin-top: 24px; align-items: start; }
@@ -661,6 +665,15 @@
 			<div class="iyp-fact"><span class="iyp-fact-icon">{{ icon("pin") }}</span><div><b>{{ city | e }}</b><span>{{ state | e if state else _("Location") }}</span></div></div>
 			{% endif %}
 		</div>
+		{% endif %}
+		{#- 2026-11-25: IYP ID, GSTIN and CIN, public (not behind View more) so people, Google and AI
+		    can find the business by them -#}
+		{% if reg_numbers %}
+		<dl class="iyp-regs">
+			{% for label, value in reg_numbers %}
+			<div class="iyp-reg"><dt>{{ label | e }}</dt><dd>{{ value | e }}</dd></div>
+			{% endfor %}
+		</dl>
 		{% endif %}
 	</header>
 

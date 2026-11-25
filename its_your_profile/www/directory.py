@@ -48,6 +48,12 @@ def get_context(context):
 			["ai_summary", "like", like],
 			["contact_person", "like", like],
 			["city", "like", like],
+			# 2026-11-25: find a business by its IYP ID (part of its address), GST number or CIN
+			["route", "like", like],
+			["gstin", "like", "%" + q.replace(" ", "").upper() + "%"],
+			["cin", "like", "%" + q.replace(" ", "").upper() + "%"],
+			["udyam", "like", like.replace(" ", "")],
+			["pan", "like", "%" + q.replace(" ", "").upper() + "%"],
 		]
 
 	businesses = frappe.get_all(
