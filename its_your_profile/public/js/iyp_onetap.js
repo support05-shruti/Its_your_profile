@@ -104,7 +104,7 @@
 		var root = document.documentElement, oldOverflow = root.style.overflow;
 		// 2026-11-25: the details form is compulsory on business pages only (no × there); on the home
 		// page, directory etc. it can be closed, so new businesses can still read and sign up
-		var compulsory = !!document.querySelector("[data-iyp-profile]");
+		var compulsory = true; // 2026-11-25: user wants it compulsory on every page
 		function show(name) {
 			step = name;
 			for (var i = 0; i < steps.length; i++) steps[i].hidden = steps[i].getAttribute("data-step") !== name;
