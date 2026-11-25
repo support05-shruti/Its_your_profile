@@ -29,41 +29,171 @@
 	// 2026-11-23: the pop-up is asked on EVERY page visit until the visitor shares their name (Google
 	// or the "View more" form). Closing it no longer hides it for the rest of the tab. Google itself
 	// may still wait a while after someone closes it several times; that we can't change.
-	// 2026-11-25: a "Sign in with Google" bar at the top of every page (user's request), also for
-	// visitors Google's pop-up can't reach (not signed in to Google in this browser, incognito, pop-up
-	// paused by Google). Shown on every page open; × hides it for this page view only.
-	(function addTopBar() {
-		var main = document.querySelector("main");
-		if (!main || !main.parentNode || document.querySelector("[data-iyp-topsign]")) return;
+	// 2026-11-25: a pop-up at the start of every page (user's request): "Sign in with Google" for
+	// 10 seconds; closing it (×) asks for the visitor's name and email instead. Also reaches visitors
+	// Google's own pop-up can't (not signed in to Google in this browser, incognito, paused by Google).
+	// Shown on every page open, also for returning visitors.
+	var pop = (function () {
+		if (!document.body) return null;
+		var SHOW_SECONDS = 10;
 		var css = document.createElement("style");
 		css.textContent =
-			".iyp-topsign{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:10px 16px;position:relative;" +
-			"box-sizing:border-box;width:calc(100% - 32px);max-width:760px;margin:12px auto;padding:12px 44px 12px 16px;" +
-			"border:1px solid #E4DEF7;border-radius:16px;background:#F7F4FF;color:#2A2247;font-size:.92rem;" +
-			"box-shadow:0 4px 16px rgba(60,40,120,.08)}" +
-			".iyp-topsign[hidden]{display:none}" +
-			".iyp-topsign-text{margin:0;text-align:center}" +
-			".iyp-topsign-btn{display:flex;justify-content:center;min-height:44px}" +
-			".iyp-topsign-done{display:none;margin:0;font-weight:600;color:#0E7A45}" +
-			".iyp-topsign.is-known .iyp-topsign-text,.iyp-topsign.is-known .iyp-topsign-btn{display:none}" +
-			".iyp-topsign.is-known .iyp-topsign-done{display:block}" +
-			".iyp-topsign-x{position:absolute;top:6px;right:8px;border:0;background:none;font-size:1.4rem;line-height:1;" +
-			"color:#6B6485;cursor:pointer;padding:4px 6px}" +
-			"[data-iyp-theme=dark] .iyp-topsign{background:#221D36;border-color:#3A3256;color:#ECE8FA}" +
-			"[data-iyp-theme=dark] .iyp-topsign-done{color:#5FD39A}";
+			".iyp-pop{position:fixed;inset:0;z-index:2147483000;display:flex;align-items:flex-start;justify-content:center;" +
+			"padding:72px 16px 16px;background:rgba(24,18,48,.35);box-sizing:border-box}" +
+			".iyp-pop[hidden]{display:none}" +
+			".iyp-pop-card{position:relative;box-sizing:border-box;width:100%;max-width:400px;padding:22px 20px 18px;border-radius:20px;" +
+			"background:#fff;color:#2A2247;text-align:center;box-shadow:0 18px 50px rgba(30,20,80,.25);overflow:hidden;" +
+			"font-family:inherit;animation:iypPopIn .25s ease}" +
+			"@keyframes iypPopIn{from{opacity:0;transform:translateY(-12px)}to{opacity:1;transform:none}}" +
+			".iyp-pop-card h3{margin:0 0 6px;font-size:1.15rem;font-weight:700;color:inherit}" +
+			".iyp-pop-card p{margin:0 0 14px;font-size:.9rem;color:#5B5478}" +
+			".iyp-pop-step[hidden]{display:none}" +
+			".iyp-pop-btn{display:flex;justify-content:center;min-height:44px}" +
+			".iyp-pop-x[hidden]{display:none}.iyp-pop-x{position:absolute;top:8px;right:10px;border:0;background:none;font-size:1.5rem;line-height:1;color:#6B6485;cursor:pointer;padding:4px 8px}" +
+			".iyp-pop-time{position:absolute;left:0;bottom:0;height:4px;width:100%;background:#6C4BD8;transform-origin:left}" +
+			".iyp-pop-form{display:grid;gap:10px;text-align:left}" +
+			".iyp-pop-form label{font-size:.82rem;font-weight:600;color:#3A3256}" +
+			".iyp-pop-form input{box-sizing:border-box;width:100%;margin-top:4px;padding:11px 12px;border:1px solid #D9D3EE;border-radius:12px;font-size:16px;background:#fff;color:#2A2247}" +
+			".iyp-pop-form button{margin-top:4px;padding:12px;border:0;border-radius:999px;background:#3B2A86;color:#fff;font-size:.95rem;font-weight:700;cursor:pointer}" +
+			".iyp-pop-form button[disabled]{opacity:.6;cursor:wait}" +
+			".iyp-pop-card .iyp-pop-err{margin:0;color:#B42318;font-size:.84rem;font-weight:600}.iyp-pop-card .iyp-pop-err[hidden]{display:none}" +
+			".iyp-pop-trap{position:absolute;left:-9999px;width:1px;height:1px;opacity:0}" +
+			".iyp-pop-done{margin:6px 0;font-weight:700;color:#0E7A45}" +
+			"[data-iyp-theme=dark] .iyp-pop-card{background:#221D36;color:#ECE8FA}" +
+			"[data-iyp-theme=dark] .iyp-pop-card p,[data-iyp-theme=dark] .iyp-pop-form label{color:#BDB5DA}" +
+			"[data-iyp-theme=dark] .iyp-pop-form input{background:#1A162B;border-color:#3A3256;color:#ECE8FA}" +
+			"[data-iyp-theme=dark] .iyp-pop-done{color:#5FD39A}";
 		document.head.appendChild(css);
-		var bar = document.createElement("div");
-		bar.className = "iyp-topsign";
-		bar.hidden = true; // shown once Google's button is drawn
-		bar.setAttribute("data-iyp-topsign", "");
-		bar.setAttribute("data-iyp-gsi-wrap", "");
-		bar.innerHTML =
-			'<p class="iyp-topsign-text"><strong>👋 Welcome!</strong> Sign in with Google to continue</p>' +
-			'<div class="iyp-topsign-btn" data-iyp-gsi-button data-iyp-gsi-text="signin_with"></div>' +
-			'<p class="iyp-topsign-done" data-iyp-gsi-done data-text="✓ Signed in as {0}"></p>' +
-			'<button type="button" class="iyp-topsign-x" aria-label="Close">×</button>';
-		bar.querySelector(".iyp-topsign-x").addEventListener("click", function () { bar.remove(); });
-		main.parentNode.insertBefore(bar, main);
+
+		var box = document.createElement("div");
+		box.className = "iyp-pop";
+		box.hidden = true;
+		box.setAttribute("role", "dialog");
+		box.setAttribute("aria-modal", "true");
+		box.setAttribute("aria-label", "Sign in");
+		box.innerHTML =
+			'<div class="iyp-pop-card">' +
+				'<button type="button" class="iyp-pop-x" aria-label="Close">×</button>' +
+				'<div class="iyp-pop-step" data-step="google">' +
+					'<h3>👋 Welcome to It’s Your Profile</h3>' +
+					'<p>Sign in with Google to continue</p>' +
+					'<div class="iyp-pop-btn" data-iyp-pop-gsi></div>' +
+					'<div class="iyp-pop-time"></div>' +
+				'</div>' +
+				'<div class="iyp-pop-step" data-step="form" hidden>' +
+					'<h3>Tell us who you are</h3>' +
+					'<p>Please give your name and email ID</p>' +
+					'<form class="iyp-pop-form" novalidate>' +
+						'<label>Name *<input name="name" autocomplete="name" maxlength="80" required></label>' +
+						'<label>Email ID *<input name="email" type="email" autocomplete="email" maxlength="120" required></label>' +
+						'<input class="iyp-pop-trap" name="company_website" tabindex="-1" autocomplete="off" aria-hidden="true">' +
+						'<p class="iyp-pop-err" hidden></p>' +
+						'<button type="submit">Continue</button>' +
+					'</form>' +
+				'</div>' +
+				'<div class="iyp-pop-step" data-step="done" hidden><p class="iyp-pop-done"></p></div>' +
+			'</div>';
+		document.body.appendChild(box);
+
+		var steps = box.querySelectorAll(".iyp-pop-step");
+		var form = box.querySelector("form");
+		var err = box.querySelector(".iyp-pop-err");
+		var line = box.querySelector(".iyp-pop-time");
+		var xButton = box.querySelector(".iyp-pop-x");
+		var timer = null, step = "";
+		var root = document.documentElement, oldOverflow = root.style.overflow;
+		// 2026-11-25: the details form is compulsory on business pages only (no × there); on the home
+		// page, directory etc. it can be closed, so new businesses can still read and sign up
+		var compulsory = !!document.querySelector("[data-iyp-profile]");
+		function show(name) {
+			step = name;
+			for (var i = 0; i < steps.length; i++) steps[i].hidden = steps[i].getAttribute("data-step") !== name;
+			xButton.hidden = name === "done" || (name === "form" && compulsory);
+			box.hidden = false;
+			root.style.overflow = "hidden"; // the page behind can't be scrolled or read
+		}
+		function close() { clearTimeout(timer); box.hidden = true; step = ""; root.style.overflow = oldOverflow; }
+		function openForm() {
+			clearTimeout(timer);
+			show("form");
+			setTimeout(function () {
+				var first = form.elements.name.value ? form.elements.email : form.elements.name;
+				try { first.focus(); } catch (e) { /* ignore */ }
+			}, 50);
+		}
+		function open() {
+			if (step) return;
+			show("google");
+			// The 10-second line shrinks; after 10 seconds without Google, the details form is asked
+			// (compulsory, so waiting doesn't get anyone past it)
+			line.style.transition = "none";
+			line.style.transform = "scaleX(1)";
+			void line.offsetWidth;
+			line.style.transition = "transform " + SHOW_SECONDS + "s linear";
+			line.style.transform = "scaleX(0)";
+			timer = setTimeout(function () { if (step === "google") openForm(); }, SHOW_SECONDS * 1000);
+		}
+		// × on the Google step asks for the details; × on the details step (not on business pages) closes
+		xButton.addEventListener("click", function () {
+			if (step === "google") openForm();
+			else if (!compulsory) close();
+		});
+		form.addEventListener("submit", function (ev) {
+			ev.preventDefault();
+			err.hidden = true;
+			var name = form.elements.name.value.trim(), email = form.elements.email.value.trim();
+			function fail(text, field) { err.textContent = text; err.hidden = false; if (field) field.focus(); }
+			if (name.length < 2) return fail("Please enter your name.", form.elements.name);
+			if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) return fail("Please enter a valid email ID.", form.elements.email);
+			var button = form.querySelector("button");
+			button.disabled = true;
+			var headers = { "Content-Type": "application/x-www-form-urlencoded", "Accept": "application/json" };
+			if (window.frappe && frappe.csrf_token) headers["X-Frappe-CSRF-Token"] = frappe.csrf_token;
+			fetch("/api/method/its_your_profile.one_tap.share_details", {
+				method: "POST", credentials: "same-origin", headers: headers,
+				body: new URLSearchParams({
+					name: name, email: email, profile: profileId(), path: location.pathname,
+					referrer: (firstVisit && firstVisit.referrer) || "", utm: (firstVisit && firstVisit.utm) || "",
+					company_website: form.elements.company_website.value
+				})
+			}).then(function (r) {
+				return r.json().catch(function () { return {}; }).then(function (data) { return { ok: r.ok, status: r.status, data: data }; });
+			}).then(function (res) {
+				button.disabled = false;
+				if (!res.ok) {
+					var text = "Could not save your details. Please try again.";
+					if (res.status === 429) text = "Too many tries. Please wait a while and try again.";
+					else {
+						try {
+							var m = JSON.parse(JSON.parse(res.data._server_messages || "[]")[0] || "{}").message;
+							if (m) { var d = document.createElement("div"); d.innerHTML = m; text = d.textContent || text; }
+						} catch (e) { /* keep the default text */ }
+					}
+					return fail(text);
+				}
+				var person = (res.data && res.data.message) || { name: name, first_name: name.split(" ")[0], email: email };
+				keep(JSON.stringify(person));
+				announce(person);
+			}).catch(function () {
+				button.disabled = false;
+				fail("Could not save your details. Please check your internet and try again.");
+			});
+		});
+		return {
+			open: open,
+			openForm: openForm,
+			gsiBox: box.querySelector("[data-iyp-pop-gsi]"),
+			prefill: function (person) {
+				if (person.name && !form.elements.name.value) form.elements.name.value = person.name;
+				if (person.email && !form.elements.email.value) form.elements.email.value = person.email;
+			},
+			done: function (person) {
+				clearTimeout(timer);
+				box.querySelector(".iyp-pop-done").textContent = "✓ Thank you, " + (person.first_name || person.name || person.email || "") + "!";
+				show("done");
+				setTimeout(close, 2000);
+			}
+		};
 	})();
 	var buttons = document.querySelectorAll("[data-iyp-gsi-button]");
 
@@ -85,9 +215,9 @@
 			var done = wrap.querySelector("[data-iyp-gsi-done]");
 			if (done) done.textContent = (done.getAttribute("data-text") || "").replace("{0}", person.name || person.email || "");
 		});
-		// The top bar shows "✓ Signed in as …" for a moment, then goes away
-		var topBar = document.querySelector("[data-iyp-topsign]");
-		if (person.fresh !== false && topBar) setTimeout(function () { topBar.remove(); }, 4000);
+		// The start pop-up: a new answer says thank you and closes; someone remembered from an earlier
+		// visit only gets their name and email filled in (they are still asked)
+		if (pop) { if (person.fresh !== false) pop.done(person); else pop.prefill(person); }
 		var event;
 		try { event = new CustomEvent("iyp:known", { detail: person }); } catch (e) { return; }
 		document.dispatchEvent(event);
@@ -153,16 +283,29 @@
 				if (wrap) wrap.hidden = false;
 			} catch (e) { /* button could not be drawn */ }
 		});
-		// 2026-11-24: "Sign in as …" is asked every time any page of the website is opened,
-		// also for people known on this device already (user's request)
-		google.accounts.id.prompt();
+		// 2026-11-25: the start pop-up replaces Google's own corner pop-up (two at once was confusing).
+		// Its Google button shows "Sign in as <name>" when the visitor is signed in to Google.
+		if (pop) {
+			try {
+				google.accounts.id.renderButton(pop.gsiBox, {
+					type: "standard", theme: document.documentElement.getAttribute("data-iyp-theme") === "dark" ? "filled_black" : "outline",
+					size: "large", text: "signin_with", shape: "pill", logo_alignment: "left", width: 300
+				});
+				pop.open();
+			} catch (e) { pop.openForm(); }
+		}
 	}
 
 	function load() {
 		var script = document.createElement("script");
 		script.src = "https://accounts.google.com/gsi/client";
 		script.async = true;
-		script.onload = start;
+		script.onload = function () {
+			if (window.google && google.accounts && google.accounts.id) start();
+			else if (pop) pop.openForm();
+		};
+		// Google could not be reached (blocked, offline): ask for the details straight away
+		script.onerror = function () { if (pop) pop.openForm(); };
 		document.head.appendChild(script);
 	}
 
