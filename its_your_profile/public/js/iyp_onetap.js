@@ -29,6 +29,42 @@
 	// 2026-11-23: the pop-up is asked on EVERY page visit until the visitor shares their name (Google
 	// or the "View more" form). Closing it no longer hides it for the rest of the tab. Google itself
 	// may still wait a while after someone closes it several times; that we can't change.
+	// 2026-11-25: a "Sign in with Google" bar at the top of every page (user's request), also for
+	// visitors Google's pop-up can't reach (not signed in to Google in this browser, incognito, pop-up
+	// paused by Google). Shown on every page open; × hides it for this page view only.
+	(function addTopBar() {
+		var main = document.querySelector("main");
+		if (!main || !main.parentNode || document.querySelector("[data-iyp-topsign]")) return;
+		var css = document.createElement("style");
+		css.textContent =
+			".iyp-topsign{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:10px 16px;position:relative;" +
+			"box-sizing:border-box;width:calc(100% - 32px);max-width:760px;margin:12px auto;padding:12px 44px 12px 16px;" +
+			"border:1px solid #E4DEF7;border-radius:16px;background:#F7F4FF;color:#2A2247;font-size:.92rem;" +
+			"box-shadow:0 4px 16px rgba(60,40,120,.08)}" +
+			".iyp-topsign[hidden]{display:none}" +
+			".iyp-topsign-text{margin:0;text-align:center}" +
+			".iyp-topsign-btn{display:flex;justify-content:center;min-height:44px}" +
+			".iyp-topsign-done{display:none;margin:0;font-weight:600;color:#0E7A45}" +
+			".iyp-topsign.is-known .iyp-topsign-text,.iyp-topsign.is-known .iyp-topsign-btn{display:none}" +
+			".iyp-topsign.is-known .iyp-topsign-done{display:block}" +
+			".iyp-topsign-x{position:absolute;top:6px;right:8px;border:0;background:none;font-size:1.4rem;line-height:1;" +
+			"color:#6B6485;cursor:pointer;padding:4px 6px}" +
+			"[data-iyp-theme=dark] .iyp-topsign{background:#221D36;border-color:#3A3256;color:#ECE8FA}" +
+			"[data-iyp-theme=dark] .iyp-topsign-done{color:#5FD39A}";
+		document.head.appendChild(css);
+		var bar = document.createElement("div");
+		bar.className = "iyp-topsign";
+		bar.hidden = true; // shown once Google's button is drawn
+		bar.setAttribute("data-iyp-topsign", "");
+		bar.setAttribute("data-iyp-gsi-wrap", "");
+		bar.innerHTML =
+			'<p class="iyp-topsign-text"><strong>👋 Welcome!</strong> Sign in with Google to continue</p>' +
+			'<div class="iyp-topsign-btn" data-iyp-gsi-button data-iyp-gsi-text="signin_with"></div>' +
+			'<p class="iyp-topsign-done" data-iyp-gsi-done data-text="✓ Signed in as {0}"></p>' +
+			'<button type="button" class="iyp-topsign-x" aria-label="Close">×</button>';
+		bar.querySelector(".iyp-topsign-x").addEventListener("click", function () { bar.remove(); });
+		main.parentNode.insertBefore(bar, main);
+	})();
 	var buttons = document.querySelectorAll("[data-iyp-gsi-button]");
 
 	// Where the visitor first came from in this tab (Google, WhatsApp, ChatGPT...)
@@ -49,6 +85,9 @@
 			var done = wrap.querySelector("[data-iyp-gsi-done]");
 			if (done) done.textContent = (done.getAttribute("data-text") || "").replace("{0}", person.name || person.email || "");
 		});
+		// The top bar shows "✓ Signed in as …" for a moment, then goes away
+		var topBar = document.querySelector("[data-iyp-topsign]");
+		if (person.fresh !== false && topBar) setTimeout(function () { topBar.remove(); }, 4000);
 		var event;
 		try { event = new CustomEvent("iyp:known", { detail: person }); } catch (e) { return; }
 		document.dispatchEvent(event);
@@ -130,6 +169,6 @@
 	// Remembered from an earlier visit: fills forms only (fresh: false), it does not open the
 	// business page's View more box; the visitor is asked again (2026-11-24)
 	if (known) announce(Object.assign({}, known, { fresh: false }));
-	// Let the visitor see the page first
-	setTimeout(load, known ? 0 : 2500);
+	// 2026-11-25: Google sign-in is offered right at the start of every page (user's request)
+	setTimeout(load, 0);
 })();
