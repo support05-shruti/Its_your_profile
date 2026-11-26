@@ -580,7 +580,7 @@ frappe.ready(function () {
 					<span class="iyp-paid-lock-icon" aria-hidden="true">🔒</span>
 					<div>
 						<b>${opts.locked_title}</b>
-						<p>${__("Available on the paid plan (₹1,200 + GST for 10 years). Each one adds 10% to your page completeness.")}</p>
+						<p>${__("Available on the paid plan (₹1,200 + GST for 10 years).")}</p>
 						${kept ? `<p>${__("Your {0} saved items are kept and show on your page again once your plan is active.", [kept])}</p>` : ""}
 						<a class="iyp-links-add" href="/#pricing" target="_blank" rel="noopener">${__("See plans")}</a>
 					</div>
