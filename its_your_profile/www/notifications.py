@@ -313,7 +313,10 @@ def page_strength(name, limit=3):
 	"""How complete the owner's page is (0-100), and up to `limit` tips for what to add next
 	(2026-11-23: limit=None gives every missing item, for the page report email)."""
 	doc = frappe.db.get_value(
-		"Business Profile", name, [field for field, _tip in STRENGTH_CHECKS] + ["ai_summary"], as_dict=True
+		"Business Profile",
+		name,
+		[field for field, _tip in STRENGTH_CHECKS] + ["ai_summary", "paid_plan", "paid_until"],
+		as_dict=True,
 	)
 	if not doc:
 		return None
@@ -332,7 +335,25 @@ def page_strength(name, limit=3):
 	checks = [(bool(str(doc.get(field) or "").strip()), _(tip)) for field, tip in STRENGTH_CHECKS]
 	checks.insert(0, (bool(has_linkedin), _("Add your LinkedIn page (required)")))
 	done = sum(1 for ok, _tip in checks if ok)
-	return {"percent": round(done * 100 / len(checks)), "tips": [tip for ok, tip in checks if not ok][:limit]}
+	# 2026-11-26: the items above make up 80%. Testimonials and Certificates (paid plan only) are
+	# worth 10% each, so no page reaches 100% without both. They count only while the plan is
+	# paid, because only then does the page show them.
+	from its_your_profile.page_report import is_paid
+
+	paid = is_paid(doc)
+	extras = [
+		(
+			paid and bool(frappe.db.count(child, {"parent": name, "parenttype": "Business Profile"})),
+			_(tip) if paid else _("{0} (paid plan)").format(_(tip)),
+		)
+		for child, tip in (
+			("Business Profile Testimonial", "Add customer testimonials"),
+			("Business Profile Certificate", "Add your certificates"),
+		)
+	]
+	percent = done * 80 / len(checks) + sum(10 for ok, _tip in extras if ok)
+	tips = [tip for ok, tip in checks + extras if not ok]
+	return {"percent": min(100, round(percent)), "tips": tips[:limit]}
 
 
 def week_counts(names):

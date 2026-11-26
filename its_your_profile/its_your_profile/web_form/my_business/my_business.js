@@ -551,6 +551,170 @@ frappe.ready(function () {
 		render_faqs();
 	}
 
+	// CHANGE NOTE 2026-11-26: Testimonials and Certificates, for paid plans only. Same kind of editor
+	// as the FAQs (Frappe's tables stay hidden and keep the data in field.df.data for Save). Without
+	// an active plan the section shows a lock with "See plans" instead; the server refuses changes
+	// too (BusinessProfile.guard_paid_sections), so this is only the friendly side.
+	const esc_html = (s) => String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+	const table_rows = (field) => {
+		if (!field) return [];
+		if (!Array.isArray(field.df.data)) field.df.data = (field.grid.get_data() || []).slice();
+		return field.df.data;
+	};
+	const paid_editors = [];
+	const make_paid_editor = (opts) => {
+		const field = web_form.fields_dict[opts.fieldname];
+		if (!field) return null;
+		const rows = () => table_rows(field);
+		const box = document.createElement("div");
+		box.className = "iyp-links iyp-faqs iyp-paid-box";
+		field.$wrapper.addClass("iyp-links-grid-hidden").after(box);
+		const dirty = () => web_form.make_form_dirty && web_form.make_form_dirty();
+		const editor = { opts, rows, render: () => {}, paid: false };
+
+		const draw_locked = () => {
+			const kept = rows().length;
+			box.innerHTML = `
+				<div class="iyp-links-label">${opts.label} <span class="iyp-paid-tag">${__("Paid plan")}</span></div>
+				<div class="iyp-paid-lock">
+					<span class="iyp-paid-lock-icon" aria-hidden="true">🔒</span>
+					<div>
+						<b>${opts.locked_title}</b>
+						<p>${__("Available on the paid plan (₹1,200 + GST for 10 years). Each one adds 10% to your page completeness.")}</p>
+						${kept ? `<p>${__("Your {0} saved items are kept and show on your page again once your plan is active.", [kept])}</p>` : ""}
+						<a class="iyp-links-add" href="/#pricing" target="_blank" rel="noopener">${__("See plans")}</a>
+					</div>
+				</div>`;
+		};
+
+		const draw_open = () => {
+			box.innerHTML = `
+				<div class="iyp-links-label">${opts.label}</div>
+				<p class="iyp-links-help">${opts.help}</p>
+				<div class="iyp-faq-list"></div>
+				<div class="iyp-links-actions"><button type="button" class="iyp-links-add">＋ ${opts.add_text}</button></div>`;
+			const list = box.querySelector(".iyp-faq-list");
+			editor.render = () => {
+				rows().forEach((r, i) => (r.idx = i + 1));
+				list.innerHTML = rows().length
+					? rows()
+							.map(
+								(r, i) => `
+					<div class="iyp-faq-row" data-i="${i}">
+						<div class="iyp-faq-num">${i + 1}</div>
+						<div class="iyp-faq-fields">${opts.inputs
+							.map((inp) =>
+								inp.type === "file"
+									? `<div class="iyp-paid-file">
+										${r[inp.key] ? `<a href="${esc_html(r[inp.key])}" target="_blank" rel="noopener">📎 ${esc_html(r[inp.key].split("/").pop())}</a>` : `<span>${__("No file yet")}</span>`}
+										<button type="button" class="iyp-links-add iyp-paid-upload" data-key="${inp.key}">${r[inp.key] ? __("Change file") : inp.placeholder}</button>
+									</div>`
+									: inp.type === "textarea"
+									? `<textarea data-key="${inp.key}" rows="3" placeholder="${inp.placeholder}" aria-label="${inp.placeholder}">${esc_html(r[inp.key])}</textarea>`
+									: `<input data-key="${inp.key}" type="text" value="${esc_html(r[inp.key])}" placeholder="${inp.placeholder}" aria-label="${inp.placeholder}">`
+							)
+							.join("")}</div>
+						<button type="button" class="iyp-link-del" title="${__("Remove")}" aria-label="${__("Remove")}">✕</button>
+					</div>`
+							)
+							.join("")
+					: `<div class="iyp-links-empty">${opts.empty_text}</div>`;
+			};
+			list.addEventListener("input", (e) => {
+				const row_el = e.target.closest(".iyp-faq-row");
+				const row = row_el && rows()[+row_el.dataset.i];
+				if (!row || !e.target.dataset.key) return;
+				row[e.target.dataset.key] = e.target.value;
+				dirty();
+			});
+			list.addEventListener("click", (e) => {
+				const row_el = e.target.closest(".iyp-faq-row");
+				if (!row_el) return;
+				const i = +row_el.dataset.i;
+				const row = rows()[i];
+				const upload = e.target.closest(".iyp-paid-upload");
+				if (upload) {
+					if (!frappe.ui.FileUploader) return frappe.msgprint(__("File upload is not available here. Please try again."));
+					new frappe.ui.FileUploader({
+						allow_multiple: false,
+						restrictions: { allowed_file_types: [".jpg", ".jpeg", ".png", ".webp", ".pdf"] },
+						on_success: (file) => {
+							row[upload.dataset.key] = file.file_url;
+							editor.render();
+							dirty();
+						},
+					});
+					return;
+				}
+				if (!e.target.closest(".iyp-link-del")) return;
+				const remove = () => {
+					rows().splice(i, 1);
+					editor.render();
+					dirty();
+				};
+				const title = (row && row[opts.inputs[0].key]) || "";
+				if (!title.trim()) return remove();
+				frappe.confirm(__("Do you really want to delete this?") + `<br><b>${esc_html(title.trim())}</b>`, remove);
+			});
+			box.querySelector(".iyp-faq-list + .iyp-links-actions .iyp-links-add").addEventListener("click", () => {
+				const blank = { idx: rows().length + 1, __islocal: true };
+				opts.inputs.forEach((inp) => (blank[inp.key] = ""));
+				rows().push(blank);
+				editor.render();
+				dirty();
+				const last = list.querySelector(".iyp-faq-row:last-child input, .iyp-faq-row:last-child textarea");
+				if (last) last.focus();
+			});
+			editor.render();
+		};
+
+		editor.open = (paid) => {
+			editor.paid = paid;
+			paid ? draw_open() : draw_locked();
+		};
+		draw_locked();
+		paid_editors.push(editor);
+		return editor;
+	};
+	make_paid_editor({
+		fieldname: "testimonials",
+		label: __("Testimonials"),
+		locked_title: __("Show what your customers say about you"),
+		help: __("Real words from your customers, with their name. Shown on your page and read by Google and AI search."),
+		add_text: __("Add testimonial"),
+		empty_text: __("No testimonials yet. Click “Add testimonial” to add one."),
+		required: ["customer_name", "testimonial"],
+		inputs: [
+			{ key: "customer_name", placeholder: __("Customer name, e.g. Rahul Sharma") },
+			{ key: "customer_company", placeholder: __("Designation / company, e.g. Purchase Head, Tata Motors") },
+			{ key: "testimonial", type: "textarea", placeholder: __("What they said about your work") },
+		],
+	});
+	make_paid_editor({
+		fieldname: "certificates",
+		label: __("Certificates"),
+		locked_title: __("Show your certificates and awards"),
+		help: __("ISO, licences, awards. Upload a photo or PDF; visitors can open it on your page."),
+		add_text: __("Add certificate"),
+		empty_text: __("No certificates yet. Click “Add certificate” to add one."),
+		required: ["certificate_name"],
+		inputs: [
+			{ key: "certificate_name", placeholder: __("Certificate name, e.g. ISO 9001:2015") },
+			{ key: "issued_by", placeholder: __("Issued by, e.g. TÜV SÜD") },
+			{ key: "year", placeholder: __("Year, e.g. 2024") },
+			{ key: "certificate_file", type: "file", placeholder: __("Upload photo or PDF") },
+		],
+	});
+	if (paid_editors.length && web_form.doc && web_form.doc.name && !web_form.is_new) {
+		frappe
+			.call({ method: "its_your_profile.api.get_plan", args: { name: web_form.doc.name }, quiet: true })
+			.then(({ message }) => {
+				const open = !!(message && (message.paid || message.staff));
+				paid_editors.forEach((ed) => ed.open(open));
+			})
+			.catch(() => {});
+	}
+
 	// Add links to the Profile Links table, skipping platforms (and URLs) it already has
 	const add_links = (links) => {
 		const field = web_form.fields_dict.profile_links;
@@ -666,6 +830,28 @@ frappe.ready(function () {
 			return false;
 		}
 
+		// 2026-11-26: Testimonials / Certificates: drop empty rows, point out half-filled ones
+		for (const ed of paid_editors) {
+			if (!ed.paid) continue;
+			const list = ed.rows();
+			for (let i = list.length - 1; i >= 0; i--) {
+				ed.opts.inputs.forEach((inp) => (list[i][inp.key] = (list[i][inp.key] || "").trim()));
+				if (ed.opts.inputs.every((inp) => !list[i][inp.key])) list.splice(i, 1);
+			}
+			ed.render();
+			const half = list.find((r) => ed.opts.required.some((key) => !r[key]));
+			if (half) {
+				frappe.msgprint({
+					title: __("Finish the {0}", [ed.opts.label]),
+					indicator: "orange",
+					message: __("Please fill in: {0}. Or remove it with ✕.", [
+						ed.opts.inputs.filter((inp) => ed.opts.required.includes(inp.key) && !half[inp.key]).map((inp) => inp.placeholder.split(",")[0]).join(", "),
+					]),
+				});
+				return false;
+			}
+		}
+
 		const no_platform = rows.find((r) => !r.platform);
 		if (no_platform) {
 			frappe.msgprint({
@@ -713,22 +899,32 @@ frappe.ready(function () {
 		if (polling || !doc.name || !["Pending", "Processing"].includes(doc.card_scan_status)) return;
 		polling = true;
 
-		frappe.show_alert({ message: __("Reading your visiting card..."), indicator: "blue" });
-		const timer = setInterval(() => {
+		// 2026-11-26: ask first and only say "Reading..." while a scan really runs; a stuck old
+		// status comes back as "Stale" (api.get_scan_status) and is dropped without a message.
+		// Never poll for more than 3 minutes.
+		const check = () =>
 			frappe
-				.call("its_your_profile.api.get_scan_status", { name: doc.name })
-				.then(({ message: status }) => {
-					if (status === "Completed") {
+				.call({ method: "its_your_profile.api.get_scan_status", args: { name: doc.name }, quiet: true })
+				.then(({ message: status }) => status);
+		check().then((status) => {
+			if (!["Pending", "Processing"].includes(status)) return;
+			frappe.show_alert({ message: __("Reading your visiting card..."), indicator: "blue" });
+			let tries = 0;
+			const timer = setInterval(() => {
+				if (++tries > (3 * 60 * 1000) / POLL_MS) return clearInterval(timer);
+				check().then((now) => {
+					if (now === "Completed") {
 						clearInterval(timer);
 						window.location.reload();
-					} else if (status === "Failed") {
+					} else if (now === "Failed") {
 						clearInterval(timer);
-						frappe.msgprint(
-							__("We couldn't read the card. Please fill in the details manually.")
-						);
+						frappe.msgprint(__("We couldn't read the card. Please fill in the details manually."));
+					} else if (now === "Stale") {
+						clearInterval(timer);
 					}
 				});
-		}, POLL_MS);
+			}, POLL_MS);
+		});
 	};
 
 	// 2026-11-23: show the logo we already have (uploaded, from the card or the website) as a

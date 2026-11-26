@@ -53,6 +53,8 @@
 	"external": '<path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>',
 	"quote": '<path d="M16 3a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2 1 1 0 0 1 1 1v1a2 2 0 0 1-2 2 1 1 0 0 0-1 1v2a1 1 0 0 0 1 1 6 6 0 0 0 6-6V5a2 2 0 0 0-2-2z"/><path d="M5 3a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2 1 1 0 0 1 1 1v1a2 2 0 0 1-2 2 1 1 0 0 0-1 1v2a1 1 0 0 0 1 1 6 6 0 0 0 6-6V5a2 2 0 0 0-2-2z"/>',
 	"card": '<rect x="2" y="5" width="20" height="14" rx="2"/><path d="M6 10h6M6 14h4"/><circle cx="16.5" cy="12" r="2"/>',
+	"award": '<circle cx="12" cy="8" r="6"/><path d="M15.48 12.89 17 22l-5-3-5 3 1.52-9.11"/>',
+	"file": '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/>',
 } -%}
 <svg class="iyp-i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ paths[name] | safe }}</svg>
 {%- endmacro %}
@@ -295,6 +297,22 @@
 	.iyp-faq-item { border: 1px solid var(--line); border-left: 3px solid var(--b); border-radius: 14px; padding: 14px 16px; background: #fff; }
 	.iyp-faq-item h3 { margin: 0 0 6px; font-size: 1rem; font-weight: 700; line-height: 1.4; color: var(--ink); }
 	.iyp-faq-item p { margin: 0; color: var(--ink-2); line-height: 1.65; }
+	/* 2026-11-26: Testimonials and Certificates (paid plans) */
+	.iyp-tst { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; }
+	.iyp-tst-item { margin: 0; position: relative; border: 1px solid var(--line); border-radius: 16px; padding: 44px 16px 14px; background: #fff; }
+	.iyp-tst-item > .iyp-i { position: absolute; left: 16px; top: 14px; width: 22px; height: 22px; color: var(--b); opacity: .6; }
+	.iyp-tst-item blockquote { margin: 0; color: var(--ink-2); line-height: 1.65; }
+	.iyp-tst-item figcaption { margin-top: 10px; font-size: .85rem; color: var(--muted); }
+	.iyp-tst-item figcaption b { display: block; color: var(--ink); font-size: .95rem; }
+	.iyp-certs { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px; list-style: none; margin: 0; padding: 0; }
+	.iyp-cert { border: 1px solid var(--line); border-radius: 16px; overflow: hidden; background: #fff; display: flex; flex-direction: column; }
+	.iyp-cert-pic { display: grid; place-items: center; aspect-ratio: 4 / 3; background: var(--b-soft, #F4F1FD); color: var(--b); text-decoration: none; }
+	.iyp-cert-pic img { width: 100%; height: 100%; object-fit: cover; }
+	.iyp-cert-pic .iyp-i { width: 36px; height: 36px; }
+	.iyp-cert-pic span { font-weight: 800; font-size: .8rem; letter-spacing: .08em; margin-top: -18px; }
+	.iyp-cert-text { padding: 10px 12px 12px; }
+	.iyp-cert-text b { display: block; color: var(--ink); line-height: 1.35; overflow-wrap: anywhere; }
+	.iyp-cert-text small { color: var(--muted); }
 
 	/* Mobile action bar */
 	.iyp-bar { display: none; }
@@ -576,6 +594,7 @@
 	}
 	[data-iyp-theme="dark"] .iyp::before { background: #3A2516; opacity: .35; }
 	[data-iyp-theme="dark"] .iyp::after { background: #16332A; opacity: .35; }
+	[data-iyp-theme="dark"] .iyp-tst-item, [data-iyp-theme="dark"] .iyp-cert,
 	[data-iyp-theme="dark"] .iyp-id, [data-iyp-theme="dark"] .iyp-card, [data-iyp-theme="dark"] .iyp-faq-item,
 	[data-iyp-theme="dark"] .iyp-btn-outline, [data-iyp-theme="dark"] .iyp-fact-icon { background: var(--surface); }
 	[data-iyp-theme="dark"] .iyp-btn-outline { border-color: #463E7A; }
@@ -749,6 +768,42 @@
 					</div>
 					{% endfor %}
 				</div>
+			</section>
+			{% endif %}
+
+			{#- 2026-11-26: Testimonials and Certificates, paid plans only (BusinessProfile.get_proof) -#}
+			{% if testimonial_items %}
+			<section class="iyp-card iyp-reveal" id="testimonials" data-iyp-lock>
+				<h2><span class="iyp-h-icon">{{ icon("quote") }}</span>{{ _("What Customers Say") }}</h2>
+				<div class="iyp-tst">
+					{% for row in testimonial_items %}
+					<figure class="iyp-tst-item">
+						{{ icon("quote") }}
+						<blockquote>{{ row.testimonial | e | replace("\n", "<br>") }}</blockquote>
+						<figcaption><b>{{ row.customer_name | e }}</b>{% if row.customer_company %}{{ row.customer_company | e }}{% endif %}</figcaption>
+					</figure>
+					{% endfor %}
+				</div>
+			</section>
+			{% endif %}
+
+			{% if certificate_items %}
+			<section class="iyp-card iyp-reveal" id="certificates" data-iyp-lock>
+				<h2><span class="iyp-h-icon">{{ icon("award") }}</span>{{ _("Certificates") }}</h2>
+				<ul class="iyp-certs">
+					{% for c in certificate_items %}
+					<li class="iyp-cert">
+						{% if c.url %}
+						<a class="iyp-cert-pic" href="{{ c.url | e }}" target="_blank" rel="noopener" aria-label="{{ _('Open certificate {0}').format(c.name) | e }}">
+							{% if c.is_image %}<img src="{{ c.url | e }}" alt="{{ c.name | e }}" loading="lazy">{% else %}{{ icon("file") }}<span>PDF</span>{% endif %}
+						</a>
+						{% else %}
+						<div class="iyp-cert-pic">{{ icon("award") }}</div>
+						{% endif %}
+						<div class="iyp-cert-text"><b>{{ c.name | e }}</b>{% if c.issued_by or c.year %}<small>{{ [c.issued_by, c.year] | select | join(" · ") | e }}</small>{% endif %}</div>
+					</li>
+					{% endfor %}
+				</ul>
 			</section>
 			{% endif %}
 

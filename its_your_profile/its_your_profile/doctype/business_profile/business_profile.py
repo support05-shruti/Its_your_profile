@@ -199,6 +199,28 @@ def drop_empty(data):
 	return {k: v for k, v in data.items() if v}
 
 
+# 2026-11-26: Testimonials and Certificates (paid plans only); the fields that count as a change
+PAID_TABLES = {
+	"testimonials": ("customer_name", "customer_company", "testimonial"),
+	"certificates": ("certificate_name", "issued_by", "year", "certificate_file"),
+}
+# Certificates are shown to everyone, so only photos and PDFs (never HTML/SVG, which can carry scripts)
+CERTIFICATE_FILE = re.compile(r"\.(jpe?g|png|webp|pdf)$", re.I)
+
+
+def make_file_public(file_url):
+	"""A file the public page shows must be public; the uploader may have marked it private."""
+	if not (file_url or "").startswith("/private/files/"):
+		return file_url
+	file_name = frappe.db.get_value("File", {"file_url": file_url})
+	if not file_name:
+		return file_url
+	file = frappe.get_doc("File", file_name)
+	file.is_private = 0
+	file.save(ignore_permissions=True)
+	return file.file_url
+
+
 class BusinessProfile(WebsiteGenerator):
 	def validate(self):
 		# A profile created from a card upload has no company name until the scan finishes
@@ -214,6 +236,7 @@ class BusinessProfile(WebsiteGenerator):
 		self.keep_welcome_fields()
 		self.make_logo_public()
 		self.track_faqs_cleared()
+		self.guard_paid_sections()
 
 		self.gstin = clean_reg_number(
 			self.get("gstin"),
@@ -296,6 +319,63 @@ class BusinessProfile(WebsiteGenerator):
 		file.is_private = 0
 		file.save(ignore_permissions=True)
 		self.company_logo = file.file_url
+
+	def guard_paid_sections(self):
+		"""2026-11-26: Testimonials and Certificates are for paid plans. Owners without an active plan
+		can't add or change them (removing is fine); staff (System Manager) always can. Certificate
+		files must be a photo or PDF, and are made public because the page shows them."""
+		from its_your_profile.page_report import is_paid
+
+		for row in self.get("testimonials") or []:
+			row.customer_name = " ".join((row.customer_name or "").split())
+			row.customer_company = " ".join((row.customer_company or "").split()) or None
+			row.testimonial = (row.testimonial or "").strip()
+		for row in self.get("certificates") or []:
+			row.certificate_name = " ".join((row.certificate_name or "").split())
+			row.issued_by = " ".join((row.issued_by or "").split()) or None
+			row.year = (row.year or "").strip() or None
+			if row.certificate_file:
+				if not CERTIFICATE_FILE.search(row.certificate_file):
+					frappe.throw(
+						frappe._("Certificate “{0}”: please upload a photo (JPG, PNG) or a PDF.").format(
+							row.certificate_name or row.idx
+						)
+					)
+				row.certificate_file = make_file_public(row.certificate_file)
+
+		if is_paid(self) or "System Manager" in frappe.get_roles():
+			return
+		before = None if self.is_new() else self.get_doc_before_save()
+		for table, fields in PAID_TABLES.items():
+			old = {tuple(r.get(f) or "" for f in fields) for r in (before.get(table) if before else None) or []}
+			if any(tuple(r.get(f) or "" for f in fields) not in old for r in self.get(table) or []):
+				frappe.throw(
+					frappe._(
+						"Testimonials and certificates are part of the paid plan. They can be added once your plan is active."
+					),
+					title=frappe._("Paid plan"),
+				)
+
+	def get_proof(self):
+		"""2026-11-26: (testimonials, certificates) shown on the page and in its .md version,
+		only while the plan is paid."""
+		from its_your_profile.page_report import is_paid
+
+		if not is_paid(self):
+			return [], []
+		testimonials = [r for r in self.get("testimonials") or [] if r.customer_name and r.testimonial]
+		certificates = [
+			frappe._dict(
+				name=r.certificate_name,
+				issued_by=r.issued_by,
+				year=r.year,
+				url=r.certificate_file if (r.certificate_file or "").startswith("/files/") else None,
+				is_image=bool(re.search(r"\.(jpe?g|png|webp)$", r.certificate_file or "", re.I)),
+			)
+			for r in self.get("certificates") or []
+			if r.certificate_name
+		]
+		return testimonials, certificates
 
 	def track_faqs_cleared(self):
 		"""2026-11-18: owners edit their FAQs on "My information". When someone removes every FAQ on
@@ -555,6 +635,7 @@ class BusinessProfile(WebsiteGenerator):
 		context.services = self.get_services()
 		context.reg_numbers = self.get_reg_numbers()
 		context.faq_items = self.get_page_faqs()
+		context.testimonial_items, context.certificate_items = self.get_proof()
 		context.markdown_url = frappe.utils.get_url(self.route + ".md")
 		# Shown when there is no AI summary yet, so every page has a plain factual description
 		context.entity_summary = None if self.ai_summary else self.get_entity_summary()
@@ -650,6 +731,17 @@ class BusinessProfile(WebsiteGenerator):
 			lines += ["", f"{h2} Questions and answers", ""]
 			for row in faqs:
 				lines += [f"{h3} {' '.join(row.question.split())}", "", " ".join(row.answer.split()), ""]
+		testimonials, certificates = self.get_proof()
+		if testimonials:
+			lines += ["", f"{h2} What customers say", ""]
+			for row in testimonials:
+				who = row.customer_name + (f", {row.customer_company}" if row.customer_company else "")
+				lines += [f"> {' '.join(row.testimonial.split())}", f"> — {who}", ""]
+		if certificates:
+			lines += ["", f"{h2} Certificates", ""]
+			for c in certificates:
+				extra = ", ".join(x for x in (c.issued_by, c.year) if x)
+				lines.append(f"- {c.name}" + (f" ({extra})" if extra else "") + (f": {frappe.utils.get_url(c.url)}" if c.url else ""))
 		if links := [row for row in self.profile_links if row.url]:
 			lines += ["", f"{h2} Elsewhere online", ""]
 			lines += [f"- {row.label or row.platform}: {row.url}" for row in links]

@@ -1,0 +1,47 @@
+{
+ "actions": [],
+ "creation": "2026-11-26 12:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "customer_name",
+  "customer_company",
+  "testimonial"
+ ],
+ "fields": [
+  {
+   "fieldname": "customer_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Customer Name",
+   "reqd": 1
+  },
+  {
+   "description": "e.g. Purchase Head, Tata Motors",
+   "fieldname": "customer_company",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Designation / Company"
+  },
+  {
+   "fieldname": "testimonial",
+   "fieldtype": "Small Text",
+   "in_list_view": 1,
+   "label": "What They Said",
+   "reqd": 1
+  }
+ ],
+ "istable": 1,
+ "links": [],
+ "modified": "2026-11-26 12:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Its Your Profile",
+ "name": "Business Profile Testimonial",
+ "owner": "Administrator",
+ "permissions": [],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

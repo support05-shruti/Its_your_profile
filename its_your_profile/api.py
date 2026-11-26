@@ -398,12 +398,40 @@ def upload_visiting_card():
 
 @frappe.whitelist()
 def get_scan_status(name: str):
-	owner, status = frappe.db.get_value("Business Profile", name, ["owner", "card_scan_status"]) or (None, None)
+	owner, status, modified = frappe.db.get_value(
+		"Business Profile", name, ["owner", "card_scan_status", "modified"]
+	) or (None, None, None)
 	if not owner:
 		frappe.throw(_("Business Profile not found"), frappe.DoesNotExistError)
 	if owner != frappe.session.user and not frappe.has_permission("Business Profile", "read", name):
 		frappe.throw(_("Not permitted"), frappe.PermissionError)
+
+	# 2026-11-26: a scan job killed midway (e.g. workers restarted on deploy) left the status at
+	# Pending/Processing for good, so the edit page said "Reading your visiting card..." forever.
+	# Stuck for 10+ minutes with no scan job queued or running: close it quietly.
+	if status in ("Pending", "Processing") and modified:
+		from frappe.utils.background_jobs import is_job_enqueued
+
+		stuck = frappe.utils.time_diff_in_seconds(frappe.utils.now_datetime(), modified) > 600
+		if stuck and not is_job_enqueued(f"scan_visiting_card::{name}"):
+			frappe.db.set_value("Business Profile", name, "card_scan_status", "Failed", update_modified=False)
+			frappe.db.commit()
+			return "Stale"
 	return status
+
+
+@frappe.whitelist()
+def get_plan(name: str | None = None):
+	"""2026-11-26: is the business on an active paid plan? "My information" opens Testimonials and
+	Certificates only then (the server checks again on save). A new page is never paid yet."""
+	if not name or not frappe.db.exists("Business Profile", name):
+		return {"paid": False}
+	doc = frappe.db.get_value("Business Profile", name, ["owner", "paid_plan", "paid_until"], as_dict=True)
+	if doc.owner != frappe.session.user and not frappe.has_permission("Business Profile", "read", name):
+		frappe.throw(_("Not permitted"), frappe.PermissionError)
+	from its_your_profile.page_report import is_paid
+
+	return {"paid": is_paid(doc), "staff": "System Manager" in frappe.get_roles()}
 
 
 @frappe.whitelist(methods=["POST"])

@@ -545,3 +545,26 @@ body::after { width: 300px; height: 300px; right: -110px; top: 60px; background:
 [data-iyp-theme="dark"] .iyp-faq-row { background: #141029; border-color: #332C5A; }
 [data-iyp-theme="dark"] .iyp-faq-row input, [data-iyp-theme="dark"] .iyp-faq-row textarea { background: #1B1736; color: #F0EEFA; border-color: #3D3566; }
 [data-iyp-theme="dark"] .iyp-faq-num { background: #6B55D6; }
+
+/* ---------- Testimonials & Certificates (2026-11-26), paid plans only ---------- */
+.iyp-paid-box + .iyp-paid-box, .iyp-paid-box { margin-top: 6px; }
+.iyp-paid-tag {
+	display: inline-block; margin-left: 6px; padding: 2px 8px; border-radius: 999px; vertical-align: 2px;
+	font-size: 11px; font-weight: 700; letter-spacing: .02em; color: #8A4B00; background: #FFE9CC;
+}
+.iyp-paid-lock {
+	display: flex; gap: 14px; align-items: flex-start; padding: 16px; margin-top: 6px;
+	border: 1px dashed #E8C9A0; border-radius: 14px; background: #FFF8EF;
+}
+.iyp-paid-lock-icon { font-size: 22px; line-height: 1; }
+.iyp-paid-lock b { color: var(--iyp-ink); }
+.iyp-paid-lock p { margin: 4px 0 10px; color: var(--iyp-faint); font-size: 13px; }
+.iyp-paid-lock .iyp-links-add { display: inline-block; text-decoration: none; margin-top: 0; }
+.iyp-paid-file { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; font-size: 13px; color: var(--iyp-faint); }
+.iyp-paid-file a { color: var(--iyp-indigo); font-weight: 600; overflow-wrap: anywhere; }
+.iyp-paid-file .iyp-links-add { margin-top: 0; }
+[data-iyp-theme="dark"] .iyp-paid-tag { color: #FFD9A8; background: #4A3216; }
+[data-iyp-theme="dark"] .iyp-paid-lock { background: #231A12; border-color: #5A4225; }
+[data-iyp-theme="dark"] .iyp-paid-lock b { color: #F0EEFA; }
+[data-iyp-theme="dark"] .iyp-paid-lock p, [data-iyp-theme="dark"] .iyp-paid-file { color: #A9A4C8; }
+[data-iyp-theme="dark"] .iyp-paid-file a { color: #CBBEFF; }

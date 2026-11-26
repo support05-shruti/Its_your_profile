@@ -47,6 +47,9 @@
   "ai_section",
   "ai_summary",
   "faqs",
+  "proof_section",
+  "testimonials",
+  "certificates",
   "faqs_cleared",
   "card_section",
   "visiting_card",
@@ -451,6 +454,25 @@
    "options": "Business Profile FAQ"
   },
   {
+   "fieldname": "proof_section",
+   "fieldtype": "Section Break",
+   "label": "Testimonials & Certificates"
+  },
+  {
+   "description": "What your customers say about you. Paid plan only.",
+   "fieldname": "testimonials",
+   "fieldtype": "Table",
+   "label": "Testimonials",
+   "options": "Business Profile Testimonial"
+  },
+  {
+   "description": "ISO, licences, awards. Paid plan only.",
+   "fieldname": "certificates",
+   "fieldtype": "Table",
+   "label": "Certificates",
+   "options": "Business Profile Certificate"
+  },
+  {
    "default": "0",
    "description": "Ticked when the owner removed every FAQ: the AI then leaves the FAQs empty. Cleared when a FAQ is added again.",
    "fieldname": "faqs_cleared",
@@ -465,7 +487,7 @@
  "index_web_pages_for_search": 1,
  "is_published_field": "published",
  "links": [],
- "modified": "2026-11-25 14:30:00.000000",
+ "modified": "2026-11-26 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Its Your Profile",
  "name": "Business Profile",

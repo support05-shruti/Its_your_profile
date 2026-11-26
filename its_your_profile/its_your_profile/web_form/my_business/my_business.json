@@ -43,7 +43,7 @@
  ],
  "login_required": 1,
  "max_attachment_size": 10,
- "modified": "2026-11-25 14:30:00.000000",
+ "modified": "2026-11-26 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Its Your Profile",
  "name": "my-business",
@@ -271,6 +271,27 @@
    "fieldtype": "Table",
    "label": "FAQs",
    "options": "Business Profile FAQ",
+   "reqd": 0
+  },
+  {
+   "fieldname": "proof_section",
+   "fieldtype": "Section Break",
+   "label": "Testimonials & Certificates"
+  },
+  {
+   "description": "What your customers say about you. Paid plan only.",
+   "fieldname": "testimonials",
+   "fieldtype": "Table",
+   "label": "Testimonials",
+   "options": "Business Profile Testimonial",
+   "reqd": 0
+  },
+  {
+   "description": "ISO, licences, awards. Paid plan only.",
+   "fieldname": "certificates",
+   "fieldtype": "Table",
+   "label": "Certificates",
+   "options": "Business Profile Certificate",
    "reqd": 0
   }
  ]
