@@ -68,6 +68,7 @@
   "welcome_email_sent_on",
   "plan_section",
   "paid_plan",
+  "paid_from",
   "column_break_plan",
   "paid_until",
   "page_section",
@@ -146,6 +147,14 @@
    "fieldtype": "Check",
    "in_standard_filter": 1,
    "label": "Paid Plan",
+   "no_copy": 1
+  },
+  {
+   "depends_on": "paid_plan",
+   "description": "First day of the paid subscription (e.g. after the free period). For your records; paid features are on while Paid Plan is ticked.",
+   "fieldname": "paid_from",
+   "fieldtype": "Date",
+   "label": "Paid From",
    "no_copy": 1
   },
   {
@@ -487,7 +496,7 @@
  "index_web_pages_for_search": 1,
  "is_published_field": "published",
  "links": [],
- "modified": "2026-11-26 12:00:00.000000",
+ "modified": "2026-11-26 15:00:00.000000",
  "modified_by": "Administrator",
  "module": "Its Your Profile",
  "name": "Business Profile",
