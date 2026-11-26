@@ -715,6 +715,107 @@ frappe.ready(function () {
 			.catch(() => {});
 	}
 
+	// CHANGE NOTE 2026-11-26: Registration Details in the same style as Links: choose the number's
+	// type from a list, type the number, ✕ to remove, "Add number" for the next one. Only the numbers
+	// the business has are shown, no empty boxes. The four fields (gstin, cin, udyam, pan) stay on the
+	// form, hidden, and keep the values for Save; the server still checks every format. IYP ID stays
+	// as it is (fixed, read only).
+	const REG_TYPES = [
+		{ field: "gstin", label: __("GST Number"), placeholder: __("e.g. 27ABCDE1234F1Z5") },
+		{ field: "pan", label: __("PAN Number"), placeholder: __("e.g. ABCDE1234F") },
+		{ field: "udyam", label: __("Udyam / Udyog Aadhaar"), placeholder: __("e.g. UDYAM-MH-26-0012345") },
+		{ field: "cin", label: __("CIN"), placeholder: __("e.g. U72200MH2013PTC123456") },
+	].filter((t) => web_form.fields_dict[t.field]);
+	const reg_section =
+		web_form.fields_dict.iyp_id && web_form.fields_dict.iyp_id.$wrapper.closest(".form-section").get(0);
+	if (REG_TYPES.length && reg_section) {
+		const reg_value = (f) => (web_form.get_value(f) || (web_form.doc && web_form.doc[f]) || "").trim();
+		const reg_rows = REG_TYPES.filter((t) => reg_value(t.field)).map((t) => ({ field: t.field, value: reg_value(t.field) }));
+		REG_TYPES.forEach((t) => web_form.fields_dict[t.field].$wrapper.addClass("iyp-links-grid-hidden"));
+
+		const box = document.createElement("div");
+		box.className = "iyp-links iyp-regs-box";
+		box.innerHTML = `
+			<div class="iyp-links-label">${__("Registration numbers")}</div>
+			<p class="iyp-links-help">${__("GST, PAN, Udyam or CIN. Add only the ones your business has. Shown on your page, so customers and Google can find you by them.")}</p>
+			<div class="iyp-links-list"></div>
+			<div class="iyp-links-actions"><button type="button" class="iyp-links-add">＋ ${__("Add number")}</button></div>`;
+		const body = reg_section.querySelector(".section-body") || reg_section;
+		body.after(box);
+		const list = box.querySelector(".iyp-links-list");
+		const add_btn = box.querySelector(".iyp-links-add");
+		const type_of = (f) => REG_TYPES.find((t) => t.field === f);
+		const sync = (field, value) => {
+			web_form.set_value(field, value || "");
+			web_form.make_form_dirty && web_form.make_form_dirty();
+		};
+
+		const render_regs = () => {
+			const used = reg_rows.map((r) => r.field);
+			list.innerHTML = reg_rows.length
+				? reg_rows
+						.map(
+							(r, i) => `
+				<div class="iyp-link-row iyp-reg-row" data-i="${i}">
+					<select class="iyp-link-platform" aria-label="${__("Type")}">
+						${REG_TYPES.map(
+							(t) =>
+								`<option value="${t.field}"${t.field === r.field ? " selected" : ""}${t.field !== r.field && used.includes(t.field) ? " disabled" : ""}>${t.label}</option>`
+						).join("")}
+					</select>
+					<input class="iyp-link-url" type="text" value="${esc_html(r.value)}" placeholder="${type_of(r.field).placeholder}" aria-label="${type_of(r.field).label}" autocapitalize="characters" spellcheck="false">
+					<button type="button" class="iyp-link-del" title="${__("Remove")}" aria-label="${__("Remove")}">✕</button>
+				</div>`
+						)
+						.join("")
+				: `<div class="iyp-links-empty">${__("No numbers yet. Click “Add number” to add your GST, PAN, Udyam or CIN.")}</div>`;
+			add_btn.hidden = reg_rows.length >= REG_TYPES.length;
+		};
+		list.addEventListener("input", (e) => {
+			const row_el = e.target.closest(".iyp-reg-row");
+			const row = row_el && reg_rows[+row_el.dataset.i];
+			if (!row || !e.target.classList.contains("iyp-link-url")) return;
+			row.value = e.target.value.toUpperCase();
+			if (e.target.value !== row.value) {
+				const pos = e.target.selectionStart;
+				e.target.value = row.value;
+				e.target.setSelectionRange(pos, pos);
+			}
+			sync(row.field, row.value.trim());
+		});
+		list.addEventListener("change", (e) => {
+			const row_el = e.target.closest(".iyp-reg-row");
+			const row = row_el && reg_rows[+row_el.dataset.i];
+			if (!row || !e.target.classList.contains("iyp-link-platform")) return;
+			sync(row.field, ""); // the number moves to its new type
+			row.field = e.target.value;
+			sync(row.field, (row.value || "").trim());
+			render_regs();
+		});
+		list.addEventListener("click", (e) => {
+			const del = e.target.closest(".iyp-link-del");
+			if (!del) return;
+			const i = +del.closest(".iyp-reg-row").dataset.i;
+			const row = reg_rows[i];
+			const remove = () => {
+				reg_rows.splice(i, 1);
+				sync(row.field, "");
+				render_regs();
+			};
+			if (!(row.value || "").trim()) return remove();
+			frappe.confirm(__("Do you really want to remove this number?") + `<br><b>${esc_html(type_of(row.field).label)}: ${esc_html(row.value)}</b>`, remove);
+		});
+		add_btn.addEventListener("click", () => {
+			const free = REG_TYPES.find((t) => !reg_rows.some((r) => r.field === t.field));
+			if (!free) return;
+			reg_rows.push({ field: free.field, value: "" });
+			render_regs();
+			const last = list.querySelector(".iyp-reg-row:last-child .iyp-link-url");
+			if (last) last.focus();
+		});
+		render_regs();
+	}
+
 	// Add links to the Profile Links table, skipping platforms (and URLs) it already has
 	const add_links = (links) => {
 		const field = web_form.fields_dict.profile_links;
