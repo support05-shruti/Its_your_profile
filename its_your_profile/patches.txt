@@ -14,3 +14,4 @@ its_your_profile.patches.add_profile_faqs
 its_your_profile.patches.enable_signup
 its_your_profile.patches.brand_emails_and_welcome
 its_your_profile.patches.set_iyp_ids
+its_your_profile.patches.mark_softworld_paid
