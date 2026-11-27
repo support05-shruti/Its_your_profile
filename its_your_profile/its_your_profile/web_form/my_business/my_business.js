@@ -705,15 +705,27 @@ frappe.ready(function () {
 			{ key: "certificate_file", type: "file", placeholder: __("Upload photo or PDF") },
 		],
 	});
-	if (paid_editors.length && web_form.doc && web_form.doc.name && !web_form.is_new) {
+	// 2026-11-27: the form's data can arrive after this script runs (see after_load at the end), so
+	// the page name also comes from the address (/my-business/<name>/edit) and this runs again then
+	const page_name = () =>
+		(web_form.doc && web_form.doc.name) || (location.pathname.match(/^\/my-business\/([^/]+)\/edit/) || [])[1];
+	let plan_asked = false;
+	const load_plan = () => {
+		const name = page_name();
+		if (plan_asked || !paid_editors.length || !name || name === "new") return;
+		plan_asked = true;
 		frappe
-			.call({ method: "its_your_profile.api.get_plan", args: { name: web_form.doc.name }, quiet: true })
+			.call({ method: "its_your_profile.api.get_plan", args: { name }, quiet: true })
 			.then(({ message }) => {
 				const open = !!(message && (message.paid || message.staff));
 				paid_editors.forEach((ed) => ed.open(open));
 			})
-			.catch(() => {});
-	}
+			.catch((e) => {
+				plan_asked = false;
+				console.warn("get_plan failed", e);
+			});
+	};
+	load_plan();
 
 	// CHANGE NOTE 2026-11-26: Registration Details in the same style as Links: choose the number's
 	// type from a list, type the number, ✕ to remove, "Add number" for the next one. Only the numbers
@@ -726,11 +738,13 @@ frappe.ready(function () {
 		{ field: "udyam", label: __("Udyam / Udyog Aadhaar"), placeholder: __("e.g. UDYAM-MH-26-0012345") },
 		{ field: "cin", label: __("CIN"), placeholder: __("e.g. U72200MH2013PTC123456") },
 	].filter((t) => web_form.fields_dict[t.field]);
+	let reload_regs = () => {};
 	const reg_section =
 		web_form.fields_dict.iyp_id && web_form.fields_dict.iyp_id.$wrapper.closest(".form-section").get(0);
 	if (REG_TYPES.length && reg_section) {
 		const reg_value = (f) => (web_form.get_value(f) || (web_form.doc && web_form.doc[f]) || "").trim();
 		const reg_rows = REG_TYPES.filter((t) => reg_value(t.field)).map((t) => ({ field: t.field, value: reg_value(t.field) }));
+		let reg_touched = false;
 		REG_TYPES.forEach((t) => web_form.fields_dict[t.field].$wrapper.addClass("iyp-links-grid-hidden"));
 
 		const box = document.createElement("div");
@@ -746,6 +760,7 @@ frappe.ready(function () {
 		const add_btn = box.querySelector(".iyp-links-add");
 		const type_of = (f) => REG_TYPES.find((t) => t.field === f);
 		const sync = (field, value) => {
+			reg_touched = true;
 			web_form.set_value(field, value || "");
 			web_form.make_form_dirty && web_form.make_form_dirty();
 		};
@@ -814,6 +829,13 @@ frappe.ready(function () {
 			if (last) last.focus();
 		});
 		render_regs();
+		// 2026-11-27: the saved numbers can arrive after this ran; fill the rows then (unless the
+		// owner already started editing)
+		reload_regs = () => {
+			if (reg_touched) return;
+			reg_rows.splice(0, reg_rows.length, ...REG_TYPES.filter((t) => reg_value(t.field)).map((t) => ({ field: t.field, value: reg_value(t.field) })));
+			render_regs();
+		};
 	}
 
 	// Add links to the Profile Links table, skipping platforms (and URLs) it already has
@@ -1056,6 +1078,8 @@ frappe.ready(function () {
 	web_form.after_load = () => {
 		watch_scan();
 		show_logo();
+		load_plan();
+		reload_regs();
 	};
 	watch_scan();
 	show_logo();
